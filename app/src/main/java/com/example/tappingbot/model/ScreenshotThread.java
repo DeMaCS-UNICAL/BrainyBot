@@ -12,10 +12,12 @@ public class ScreenshotThread extends Thread {
     private static final String TAG = ScreenshotThread.class.getCanonicalName();
     private final View view;
     private int idFile;
+    private final StopScreenshot stopScreenshot;
 
-    public ScreenshotThread(View view) {
+    public ScreenshotThread(View view, StopScreenshot stopScreenshot) {
         this.view = view;
         this.idFile = 0;
+        this.stopScreenshot = stopScreenshot;
     }
 
     private Bitmap takeScreen() throws Exception {
@@ -34,15 +36,19 @@ public class ScreenshotThread extends Thread {
     @Override
     public void run() { //take screen each second
         super.run();
-        while (true) {
+        boolean isStopped = false;
+        while (!isStopped) {
             try {
-
+                stopScreenshot.takeReadLock();
                 Bitmap bitmapView = takeScreen();
                 saveScreen(bitmapView);
 
+                isStopped = stopScreenshot.isStopped();
+                stopScreenshot.leaveReadLock();
                 sleep(1000);
             } catch (Exception e) {
                 e.printStackTrace();
+                break;
             }
         }
     }

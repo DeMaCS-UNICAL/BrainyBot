@@ -12,22 +12,57 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.example.tappingbot.model.ScreenshotThread;
+import com.example.tappingbot.model.StopScreenshot;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getCanonicalName();
+    private Button startAndStopButton;
+    private ExecutorService pool;
+    private StopScreenshot stopScreenshot;
+    private boolean isStart = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // stop variable
+        stopScreenshot = new StopScreenshot();
 
-        Button startButton = findViewById(R.id.start_button);
-        startButton.setOnClickListener(new View.OnClickListener() {
+        // initialize threads pool
+        final int poolSize = 1;
+        pool = Executors.newFixedThreadPool(poolSize);
+
+        // button start and stop
+        Button startAndStopButton = findViewById(R.id.start_button);
+        startAndStopButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 if (isStoragePermissionGranted()) {
-                    new ScreenshotThread(MainActivity.this.findViewById(android.R.id.content)).start();
+
+                    // Thread to take screenshot
+                    Thread t = new ScreenshotThread(MainActivity.this.findViewById(android.R.id.content), stopScreenshot);
+
+                    try {
+
+                        if (isStart) {
+                            stopScreenshot.stopWithLock(false);
+
+                            pool.execute(t);
+                            startAndStopButton.setText(R.string.stop);
+                        } else {
+                            stopScreenshot.stopWithLock(true);
+                            startAndStopButton.setText(R.string.start);
+                        }
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    isStart = !isStart;
                 }
             }
         });
