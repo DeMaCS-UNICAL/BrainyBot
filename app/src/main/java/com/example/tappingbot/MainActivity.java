@@ -1,7 +1,11 @@
 package com.example.tappingbot;
 
 import android.Manifest;
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -11,7 +15,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
-import com.example.tappingbot.model.ScreenshotThread;
+import com.example.tappingbot.model.ScreenCaptureService;
 import com.example.tappingbot.model.StopScreenshot;
 
 import java.util.concurrent.ExecutorService;
@@ -23,6 +27,8 @@ public class MainActivity extends AppCompatActivity {
     private ExecutorService pool;
     private StopScreenshot stopScreenshot;
     private boolean isStart = true;
+    private static final int REQUEST_CODE = 100;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,23 +50,20 @@ public class MainActivity extends AppCompatActivity {
                 if (isStoragePermissionGranted()) {
 
                     // Thread to take screenshot
-                    Thread t = new ScreenshotThread(MainActivity.this.findViewById(android.R.id.content), stopScreenshot);
+//                    Thread t = new ScreenshotThread(MainActivity.this.findViewById(android.R.id.content), stopScreenshot);
 
-                    try {
 
-                        if (isStart) {
-                            stopScreenshot.stopWithLock(false);
-
-                            pool.execute(t);
-                            startAndStopButton.setText(R.string.stop);
-                        } else {
-                            stopScreenshot.stopWithLock(true);
-                            startAndStopButton.setText(R.string.start);
-                        }
-
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    if (isStart) {
+//                            stopScreenshot.stopWithLock(false);
+                        startProjection();
+//                            pool.execute(t);
+                        startAndStopButton.setText(R.string.stop);
+                    } else {
+//                            stopScreenshot.stopWithLock(true);
+                        stopProjection();
+                        startAndStopButton.setText(R.string.start);
                     }
+
 
                     isStart = !isStart;
                 }
@@ -88,5 +91,26 @@ public class MainActivity extends AppCompatActivity {
             Log.v(TAG, "Permission: " + permissions[0] + "was " + grantResults[0]);
             //resume tasks needing this permission
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                startService(ScreenCaptureService.getStartIntent(this, resultCode, data));
+            }
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    /****************************************** UI Widget Callbacks *******************************/
+    private void startProjection() {
+        MediaProjectionManager mProjectionManager =
+                (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        startActivityForResult(mProjectionManager.createScreenCaptureIntent(), REQUEST_CODE);
+    }
+
+    private void stopProjection() {
+        startService(ScreenCaptureService.getStopIntent(this));
     }
 }
