@@ -36,6 +36,20 @@ import java.util.Objects;
 public class ScreenCaptureService extends Service {
 
 
+    /*
+     *   CALL ORDER LIST:
+     *       - getStartIntent
+     *       - onCreate
+     *       - onStartCommand
+     *       - isStartCommand
+     *       - startProjection
+     *       - createVirtualDisplay
+     *       - getVirtualDisplayFlags
+     *       - onImageAvailable (loop)
+     *       - onOrientationChanged
+     *       - getStopIntent
+     * */
+
     private static final String TAG = "ScreenCaptureService";
     private static final String RESULT_CODE = "RESULT_CODE";
     private static final String DATA = "DATA";
@@ -76,6 +90,7 @@ public class ScreenCaptureService extends Service {
         return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
     }
 
+    //    first call
     public static Intent getStartIntent(Context context, int resultCode, Intent data) {
         Log.d(TAG, "getStartIntent");
 
@@ -238,7 +253,7 @@ public class ScreenCaptureService extends Service {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
                     IMAGES_PRODUCED++;
-                    Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
+//                    Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
                 }
 
             } catch (Exception e) {
@@ -289,7 +304,7 @@ public class ScreenCaptureService extends Service {
     private class MediaProjectionStopCallback extends MediaProjection.Callback {
         @Override
         public void onStop() {
-            Log.e(TAG, "stopping projection.");
+            Log.d(TAG, "stopping projection.");
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {

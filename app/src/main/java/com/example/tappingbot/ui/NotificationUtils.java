@@ -26,7 +26,7 @@ public class NotificationUtils {
         Notification notification = createNotification(context);
         NotificationManager notificationManager
                 = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-//        notificationManager.notify(NOTIFICATION_ID, notification); // TODO why doesn' t work with this?!
+        notificationManager.notify(NOTIFICATION_ID, notification);
         return new Pair<>(NOTIFICATION_ID, notification);
     }
 
@@ -46,7 +46,7 @@ public class NotificationUtils {
 
     private static Notification createNotification(@NonNull Context context) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID);
-//        builder.setSmallIcon(R.drawable.ic_camera);
+        builder.setSmallIcon(R.drawable.ic_camera);
         builder.setContentTitle(context.getString(R.string.app_name));
         builder.setContentText(context.getString(R.string.recording));
         builder.setOngoing(true);
