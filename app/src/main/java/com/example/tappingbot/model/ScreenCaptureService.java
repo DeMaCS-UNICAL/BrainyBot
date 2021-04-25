@@ -25,7 +25,7 @@ import android.view.WindowManager;
 
 import androidx.core.util.Pair;
 
-import com.example.tappingbot.ui.NotificationUtils;
+import com.example.tappingbot.utils.NotificationUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,12 +41,10 @@ public class ScreenCaptureService extends Service {
      *       - getStartIntent
      *       - onCreate
      *       - onStartCommand
-     *       - isStartCommand
      *       - startProjection
-     *       - createVirtualDisplay
-     *       - getVirtualDisplayFlags
-     *       - onImageAvailable (loop)
-     *       - onOrientationChanged
+     *          - createVirtualDisplay
+     *          - getVirtualDisplayFlags
+     *          - onImageAvailable (loop)
      *       - getStopIntent
      * */
 
@@ -90,6 +88,13 @@ public class ScreenCaptureService extends Service {
         return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
     }
 
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.d(TAG, "onBind");
+        return null;
+    }
+
+
     //    first call
     public static Intent getStartIntent(Context context, int resultCode, Intent data) {
         Log.d(TAG, "getStartIntent");
@@ -111,8 +116,17 @@ public class ScreenCaptureService extends Service {
     private void startProjection(int resultCode, Intent data) {
         Log.d(TAG, "startProjection");
 
+
+        /*
+         *
+         *   MediaProjectionManager is the class to start capturing the screen.
+         *   at line 125 we take MediaProjection.
+         *
+         * */
         MediaProjectionManager mpManager =
                 (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+
+
         if (mMediaProjection == null) {
             mMediaProjection = mpManager.getMediaProjection(resultCode, data);
             if (mMediaProjection != null) {
@@ -122,7 +136,7 @@ public class ScreenCaptureService extends Service {
                 mDisplay = windowManager.getDefaultDisplay();
 
                 // create virtual display depending on device width / height
-                createVirtualDisplay();
+                createVirtualDisplay(); // initialize virtual display
 
                 // register orientation change callback
                 mOrientationChangeCallback = new OrientationChangeCallback(this);
@@ -131,7 +145,9 @@ public class ScreenCaptureService extends Service {
                 }
 
                 // register media projection stop callback
+                // registerCallback Register a listener to receive notifications about when the MediaProjection changes state.
                 mMediaProjection.registerCallback(new MediaProjectionStopCallback(), mHandler);
+
             }
         }
     }
@@ -160,16 +176,13 @@ public class ScreenCaptureService extends Service {
         mHeight = Resources.getSystem().getDisplayMetrics().heightPixels;
 
         // start capture reader
-        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 2);
+        mImageReader = ImageReader.newInstance(mWidth, mHeight, PixelFormat.RGBA_8888, 2); // contains the surface on we render
+
+        // initialize our virtual display
+
         mVirtualDisplay = mMediaProjection.createVirtualDisplay(SCREENCAP_NAME, mWidth, mHeight,
                 mDensity, getVirtualDisplayFlags(), mImageReader.getSurface(), null, mHandler);
         mImageReader.setOnImageAvailableListener(new ImageAvailableListener(), mHandler);
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind");
-        return null;
     }
 
     @Override
@@ -181,7 +194,8 @@ public class ScreenCaptureService extends Service {
         File externalFilesDir = getExternalFilesDir(null);
         if (externalFilesDir != null) {
             mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-//            mStoreDir = String.valueOf(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS));
+
+//            store file
             File storeDirectory = new File(mStoreDir);
             if (!storeDirectory.exists()) {
                 boolean success = storeDirectory.mkdirs();
@@ -199,8 +213,28 @@ public class ScreenCaptureService extends Service {
         new Thread() {
             @Override
             public void run() {
+                try {
+                    Log.e(TAG, "SLEEP");
+                    sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 Looper.prepare();
+
+                /*
+                 *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
+                 *   Each Handler instance is associated with a single thread and that thread's message queue.
+                 *   When you create a new Handler it is bound to a Looper.
+                 *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
+                 *
+                 * */
                 mHandler = new Handler();
+
+                /*
+                 * Loop is a Class used to run a message loop for a thread.
+                 * Threads by default do not have a message loop associated with them; to create one, call prepare()
+                 * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
+                 * */
                 Looper.loop();
             }
         }.start();
@@ -236,7 +270,7 @@ public class ScreenCaptureService extends Service {
 
             FileOutputStream fos = null;
             Bitmap bitmap = null;
-            try (Image image = mImageReader.acquireLatestImage()) {
+            try (Image image = mImageReader.acquireLatestImage()) { // acquire last image
                 if (image != null) {
                     Image.Plane[] planes = image.getPlanes();
                     ByteBuffer buffer = planes[0].getBuffer();
@@ -253,7 +287,7 @@ public class ScreenCaptureService extends Service {
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
                     IMAGES_PRODUCED++;
-//                    Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
+                    Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
                 }
 
             } catch (Exception e) {

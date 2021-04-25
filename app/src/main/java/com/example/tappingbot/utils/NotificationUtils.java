@@ -1,4 +1,4 @@
-package com.example.tappingbot.ui;
+package com.example.tappingbot.utils;
 
 
 import android.annotation.TargetApi;
@@ -18,8 +18,8 @@ import com.example.tappingbot.R;
 public class NotificationUtils {
 
     public static final int NOTIFICATION_ID = 1337;
-    private static final String NOTIFICATION_CHANNEL_ID = "com.mtsahakis.mediaprojectiondemo.app";
-    private static final String NOTIFICATION_CHANNEL_NAME = "com.mtsahakis.mediaprojectiondemo.app";
+    private static final String NOTIFICATION_CHANNEL_ID = "com.example.tappingbot.app";
+    private static final String NOTIFICATION_CHANNEL_NAME = "com.example.tappingbot.app";
 
     public static Pair<Integer, Notification> getNotification(@NonNull Context context) {
         createNotificationChannel(context);
