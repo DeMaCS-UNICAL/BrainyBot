@@ -10,6 +10,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.tappingbot.model.ImageSender;
 import com.example.tappingbot.model.ScreenCaptureService;
 
 public class MainActivity extends AppCompatActivity {
@@ -40,6 +41,8 @@ public class MainActivity extends AppCompatActivity {
 //                }
             }
         });
+
+        ImageSender.getInstance().setContext(MainActivity.this);
     }
 
 //    private boolean isStoragePermissionGranted() {

@@ -282,9 +282,12 @@ public class ScreenCaptureService extends Service {
                     bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(buffer);
 
+                    ImageSender.getInstance().uploadImage(bitmap, Integer.toString(IMAGES_PRODUCED));
+
                     // write bitmap to a file
                     fos = new FileOutputStream(mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png");
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+
 
                     IMAGES_PRODUCED++;
                     Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
