@@ -27,7 +27,6 @@ import androidx.core.util.Pair;
 
 import com.example.tappingbot.utils.NotificationUtils;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -59,7 +58,7 @@ public class ScreenCaptureService extends Service {
     private static int IMAGES_PRODUCED;
 
     private MediaProjection mMediaProjection;
-    private String mStoreDir;
+//    private String mStoreDir;
     private ImageReader mImageReader;
     private Handler mHandler;
     private Display mDisplay;
@@ -191,51 +190,55 @@ public class ScreenCaptureService extends Service {
         super.onCreate();
 
         // create store dir
-        File externalFilesDir = getExternalFilesDir(null);
-        if (externalFilesDir != null) {
-            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-
-//            store file
-            File storeDirectory = new File(mStoreDir);
-            if (!storeDirectory.exists()) {
-                boolean success = storeDirectory.mkdirs();
-                if (!success) {
-                    Log.e(TAG, "failed to create file storage directory.");
-                    stopSelf();
-                }
-            }
-        } else {
-            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
-            stopSelf();
-        }
+//        File externalFilesDir = getExternalFilesDir(null);
+//        if (externalFilesDir != null) {
+//            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
+//
+////            store file
+//            File storeDirectory = new File(mStoreDir);
+//            if (!storeDirectory.exists()) {
+//                boolean success = storeDirectory.mkdirs();
+//                if (!success) {
+//                    Log.e(TAG, "failed to create file storage directory.");
+//                    stopSelf();
+//                }
+//            }
+//        } else {
+//            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
+//            stopSelf();
+//        }
 
         // start capture handling thread
         new Thread() {
             @Override
             public void run() {
+
+
+//                it will make a screen only when the surface change state!
                 try {
-                    Log.e(TAG, "SLEEP");
-                    sleep(2000);
-                } catch (InterruptedException e) {
+                    Looper.prepare();
+
+                    /*
+                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
+                     *   Each Handler instance is associated with a single thread and that thread's message queue.
+                     *   When you create a new Handler it is bound to a Looper.
+                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
+                     *
+                     * */
+                    mHandler = new Handler();
+
+                    /*
+                     * Loop is a Class used to run a message loop for a thread.
+                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
+                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
+                     * */
+                    Looper.loop();
+                } catch (Exception e) {
+
+                    Log.e(TAG, "ERROR IN LOOPER");
                     e.printStackTrace();
                 }
-                Looper.prepare();
 
-                /*
-                 *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
-                 *   Each Handler instance is associated with a single thread and that thread's message queue.
-                 *   When you create a new Handler it is bound to a Looper.
-                 *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
-                 *
-                 * */
-                mHandler = new Handler();
-
-                /*
-                 * Loop is a Class used to run a message loop for a thread.
-                 * Threads by default do not have a message loop associated with them; to create one, call prepare()
-                 * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
-                 * */
-                Looper.loop();
             }
         }.start();
     }
@@ -282,11 +285,13 @@ public class ScreenCaptureService extends Service {
                     bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(buffer);
 
-                    ImageSender.getInstance().uploadImage(bitmap, Integer.toString(IMAGES_PRODUCED));
+                    Screenshot screenshot = new Screenshot(bitmap, Integer.toString(IMAGES_PRODUCED));
+                    ImageSender.getInstance().uploadImage(screenshot);
+//                    ImageSender.getInstance().uploadImage(bitmap, Integer.toString(IMAGES_PRODUCED));
 
                     // write bitmap to a file
-                    fos = new FileOutputStream(mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png");
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+//                    fos = new FileOutputStream(mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png");
+//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
 
                     IMAGES_PRODUCED++;

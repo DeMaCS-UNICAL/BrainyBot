@@ -12,17 +12,32 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.tappingbot.model.ImageSender;
 import com.example.tappingbot.model.ScreenCaptureService;
+import com.example.tappingbot.utils.RWLock;
+import com.example.tappingbot.utils.Settings;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = MainActivity.class.getCanonicalName();
     private boolean isStart = true;
-    private static final int REQUEST_CODE = 100;
-
+    private ExecutorService pool;
+    private RWLock<Boolean> rwLock;
+    private boolean stop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+//        init Read Write Lock
+        stop = false;
+        rwLock = new RWLock<Boolean>(stop);
+
+//        init thread image sender
+        pool = Executors.newFixedThreadPool(Settings.POOL_SIZE);
+        ImageSender.getInstance().setContext(MainActivity.this);
+        ImageSender.getInstance().setLock(rwLock);
 
         // button start and stop
         Button startAndStopButton = findViewById(R.id.start_button);
@@ -30,19 +45,35 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 //                if (isStoragePermissionGranted()) {
-                    if (isStart) {
-                        startProjection();
-                        startAndStopButton.setText(R.string.stop);
-                    } else {
+                if (isStart) {
+
+                    try {
+                        rwLock.writeData(true);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    pool.execute(ImageSender.getInstance());
+                    startProjection();
+                    startAndStopButton.setText(R.string.stop);
+                } else {
+
+                    try {
+                        rwLock.takeWriteLock();
+                        rwLock.setData(false);
                         stopProjection();
                         startAndStopButton.setText(R.string.start);
+
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } finally {
+                        rwLock.leaveWriteLock();
                     }
+                }
                 isStart = !isStart;
 //                }
             }
         });
-
-        ImageSender.getInstance().setContext(MainActivity.this);
     }
 
 //    private boolean isStoragePermissionGranted() {
@@ -69,7 +100,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) { // result of startActivityForResult
-        if (requestCode == REQUEST_CODE) {
+        if (requestCode == Settings.REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
                 startService(ScreenCaptureService.getStartIntent(this, resultCode, data)); // start capture
             }
@@ -93,7 +124,7 @@ public class MainActivity extends AppCompatActivity {
 
         MediaProjectionManager mProjectionManager =
                 (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        startActivityForResult(mProjectionManager.createScreenCaptureIntent(), REQUEST_CODE);
+        startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
     }
 
     private void stopProjection() {
