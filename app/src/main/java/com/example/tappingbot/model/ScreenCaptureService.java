@@ -23,12 +23,13 @@ import android.view.Display;
 import android.view.OrientationEventListener;
 import android.view.WindowManager;
 
+import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 
 import com.example.tappingbot.utils.NotificationUtils;
 
+import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -58,7 +59,7 @@ public class ScreenCaptureService extends Service {
     private static int IMAGES_PRODUCED;
 
     private MediaProjection mMediaProjection;
-//    private String mStoreDir;
+    private String mStoreDir;
     private ImageReader mImageReader;
     private Handler mHandler;
     private Display mDisplay;
@@ -69,14 +70,14 @@ public class ScreenCaptureService extends Service {
     private int mRotation;
     private OrientationChangeCallback mOrientationChangeCallback;
 
-    private static boolean isStartCommand(Intent intent) {
+    private static boolean isStartCommand(@NonNull Intent intent) {
         Log.d(TAG, "isStartCommand");
 
         return intent.hasExtra(RESULT_CODE) && intent.hasExtra(DATA)
                 && intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), START);
     }
 
-    private static boolean isStopCommand(Intent intent) {
+    private static boolean isStopCommand(@NonNull Intent intent) {
         Log.d(TAG, "isStopCommand");
 
         return intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), STOP);
@@ -95,6 +96,7 @@ public class ScreenCaptureService extends Service {
 
 
     //    first call
+    @NonNull
     public static Intent getStartIntent(Context context, int resultCode, Intent data) {
         Log.d(TAG, "getStartIntent");
 
@@ -105,6 +107,7 @@ public class ScreenCaptureService extends Service {
         return intent;
     }
 
+    @NonNull
     public static Intent getStopIntent(Context context) {
         Log.d(TAG, "getStopIntent");
         Intent intent = new Intent(context, ScreenCaptureService.class);
@@ -190,23 +193,23 @@ public class ScreenCaptureService extends Service {
         super.onCreate();
 
         // create store dir
-//        File externalFilesDir = getExternalFilesDir(null);
-//        if (externalFilesDir != null) {
-//            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-//
-////            store file
-//            File storeDirectory = new File(mStoreDir);
-//            if (!storeDirectory.exists()) {
-//                boolean success = storeDirectory.mkdirs();
-//                if (!success) {
-//                    Log.e(TAG, "failed to create file storage directory.");
-//                    stopSelf();
-//                }
-//            }
-//        } else {
-//            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
-//            stopSelf();
-//        }
+        File externalFilesDir = getExternalFilesDir(null);
+        if (externalFilesDir != null) {
+            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
+
+//            store file
+            File storeDirectory = new File(mStoreDir);
+            if (!storeDirectory.exists()) {
+                boolean success = storeDirectory.mkdirs();
+                if (!success) {
+                    Log.e(TAG, "failed to create file storage directory.");
+                    stopSelf();
+                }
+            }
+        } else {
+            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
+            stopSelf();
+        }
 
         // start capture handling thread
         new Thread() {
@@ -273,6 +276,7 @@ public class ScreenCaptureService extends Service {
 
             FileOutputStream fos = null;
             Bitmap bitmap = null;
+            String name = null;
             try (Image image = mImageReader.acquireLatestImage()) { // acquire last image
                 if (image != null) {
                     Image.Plane[] planes = image.getPlanes();
@@ -287,10 +291,11 @@ public class ScreenCaptureService extends Service {
 
                     Screenshot screenshot = new Screenshot(bitmap, Integer.toString(IMAGES_PRODUCED));
                     ImageSender.getInstance().uploadImage(screenshot);
-//                    ImageSender.getInstance().uploadImage(bitmap, Integer.toString(IMAGES_PRODUCED));
 
+
+//                    name = mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png";
                     // write bitmap to a file
-//                    fos = new FileOutputStream(mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png");
+//                    fos = new FileOutputStream(name);
 //                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
 
@@ -300,20 +305,22 @@ public class ScreenCaptureService extends Service {
 
             } catch (Exception e) {
                 e.printStackTrace();
-            } finally {
-                if (fos != null) {
-                    try {
-                        fos.close();
-                    } catch (IOException ioe) {
-                        ioe.printStackTrace();
-                    }
-                }
-
-                if (bitmap != null) {
-                    bitmap.recycle();
-                }
-
             }
+//            finally {
+//                if (fos != null) {
+//                    try {
+//                        ImageSender.getInstance().uploadImage(Uri.parse(name));
+//                        fos.close();
+//                    } catch (IOException ioe) {
+//                        ioe.printStackTrace();
+//                    }
+//                }
+
+//                if (bitmap != null) {
+//                    bitmap.recycle();
+//                }
+
+//            }
         }
     }
 
