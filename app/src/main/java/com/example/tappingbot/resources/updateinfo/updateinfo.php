@@ -8,7 +8,7 @@ define('DB_NAME', 'dbupload');
 
 //We will upload files to this folder
 //So one thing don't forget, also create a folder named uploads inside your project folder i.e. MyApi folder
-define('UPLOAD_PATH', 'uploads/');
+define('UPLOAD_PATH', 'directory/uploads/');
 
 //connecting to database
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME) or die('Unable to connect');

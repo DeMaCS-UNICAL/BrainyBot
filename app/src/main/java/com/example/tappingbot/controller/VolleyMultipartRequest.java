@@ -1,6 +1,8 @@
 package com.example.tappingbot.controller;
 
 
+import androidx.annotation.NonNull;
+
 import com.android.volley.AuthFailureError;
 import com.android.volley.NetworkResponse;
 import com.android.volley.ParseError;
@@ -112,7 +114,7 @@ public class VolleyMultipartRequest extends Request<NetworkResponse> {
      * @param encoding         encode the inputs, default UTF-8
      * @throws IOException
      */
-    private void textParse(DataOutputStream dataOutputStream, Map<String, String> params, String encoding) throws IOException {
+    private void textParse(DataOutputStream dataOutputStream, @NonNull Map<String, String> params, String encoding) throws IOException {
         try {
             for (Map.Entry<String, String> entry : params.entrySet()) {
                 buildTextPart(dataOutputStream, entry.getKey(), entry.getValue());
@@ -129,7 +131,7 @@ public class VolleyMultipartRequest extends Request<NetworkResponse> {
      * @param data             loop through data
      * @throws IOException
      */
-    private void dataParse(DataOutputStream dataOutputStream, Map<String, DataPart> data) throws IOException {
+    private void dataParse(DataOutputStream dataOutputStream, @NonNull Map<String, DataPart> data) throws IOException {
         for (Map.Entry<String, DataPart> entry : data.entrySet()) {
             buildDataPart(dataOutputStream, entry.getValue(), entry.getKey());
         }
@@ -143,7 +145,7 @@ public class VolleyMultipartRequest extends Request<NetworkResponse> {
      * @param parameterValue   value of input
      * @throws IOException
      */
-    private void buildTextPart(DataOutputStream dataOutputStream, String parameterName, String parameterValue) throws IOException {
+    private void buildTextPart(@NonNull DataOutputStream dataOutputStream, String parameterName, String parameterValue) throws IOException {
         dataOutputStream.writeBytes(twoHyphens + boundary + lineEnd);
         dataOutputStream.writeBytes("Content-Disposition: form-data; name=\"" + parameterName + "\"" + lineEnd);
         dataOutputStream.writeBytes(lineEnd);
@@ -158,7 +160,7 @@ public class VolleyMultipartRequest extends Request<NetworkResponse> {
      * @param inputName        name of data input
      * @throws IOException
      */
-    private void buildDataPart(DataOutputStream dataOutputStream, DataPart dataFile, String inputName) throws IOException {
+    private void buildDataPart(@NonNull DataOutputStream dataOutputStream, @NonNull DataPart dataFile, String inputName) throws IOException {
         dataOutputStream.writeBytes(twoHyphens + boundary + lineEnd);
         dataOutputStream.writeBytes("Content-Disposition: form-data; name=\"" +
                 inputName + "\"; filename=\"" + dataFile.getFileName() + "\"" + lineEnd);

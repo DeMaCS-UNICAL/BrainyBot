@@ -1,8 +1,9 @@
 package com.example.tappingbot.model;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.net.Uri;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -27,15 +28,15 @@ import java.util.Map;
 
 public class ImageSender extends Thread {
     private static final String TAG = "ImageSender";
+    @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
     private Context context;
     private final BlockingQueue blockingQueue;
-    private RWLock lock;
+    private RWLock<Boolean> lock;
 
     private ImageSender() {
 //        init blockingQueue
         blockingQueue = new BlockingQueue<Screenshot>(Settings.BLOCKING_QUEUE_SIZE);
-        this.context = context;
     }
 
     public static ImageSender getInstance() {
@@ -45,11 +46,8 @@ public class ImageSender extends Thread {
         return instance;
     }
 
-    public void uploadImage(Uri uri) throws InterruptedException {
-        blockingQueue.put(uri);
-    }
-
-    public void uploadImage(Screenshot screenshot) throws InterruptedException {
+    public void uploadImage(@NonNull Screenshot screenshot) throws InterruptedException {
+        Log.d(TAG, "uploadImage " + screenshot.toString());
         blockingQueue.put(screenshot);
     }
 
@@ -57,21 +55,14 @@ public class ImageSender extends Thread {
         this.context = context;
     }
 
-    public void setLock(RWLock lock) {
+    public void setLock(RWLock<Boolean> lock) {
         this.lock = lock;
     }
 
-    private void insert(Screenshot screenshot) {
-
-//        try {
-        //getting bitmap object from uri
-//            Bitmap bitmap = MediaStore.Images.Media.getBitmap(context.getContentResolver(), imageUri);
-
+    private void insert(@NonNull Screenshot screenshot) {
         //calling the method uploadBitmap to upload image
+        Log.d(TAG, "insert " + screenshot.toString());
         uploadBitmap(screenshot);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
     }
 
     /*
@@ -87,6 +78,8 @@ public class ImageSender extends Thread {
     private byte[] getFileDataFromDrawable(@NonNull Bitmap bitmap) {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 80, byteArrayOutputStream);
+
+        bitmap.recycle();
         return byteArrayOutputStream.toByteArray();
     }
 
@@ -101,6 +94,7 @@ public class ImageSender extends Thread {
                         try {
                             JSONObject obj = new JSONObject(new String(response.data));
                             Toast.makeText(context.getApplicationContext(), obj.getString("message"), Toast.LENGTH_SHORT).show();
+
                         } catch (JSONException e) {
                             e.printStackTrace();
                         }
@@ -134,7 +128,6 @@ public class ImageSender extends Thread {
             @Override
             protected Map<String, DataPart> getByteData() {
                 Map<String, DataPart> params = new HashMap<>();
-//                long imagename = System.currentTimeMillis();
                 params.put("pic", new DataPart(screenshot.getName() + ".png", getFileDataFromDrawable(screenshot.getBitmap())));
                 return params;
             }
@@ -148,16 +141,32 @@ public class ImageSender extends Thread {
     @Override
     public void run() {
 
+        try {
+            MessageHandler.connect(Settings.HOST, Settings.PORT);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         while (true) {
             try {
-                if (!(boolean) lock.readData()) break;
+                if (!lock.readData()) break;
 
-                sleep((long) 0.2);
-//                Uri screenshot = (Uri) blockingQueue.take();
-                Screenshot screenshot = (Screenshot) blockingQueue.take();
-                insert(screenshot);
-            } catch (InterruptedException e) {
+                Thread.sleep(200);
+
+                Log.d(TAG, "Wait to read message from server");
+                if (MessageHandler.read().equals(MessageHandler.TAKE_SCREENSHOT_NOW)) {
+                    Object o = blockingQueue.take();
+                    if (o instanceof Screenshot) {
+                        Screenshot screenshot = (Screenshot) o;
+                        insert(screenshot);
+                    }
+                } else {
+                    Log.d(TAG, "Problem MessageHandler.read()");
+                }
+
+            } catch (Exception e) {
                 e.printStackTrace();
+                break;
             }
         }
     }

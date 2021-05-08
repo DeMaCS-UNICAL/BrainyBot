@@ -219,7 +219,9 @@ public class ScreenCaptureService extends Service {
 
 //                it will make a screen only when the surface change state!
                 try {
-                    Looper.prepare();
+                    Looper.prepare(); // infinite loop
+
+                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
 
                     /*
                      *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
@@ -268,7 +270,8 @@ public class ScreenCaptureService extends Service {
         return START_NOT_STICKY;
     }
 
-    private class ImageAvailableListener implements ImageReader.OnImageAvailableListener {
+
+    private class ImageAvailableListener implements ImageReader.OnImageAvailableListener { // management by an handler
 
         @Override
         public void onImageAvailable(ImageReader reader) {
@@ -315,7 +318,7 @@ public class ScreenCaptureService extends Service {
 //                        ioe.printStackTrace();
 //                    }
 //                }
-
+//
 //                if (bitmap != null) {
 //                    bitmap.recycle();
 //                }
