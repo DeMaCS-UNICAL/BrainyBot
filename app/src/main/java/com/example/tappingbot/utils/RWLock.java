@@ -14,6 +14,9 @@ public class RWLock<T> {
         this.data = data;
     }
 
+    public RWLock() {
+    }
+
     public void takeReadLock() throws InterruptedException {
         readLock.lock();
     }

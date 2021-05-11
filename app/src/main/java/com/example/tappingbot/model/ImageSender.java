@@ -7,9 +7,7 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.example.tappingbot.utils.BlockingQueue;
 import com.example.tappingbot.utils.RWLock;
-import com.example.tappingbot.utils.Settings;
 import com.koushikdutta.async.http.WebSocket;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
 import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
@@ -25,17 +23,15 @@ public class ImageSender extends Thread {
     @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
     private Context context;
-    private final BlockingQueue blockingQueue;
     private RWLock<Boolean> lock;
+    private final RWLock<Screenshot> lockImage;
+
     private static final String REQUEST_IMAGE = "Request image";
 //    private  ArraySet<WebSocket> _sockets;
 
     private ImageSender() {
-//        init blockingQueue
-        blockingQueue = new BlockingQueue<Screenshot>(Settings.BLOCKING_QUEUE_SIZE);
 
-//        init arrayset
-//        _sockets = new ArraySet<>();
+        lockImage = new RWLock<>();
     }
 
     public static ImageSender getInstance() {
@@ -47,7 +43,7 @@ public class ImageSender extends Thread {
 
     public void uploadImage(@NonNull Screenshot screenshot) throws InterruptedException {
         Log.d(TAG, "uploadImage " + screenshot.toString());
-        blockingQueue.put(screenshot);
+        lockImage.writeData(screenshot);
     }
 
     public void setContext(Context context) {
