@@ -293,7 +293,7 @@ public class ScreenCaptureService extends Service {
                     bitmap.copyPixelsFromBuffer(buffer);
 
                     Screenshot screenshot = new Screenshot(bitmap, Integer.toString(IMAGES_PRODUCED));
-                    ImageSender.getInstance().uploadImage(screenshot);
+//                    ImageSender.getInstance().uploadImage(screenshot);
 
 
 //                    name = mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png";
@@ -319,9 +319,6 @@ public class ScreenCaptureService extends Service {
 //                    }
 //                }
 //
-//                if (bitmap != null) {
-//                    bitmap.recycle();
-//                }
 
 //            }
         }

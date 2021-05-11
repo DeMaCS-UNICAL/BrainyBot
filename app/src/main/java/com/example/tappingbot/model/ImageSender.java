@@ -4,27 +4,21 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
-import com.android.volley.AuthFailureError;
-import com.android.volley.NetworkResponse;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.Volley;
-import com.example.tappingbot.controller.VolleyMultipartRequest;
 import com.example.tappingbot.utils.BlockingQueue;
 import com.example.tappingbot.utils.RWLock;
 import com.example.tappingbot.utils.Settings;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+import com.koushikdutta.async.http.WebSocket;
+import com.koushikdutta.async.http.server.AsyncHttpServer;
+import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
+import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
+import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
 import java.io.ByteArrayOutputStream;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ImageSender extends Thread {
     private static final String TAG = "ImageSender";
@@ -33,10 +27,15 @@ public class ImageSender extends Thread {
     private Context context;
     private final BlockingQueue blockingQueue;
     private RWLock<Boolean> lock;
+    private static final String REQUEST_IMAGE = "Request image";
+//    private  ArraySet<WebSocket> _sockets;
 
     private ImageSender() {
 //        init blockingQueue
         blockingQueue = new BlockingQueue<Screenshot>(Settings.BLOCKING_QUEUE_SIZE);
+
+//        init arrayset
+//        _sockets = new ArraySet<>();
     }
 
     public static ImageSender getInstance() {
@@ -62,7 +61,7 @@ public class ImageSender extends Thread {
     private void insert(@NonNull Screenshot screenshot) {
         //calling the method uploadBitmap to upload image
         Log.d(TAG, "insert " + screenshot.toString());
-        uploadBitmap(screenshot);
+//        uploadBitmap(screenshot);
     }
 
     /*
@@ -83,91 +82,83 @@ public class ImageSender extends Thread {
         return byteArrayOutputStream.toByteArray();
     }
 
-    private void uploadBitmap(final Screenshot screenshot) {
-
-
-        //our custom volley request
-        VolleyMultipartRequest volleyMultipartRequest = new VolleyMultipartRequest(Request.Method.POST, Settings.UPLOAD_URL,
-                new Response.Listener<NetworkResponse>() {
-                    @Override
-                    public void onResponse(NetworkResponse response) {
-                        try {
-                            JSONObject obj = new JSONObject(new String(response.data));
-                            Toast.makeText(context.getApplicationContext(), obj.getString("message"), Toast.LENGTH_SHORT).show();
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(context.getApplicationContext(), error.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
-                }) {
-
-            /*
-             * If you want to add more parameters with the image
-             * you can do it here
-             * here we have only one parameter with the image
-             * which is tags
-             * */
-            @NonNull
-            @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String, String> params = new HashMap<>();
-                params.put("tags", "tags");
-                return params;
-            }
-
-            /*
-             * Here we are passing image by renaming it with a unique name
-             * */
-            @NonNull
-            @Override
-            protected Map<String, DataPart> getByteData() {
-                Map<String, DataPart> params = new HashMap<>();
-                params.put("pic", new DataPart(screenshot.getName() + ".png", getFileDataFromDrawable(screenshot.getBitmap())));
-                return params;
-            }
-        };
-
-        //adding the request to volley
-        Volley.newRequestQueue(context).add(volleyMultipartRequest);
-    }
+//    private void uploadBitmap(final Screenshot screenshot) {
+//
+//
+//        //our custom volley request
+//        VolleyMultipartRequest volleyMultipartRequest = new VolleyMultipartRequest(Request.Method.POST, "localhost",
+//                new Response.Listener<NetworkResponse>() {
+//                    @Override
+//                    public void onResponse(NetworkResponse response) {
+//                        try {
+//                            JSONObject obj = new JSONObject(new String(response.data));
+//                            Toast.makeText(context.getApplicationContext(), obj.getString("message"), Toast.LENGTH_SHORT).show();
+//
+//                        } catch (JSONException e) {
+//                            e.printStackTrace();
+//                        }
+//                    }
+//                },
+//                new Response.ErrorListener() {
+//                    @Override
+//                    public void onErrorResponse(VolleyError error) {
+//                        Toast.makeText(context.getApplicationContext(), error.getMessage(), Toast.LENGTH_SHORT).show();
+//                    }
+//                }) {
+//
+//            /*
+//             * If you want to add more parameters with the image
+//             * you can do it here
+//             * here we have only one parameter with the image
+//             * which is tags
+//             * */
+//            @NonNull
+//            @Override
+//            protected Map<String, String> getParams() throws AuthFailureError {
+//                Map<String, String> params = new HashMap<>();
+//                params.put("tags", "tags");
+//                return params;
+//            }
+//
+//            /*
+//             * Here we are passing image by renaming it with a unique name
+//             * */
+//            @NonNull
+//            @Override
+//            protected Map<String, DataPart> getByteData() {
+//                Map<String, DataPart> params = new HashMap<>();
+//                params.put("pic", new DataPart(screenshot.getName() + ".png", getFileDataFromDrawable(screenshot.getBitmap())));
+//                return params;
+//            }
+//        };
+//
+//        //adding the request to volley
+//        Volley.newRequestQueue(context).add(volleyMultipartRequest);
+//    }
 
 
     @Override
     public void run() {
+        Log.e(TAG, "Start Server");
 
-        try {
-            MessageHandler.connect(Settings.HOST, Settings.PORT);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        AsyncHttpServer server = new AsyncHttpServer();
 
-        while (true) {
-            try {
-                if (!lock.readData()) break;
+        List<WebSocket> _sockets = new ArrayList<WebSocket>();
 
-                Thread.sleep(200);
+        server.get("/", new HttpServerRequestCallback() {
+            @Override
+            public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
-                Log.d(TAG, "Wait to read message from server");
-                if (MessageHandler.read().equals(MessageHandler.TAKE_SCREENSHOT_NOW)) {
-                    Object o = blockingQueue.take();
-                    if (o instanceof Screenshot) {
-                        Screenshot screenshot = (Screenshot) o;
-                        insert(screenshot);
-                    }
-                } else {
-                    Log.d(TAG, "Problem MessageHandler.read()");
-                }
+                if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
+                    response.send("ok");
+                } else
+                    response.send("not ok");
 
-            } catch (Exception e) {
-                e.printStackTrace();
-                break;
             }
-        }
+        });
+
+// listen on port 5000
+        server.listen(5000);
+// browsing http://localhost:5000 will return Hello!!!
     }
 }
