@@ -13,4 +13,5 @@ public class Settings {
 
     public static final String UPLOAD_URL = ROOT_URL + "uploadpic";
     public static final String GET_PICS_URL = ROOT_URL + "getpics";
+    public static int localHostServerPort = 5000;
 }

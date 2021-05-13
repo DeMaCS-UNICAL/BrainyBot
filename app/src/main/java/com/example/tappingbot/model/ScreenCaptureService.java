@@ -26,6 +26,7 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 
+import com.example.tappingbot.controller.HandlerProjection;
 import com.example.tappingbot.utils.NotificationUtils;
 
 import java.io.File;
@@ -238,6 +239,7 @@ public class ScreenCaptureService extends Service {
                      * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
                      * */
                     Looper.loop();
+
                 } catch (Exception e) {
 
                     Log.e(TAG, "ERROR IN LOOPER");
@@ -276,6 +278,12 @@ public class ScreenCaptureService extends Service {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Log.d(TAG, "onImageAvailable");
+            try {
+                if (HandlerProjection.getInstance().isStarted())
+                    return;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             FileOutputStream fos = null;
             Bitmap bitmap = null;
@@ -294,7 +302,10 @@ public class ScreenCaptureService extends Service {
 
                     Screenshot screenshot = new Screenshot(bitmap, Integer.toString(IMAGES_PRODUCED));
                     ImageSender.getInstance().uploadImage(screenshot);
+                    HandlerProjection.getInstance().setStarted(true);
 
+
+                    Log.d(TAG, "screenshot name: " + screenshot);
 
 //                    name = mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png";
                     // write bitmap to a file
@@ -304,6 +315,11 @@ public class ScreenCaptureService extends Service {
 
                     IMAGES_PRODUCED++;
                     Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
+
+
+//                  stop projection
+                    HandlerProjection.getInstance().stopProjection();
+                    Looper.myLooper().quitSafely();
                 }
 
             } catch (Exception e) {
