@@ -1,9 +1,12 @@
 package com.example.tappingbot.utils;
 
+import android.util.Log;
+
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class RWLock<T> {
+    private static final String TAG = "LOCK";
     private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private final Lock readLock = readWriteLock.readLock();
     private final Lock writeLock = readWriteLock.writeLock();
@@ -56,6 +59,8 @@ public class RWLock<T> {
     }
 
     public T getData() {
+
+        Log.e(TAG, "return -> " + data.toString());
         return data;
     }
 

@@ -57,7 +57,7 @@ public class ScreenCaptureService extends Service {
     private static final String STOP = "STOP";
     private static final String SCREENCAP_NAME = "screencap";
 
-    private static int IMAGES_PRODUCED;
+//    private static int IMAGES_PRODUCED;
 
     private MediaProjection mMediaProjection;
     private String mStoreDir;
@@ -300,7 +300,7 @@ public class ScreenCaptureService extends Service {
                     bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(buffer);
 
-                    Screenshot screenshot = new Screenshot(bitmap, Integer.toString(IMAGES_PRODUCED));
+                    Screenshot screenshot = new Screenshot(bitmap, Integer.toString(0));
                     ImageSender.getInstance().uploadImage(screenshot);
                     HandlerProjection.getInstance().setStarted(true);
 
@@ -313,13 +313,13 @@ public class ScreenCaptureService extends Service {
 //                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 
 
-                    IMAGES_PRODUCED++;
-                    Log.e(TAG, "captured image: " + IMAGES_PRODUCED);
+//                    IMAGES_PRODUCED++;
+                    Log.e(TAG, "captured image");
 
 
 //                  stop projection
                     HandlerProjection.getInstance().stopProjection();
-                    Looper.myLooper().quitSafely();
+//                    Looper.myLooper().quitSafely();
                 }
 
             } catch (Exception e) {
