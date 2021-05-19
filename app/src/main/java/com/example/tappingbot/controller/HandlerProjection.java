@@ -59,7 +59,6 @@ public class HandlerProjection {
                 (MediaProjectionManager) activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         activity.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
         Log.d(TAG, "startProjection: startActivityForResult");
-
     }
 
     public void stopProjection() {

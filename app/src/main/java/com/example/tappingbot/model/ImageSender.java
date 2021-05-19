@@ -59,13 +59,19 @@ public class ImageSender extends Thread {
      * 100 means best quality
      * */
     @NonNull
-    private String converterBase64(@NonNull Bitmap bitmap) {
+    private byte[] convertToArray(@NonNull Bitmap bitmap) {
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream);
 
         bitmap.recycle();
-        return Base64.encodeToString(outputStream.toByteArray(), Base64.DEFAULT);
+        return outputStream.toByteArray();
+    }
+
+
+    @NonNull
+    private String converterBase64(@NonNull Bitmap bitmap) {
+        return Base64.encodeToString(convertToArray(bitmap), Base64.DEFAULT);
     }
 
     @Override
@@ -79,15 +85,14 @@ public class ImageSender extends Thread {
 
                 if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
                     try {
-                        response.send("I will send you an image");
                         Log.d(TAG, "onRequest: request");
                         HandlerProjection.getInstance().startProjection();
                         Log.d(TAG, "onRequest: starProjection");
-
                         Screenshot screenshot = lockImage.take();
                         Log.e(TAG, "take data -> " + screenshot.toString());
                         String base46Image = converterBase64(screenshot.getBitmap());
                         response.send("img/png", base46Image);
+//                        response.send("img/png", convertToArray(screenshot.getBitmap()));
                         Log.e(TAG, "send data");
 
                     } catch (Exception e) {
