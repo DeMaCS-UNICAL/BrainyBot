@@ -4,11 +4,13 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.media.projection.MediaProjectionManager;
+import android.util.Log;
 
 import com.example.tappingbot.model.ScreenCaptureService;
 import com.example.tappingbot.utils.Settings;
 
 public class HandlerProjection {
+    private static final String TAG = "HandlerProjection";
     @SuppressLint("StaticFieldLeak")
     private static HandlerProjection instance;
     @SuppressLint("StaticFieldLeak")
@@ -34,8 +36,12 @@ public class HandlerProjection {
 
     /****************************************** UI Widget Callbacks *******************************/
     public void startProjection() {
+
+        Log.d(TAG, "startProjection: isStarted -> " + isStarted);
         if (isStarted)
             isStarted = false;
+
+
 
 
         /*
@@ -52,9 +58,12 @@ public class HandlerProjection {
         MediaProjectionManager mProjectionManager =
                 (MediaProjectionManager) activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         activity.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
+        Log.d(TAG, "startProjection: startActivityForResult");
+
     }
 
     public void stopProjection() {
+        Log.d(TAG, "stopProjection: ");
         activity.startService(ScreenCaptureService.getStopIntent(activity));
     }
 

@@ -29,7 +29,6 @@ import androidx.core.util.Pair;
 import com.example.tappingbot.controller.HandlerProjection;
 import com.example.tappingbot.utils.NotificationUtils;
 
-import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Objects;
@@ -194,23 +193,23 @@ public class ScreenCaptureService extends Service {
         super.onCreate();
 
         // create store dir
-        File externalFilesDir = getExternalFilesDir(null);
-        if (externalFilesDir != null) {
-            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-
-//            store file
-            File storeDirectory = new File(mStoreDir);
-            if (!storeDirectory.exists()) {
-                boolean success = storeDirectory.mkdirs();
-                if (!success) {
-                    Log.e(TAG, "failed to create file storage directory.");
-                    stopSelf();
-                }
-            }
-        } else {
-            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
-            stopSelf();
-        }
+//        File externalFilesDir = getExternalFilesDir(null);
+//        if (externalFilesDir != null) {
+//            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
+//
+////            store file
+//            File storeDirectory = new File(mStoreDir);
+//            if (!storeDirectory.exists()) {
+//                boolean success = storeDirectory.mkdirs();
+//                if (!success) {
+//                    Log.e(TAG, "failed to create file storage directory.");
+//                    stopSelf();
+//                }
+//            }
+//        } else {
+//            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
+//            stopSelf();
+//        }
 
         // start capture handling thread
         new Thread() {

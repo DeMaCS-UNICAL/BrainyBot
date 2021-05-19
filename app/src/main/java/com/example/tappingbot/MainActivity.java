@@ -3,6 +3,7 @@ package com.example.tappingbot;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -15,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String TAG = MainActivity.class.getCanonicalName();
+    private static final String TAG = "MainActivity";
     private final boolean isStart = true;
     private ExecutorService pool;
 
@@ -25,7 +26,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
 //        init HandlerProjection
-        HandlerProjection.setActivity(MainActivity.this);
+        HandlerProjection.setActivity(this);
 
 //        init thread image sender
         pool = Executors.newFixedThreadPool(Settings.POOL_SIZE);
@@ -36,6 +37,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) { // result of startActivityForResult
+        Log.d(TAG, "onActivityResult");
         if (requestCode == Settings.REQUEST_CODE) {
             if (resultCode == Activity.RESULT_OK) {
                 startService(ScreenCaptureService.getStartIntent(this, resultCode, data)); // start capture

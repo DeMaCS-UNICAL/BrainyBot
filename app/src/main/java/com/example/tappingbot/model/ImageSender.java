@@ -78,9 +78,12 @@ public class ImageSender extends Thread {
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
                 if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
-//                    response.send("ok");
                     try {
+                        response.send("I will send you an image");
+                        Log.d(TAG, "onRequest: request");
                         HandlerProjection.getInstance().startProjection();
+                        Log.d(TAG, "onRequest: starProjection");
+
                         Screenshot screenshot = lockImage.take();
                         Log.e(TAG, "take data -> " + screenshot.toString());
                         String base46Image = converterBase64(screenshot.getBitmap());
@@ -90,11 +93,19 @@ public class ImageSender extends Thread {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
-                } else
+                } else {
+                    Log.d(TAG, "onRequest: Error");
                     response.send("ERROR");
+                }
             }
         });
 
+        Log.e(TAG, "listening in " + Settings.PORT);
+
         server.listen(Settings.PORT);
+
+
+//        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8001), 0);
+
     }
 }
