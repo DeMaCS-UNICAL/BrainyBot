@@ -2,12 +2,6 @@ package com.example.tappingbot.controller;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
-import android.media.projection.MediaProjectionManager;
-import android.util.Log;
-
-import com.example.tappingbot.model.ScreenCaptureService;
-import com.example.tappingbot.utils.Settings;
 
 public class HandlerProjection {
     private static final String TAG = "HandlerProjection";
@@ -31,31 +25,5 @@ public class HandlerProjection {
 
     public static void setActivity(Activity activity) {
         HandlerProjection.activity = activity;
-    }
-
-    /****************************************** UI Widget Callbacks *******************************/
-    public void startProjection() {
-
-        Log.d(TAG, "startProjection: first");
-        /*
-         *   - MediaProjection has a particular class: MediaProjectionManager
-         *   - MediaProjectionManager serves to capture screenshot but NOT to capture audio of device.
-         *   - MediaProjectionManager has 2 functions:
-         *       + createScreenCaptureIntent() -> can be passed at startActivityForResult to start capturing the screen.
-         *                                     -> The result of activity will be passed to getMediaProjection()
-         *
-         *       + getMediaProjection() -> Take as input an Intent ( results of createScreenCaptureIntent() )
-         *                               -> returns MediaProjection
-         * */
-
-        MediaProjectionManager mProjectionManager =
-                (MediaProjectionManager) activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
-        activity.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
-        Log.d(TAG, "startProjection: startActivityForResult");
-    }
-
-    public void stopProjection() {
-        Log.d(TAG, "stopProjection: ");
-        activity.startService(ScreenCaptureService.getStopIntent(activity));
     }
 }

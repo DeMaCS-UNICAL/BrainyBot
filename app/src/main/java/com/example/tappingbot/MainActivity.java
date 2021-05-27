@@ -1,7 +1,9 @@
 package com.example.tappingbot;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -25,13 +27,15 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        init HandlerProjection
+        //        init HandlerProjection
         HandlerProjection.setActivity(this);
 
-//        init thread image sender
+        startProjection();
+
+        //        init thread image sender
         pool = Executors.newFixedThreadPool(Settings.POOL_SIZE);
-        ImageSender.getInstance().setContext(MainActivity.this);
         pool.execute(ImageSender.getInstance());
+
 
     }
 
@@ -44,5 +48,33 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    /****************************************** UI Widget Callbacks *******************************/
+
+
+    public void stopProjection() {
+        Log.d(TAG, "stopProjection: ");
+        MainActivity.this.startService(ScreenCaptureService.getStopIntent(MainActivity.this));
+    }
+
+    public void startProjection() {
+
+        Log.d(TAG, "startProjection: first");
+        /*
+         *   - MediaProjection has a particular class: MediaProjectionManager
+         *   - MediaProjectionManager serves to capture screenshot but NOT to capture audio of device.
+         *   - MediaProjectionManager has 2 functions:
+         *       + createScreenCaptureIntent() -> can be passed at startActivityForResult to start capturing the screen.
+         *                                     -> The result of activity will be passed to getMediaProjection()
+         *
+         *       + getMediaProjection() -> Take as input an Intent ( results of createScreenCaptureIntent() )
+         *                               -> returns MediaProjection
+         * */
+
+        MediaProjectionManager mProjectionManager =
+                (MediaProjectionManager) MainActivity.this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+        MainActivity.this.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
+        Log.d(TAG, "startProjection: startActivityForResult");
     }
 }

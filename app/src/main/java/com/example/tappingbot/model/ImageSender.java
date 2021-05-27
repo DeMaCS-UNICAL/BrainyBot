@@ -1,14 +1,12 @@
 package com.example.tappingbot.model;
 
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.example.tappingbot.controller.HandlerProjection;
 import com.example.tappingbot.utils.BlockingLock;
 import com.example.tappingbot.utils.Settings;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
@@ -22,7 +20,6 @@ public class ImageSender extends Thread {
     private static final String TAG = "ImageSender";
     @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
-    private Context context;
     private final BlockingLock<Screenshot> lockImage;
     private static final String REQUEST_IMAGE = "requestimage";
 
@@ -38,16 +35,10 @@ public class ImageSender extends Thread {
         return instance;
     }
 
-
     public void uploadImage(@NonNull Screenshot screenshot) throws Exception {
         lockImage.put(screenshot);
         Log.d(TAG, "uploadImage " + screenshot.toString());
     }
-
-    public void setContext(Context context) {
-        this.context = context;
-    }
-
 
     /*
      * The method is taking Bitmap as an argument
@@ -78,14 +69,6 @@ public class ImageSender extends Thread {
     public void run() {
         Log.e(TAG, "Start Server");
 
-
-        try {
-            HandlerProjection.getInstance().startProjection();
-            Log.d(TAG, "onRequest: starProjection");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         AsyncHttpServer server = new AsyncHttpServer();
         server.get("/", new HttpServerRequestCallback() {
             @Override
@@ -113,8 +96,6 @@ public class ImageSender extends Thread {
 
         server.listen(Settings.PORT);
 
-
-//        HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 8001), 0);
-
     }
+
 }
