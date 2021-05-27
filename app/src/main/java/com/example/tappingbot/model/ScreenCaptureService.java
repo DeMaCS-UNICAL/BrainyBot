@@ -26,7 +26,6 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 
-import com.example.tappingbot.controller.HandlerProjection;
 import com.example.tappingbot.utils.NotificationUtils;
 
 import java.io.FileOutputStream;
@@ -192,25 +191,6 @@ public class ScreenCaptureService extends Service {
         Log.d(TAG, "onCreate");
         super.onCreate();
 
-        // create store dir
-//        File externalFilesDir = getExternalFilesDir(null);
-//        if (externalFilesDir != null) {
-//            mStoreDir = externalFilesDir.getAbsolutePath() + "/screenshots/";
-//
-////            store file
-//            File storeDirectory = new File(mStoreDir);
-//            if (!storeDirectory.exists()) {
-//                boolean success = storeDirectory.mkdirs();
-//                if (!success) {
-//                    Log.e(TAG, "failed to create file storage directory.");
-//                    stopSelf();
-//                }
-//            }
-//        } else {
-//            Log.e(TAG, "failed to create file storage directory, getExternalFilesDir is null.");
-//            stopSelf();
-//        }
-
         // start capture handling thread
         new Thread() {
             @Override
@@ -220,6 +200,7 @@ public class ScreenCaptureService extends Service {
 //                it will make a screen only when the surface change state!
                 try {
                     Looper.prepare(); // infinite loop
+
 
                     Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
 
@@ -277,12 +258,7 @@ public class ScreenCaptureService extends Service {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Log.d(TAG, "onImageAvailable");
-            try {
-                if (HandlerProjection.getInstance().isStarted())
-                    return;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+
 
             FileOutputStream fos = null;
             Bitmap bitmap = null;
@@ -301,41 +277,15 @@ public class ScreenCaptureService extends Service {
 
                     Screenshot screenshot = new Screenshot(bitmap, Integer.toString(0));
                     ImageSender.getInstance().uploadImage(screenshot);
-                    HandlerProjection.getInstance().setStarted(true);
-
-
-                    Log.d(TAG, "screenshot name: " + screenshot);
-
-//                    name = mStoreDir + "/myscreen_" + IMAGES_PRODUCED + ".png";
-                    // write bitmap to a file
-//                    fos = new FileOutputStream(name);
-//                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
-
-
-//                    IMAGES_PRODUCED++;
-                    Log.e(TAG, "captured image");
-
-
+                    Log.e(TAG, "screenshot name: " + screenshot);
 //                  stop projection
-                    HandlerProjection.getInstance().stopProjection();
+//                    HandlerProjection.getInstance().stopProjection();
 //                    Looper.myLooper().quitSafely();
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//            finally {
-//                if (fos != null) {
-//                    try {
-//                        ImageSender.getInstance().uploadImage(Uri.parse(name));
-//                        fos.close();
-//                    } catch (IOException ioe) {
-//                        ioe.printStackTrace();
-//                    }
-//                }
-//
-
-//            }
         }
     }
 

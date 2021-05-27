@@ -78,6 +78,14 @@ public class ImageSender extends Thread {
     public void run() {
         Log.e(TAG, "Start Server");
 
+
+        try {
+            HandlerProjection.getInstance().startProjection();
+            Log.d(TAG, "onRequest: starProjection");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         AsyncHttpServer server = new AsyncHttpServer();
         server.get("/", new HttpServerRequestCallback() {
             @Override
@@ -86,15 +94,11 @@ public class ImageSender extends Thread {
                 if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
                     try {
                         Log.d(TAG, "onRequest: request");
-                        HandlerProjection.getInstance().startProjection();
-                        Log.d(TAG, "onRequest: starProjection");
                         Screenshot screenshot = lockImage.take();
                         Log.e(TAG, "take data -> " + screenshot.toString());
                         String base46Image = converterBase64(screenshot.getBitmap());
                         response.send("img/png", base46Image);
-//                        response.send("img/png", convertToArray(screenshot.getBitmap()));
                         Log.e(TAG, "send data");
-
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

@@ -15,10 +15,9 @@ public class HandlerProjection {
     private static HandlerProjection instance;
     @SuppressLint("StaticFieldLeak")
     private static Activity activity;
-    private boolean isStarted;
+
 
     private HandlerProjection() {
-        isStarted = false;
     }
 
     public static HandlerProjection getInstance() throws Exception {
@@ -37,13 +36,7 @@ public class HandlerProjection {
     /****************************************** UI Widget Callbacks *******************************/
     public void startProjection() {
 
-        Log.d(TAG, "startProjection: isStarted -> " + isStarted);
-        if (isStarted)
-            isStarted = false;
-
-
-
-
+        Log.d(TAG, "startProjection: first");
         /*
          *   - MediaProjection has a particular class: MediaProjectionManager
          *   - MediaProjectionManager serves to capture screenshot but NOT to capture audio of device.
@@ -64,13 +57,5 @@ public class HandlerProjection {
     public void stopProjection() {
         Log.d(TAG, "stopProjection: ");
         activity.startService(ScreenCaptureService.getStopIntent(activity));
-    }
-
-    public boolean isStarted() {
-        return isStarted;
-    }
-
-    public void setStarted(boolean started) {
-        isStarted = started;
     }
 }
