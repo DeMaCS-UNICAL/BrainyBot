@@ -2,7 +2,6 @@ package com.example.tappingbot.model;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
-import android.util.Base64;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -59,12 +58,6 @@ public class ImageSender extends Thread {
         return outputStream.toByteArray();
     }
 
-
-    @NonNull
-    private String converterBase64(@NonNull Bitmap bitmap) {
-        return Base64.encodeToString(convertToArray(bitmap), Base64.DEFAULT);
-    }
-
     @Override
     public void run() {
         Log.e(TAG, "Start Server");
@@ -79,8 +72,8 @@ public class ImageSender extends Thread {
                         Log.d(TAG, "onRequest: request");
                         Screenshot screenshot = lockImage.take();
                         Log.e(TAG, "take data -> " + screenshot.toString());
-                        String base46Image = converterBase64(screenshot.getBitmap());
-                        response.send("img/png", base46Image);
+                        byte[] bytes = convertToArray(screenshot.getBitmap());
+                        response.send("image/png", bytes);
                         Log.e(TAG, "send data");
                     } catch (Exception e) {
                         e.printStackTrace();
