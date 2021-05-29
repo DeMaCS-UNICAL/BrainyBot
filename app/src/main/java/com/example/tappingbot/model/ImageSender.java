@@ -15,15 +15,17 @@ import com.koushikdutta.async.http.server.HttpServerRequestCallback;
 
 import java.io.ByteArrayOutputStream;
 
-public class ImageSender extends Thread {
+public class ImageSender {
     private static final String TAG = "ImageSender";
     @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
     private final BlockingLock<Screenshot> lockImage;
     private static final String REQUEST_IMAGE = "requestimage";
+    private final AsyncHttpServer server;
 
     private ImageSender() {
 
+        server = new AsyncHttpServer();
         lockImage = new BlockingLock<>();
     }
 
@@ -58,11 +60,8 @@ public class ImageSender extends Thread {
         return outputStream.toByteArray();
     }
 
-    @Override
-    public void run() {
+    public void startServer() throws Exception {
         Log.e(TAG, "Start Server");
-
-        AsyncHttpServer server = new AsyncHttpServer();
         server.get("/", new HttpServerRequestCallback() {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
@@ -88,7 +87,9 @@ public class ImageSender extends Thread {
         Log.e(TAG, "listening in " + Settings.PORT);
 
         server.listen(Settings.PORT);
-
     }
 
+    public void stopServer() throws Exception {
+        server.stop();
+    }
 }

@@ -1,42 +1,76 @@
 package com.example.tappingbot;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.tappingbot.controller.HandlerProjection;
 import com.example.tappingbot.model.ImageSender;
 import com.example.tappingbot.model.ScreenCaptureService;
 import com.example.tappingbot.utils.Settings;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private final boolean isStart = true;
-    private ExecutorService pool;
+    private Button startStop;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        //        init HandlerProjection
-        HandlerProjection.setActivity(this);
+        startStop = findViewById(R.id.start_stop);
+        final boolean[] isStarted = {false};
 
+        startStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    if (isStarted[0])
+                        stop();
+                    else
+                        start();
+
+                    isStarted[0] = !isStarted[0];
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+
+    }
+
+    private void start() throws Exception {
+        Log.d(TAG, "start: ");
+        //        change label text
+        startStop.setText(R.string.stop);
+
+
+        // start projection
         startProjection();
+        // start server
+        ImageSender.getInstance().startServer();
 
-        //        init thread image sender
-        pool = Executors.newFixedThreadPool(Settings.POOL_SIZE);
-        pool.execute(ImageSender.getInstance());
+    }
 
+    @SuppressLint("SetTextI18n")
+    private void stop() throws Exception {
+        Log.d(TAG, "stop: ");
+//        change label text
+        startStop.setText(R.string.start);
 
+//        stop projection
+        stopProjection();
+
+//        stop server
+        ImageSender.getInstance().stopServer();
     }
 
     @Override
@@ -53,12 +87,12 @@ public class MainActivity extends AppCompatActivity {
     /****************************************** UI Widget Callbacks *******************************/
 
 
-    public void stopProjection() {
+    private void stopProjection() {
         Log.d(TAG, "stopProjection: ");
         MainActivity.this.startService(ScreenCaptureService.getStopIntent(MainActivity.this));
     }
 
-    public void startProjection() {
+    private void startProjection() {
 
         Log.d(TAG, "startProjection: first");
         /*
