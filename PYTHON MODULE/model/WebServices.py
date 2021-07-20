@@ -1,8 +1,15 @@
-import json
-# Create a JSON Object
 import os
 
-from model.DLVClass import resource_path
+import requests as requests
+
+from DLVClass import resource_path
+
+
+def requireImageFromURL(url, port):
+    upLoads = {'name': 'requestimage'}
+    receive = requests.get(f'{url}:{port}/', params=upLoads)
+    with open(os.path.join(resource_path, 'screenshot.png'), 'wb') as f:
+        f.write(receive.content)
 
 
 def makeJson(coodinateType: []):
@@ -17,7 +24,3 @@ def makeJson(coodinateType: []):
     # Write the object to file.
     with open(os.path.join(resource_path, 'coordinates.json'), 'w') as jsonFile:
         json.dump(json_obj, jsonFile)
-
-
-coodinateType = [(i, i + 1, i + 2) for i in range(100)]
-makeJson(coodinateType)

@@ -5,23 +5,14 @@ import mahotas
 import numpy as np
 from matplotlib import pyplot as plt
 
-from CandyGraph import CandyGraph, PX, PY, T, ID
+from CandyGraph import CandyGraph, PX, PY, TYPE, ID
 from model.DLVClass import resource_path, Node, DLVSolution, Edge
 
-img_path = os.path.join(resource_path, 'img')  # The resource folder path
+img_path = os.path.join(resource_path, 'sprite')  # The resource folder path
 
 
-def getImg(location):
-    im = cv2.imread(location)
-    return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
 
 
-YELLOW = 0
-BLUE = 1
-ORANGE = 2
-PURPLE = 3
-RED = 4
-GREEN = 5
 
 # newEdge(62,9,0). newEdge(70,50,1).
 # newEdge(62,40,1). newEdge(62,48,1).
@@ -36,19 +27,9 @@ sprites = {
     RED: getImg(os.path.join(img_path, "red.png")),
 }
 
-colors = {
-    YELLOW: (255, 255, 0),
-    BLUE: (0, 0, 255),
-    GREEN: (0, 128, 0),
-    ORANGE: (255, 165, 0),
-    PURPLE: (128, 0, 128),
-    RED: (255, 0, 0)
-}
-
-
 def draw(matrixCopy, nodes, c=None, f=10):
     if c is None:
-        c = nodes[T]
+        c = nodes[TYPE]
     cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), colors[c], f)
 
 
@@ -86,7 +67,7 @@ for color in colors:
 
 nodes = []
 for node in graph.getNodes():
-    nodes.append(Node(node[ID], node[T]))
+    nodes.append(Node(node[ID], node[TYPE]))
 
 inputGraph = DLVSolution(nodes)
 
@@ -94,13 +75,13 @@ edges = []
 
 # TODO: scommentare per far stampare i nodi e gli archi
 for n, nbrs in graph.getGraph():
-    # print(colors[nodes[T]])
+    # print(colors[nodes[TYPE]])
     # matrixCopy = candyMatrix.copy()
-    # cv2.rectangle(matrixCopy, (n[PX], n[PY]), (n[PX] + width, n[PY] + height), colors[n[T]], -1)
+    # cv2.rectangle(matrixCopy, (n[PX], n[PY]), (n[PX] + width, n[PY] + height), colors[n[TYPE]], -1)
     for nbr, eattr in nbrs.items():
         # print(f"{nodes} -> {nbr} = {graph.getPosition(nodes, nbr)}")
         edges.append(Edge(n[ID], nbr[ID], graph.getPosition(n, nbr)))
-        # cv2.rectangle(matrixCopy, (nbr[PX], nbr[PY]), (nbr[PX] + width, nbr[PY] + height), colors[nbr[T]], 2)
+        # cv2.rectangle(matrixCopy, (nbr[PX], nbr[PY]), (nbr[PX] + width, nbr[PY] + height), colors[nbr[TYPE]], 2)
 
     # plt.imshow(matrixCopy)
     # plt.title(n)

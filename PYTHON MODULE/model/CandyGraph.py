@@ -2,7 +2,7 @@ import networkx as nx
 
 PX = 0
 PY = 1
-T = 2
+TYPE = 2
 ID = 3
 
 ON_THE_SAME_COLUMN = "column"
@@ -11,10 +11,12 @@ ON_THE_SAME_ROW = "row"
 
 class CandyGraph(nx.Graph):
 
-    def __init__(self, difference: (), **attr):
+    def __init__(self, difference=None, **attr):
         super().__init__(**attr)
         self.__idNumber = 0
-        self.__difference = difference
+        self.__difference = None
+        if difference is not None:
+            self.__difference = difference
 
         # 20% approximation
         self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2

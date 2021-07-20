@@ -10,7 +10,7 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 from lib.installer import lib_path
 
 current_path = os.path.dirname(__file__)  # Where your .py file is located
-resource_path = os.path.join(current_path, 'resources')  # The resource folder path
+resource_path = os.path.join(current_path, '../resources')  # The resource folder path
 logs_path = os.path.join(resource_path, 'logs')
 
 
