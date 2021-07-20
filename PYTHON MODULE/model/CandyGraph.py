@@ -5,31 +5,32 @@ PY = 1
 T = 2
 ID = 3
 
-ON_THE_SAME_COLUMN = 0
-ON_THE_SAME_ROW = 1
+ON_THE_SAME_COLUMN = "column"
+ON_THE_SAME_ROW = "row"
 
 
-class CandyGraph:
-    def __init__(self, difference: ()):
+class CandyGraph(nx.Graph):
+
+    def __init__(self, difference: (), **attr):
+        super().__init__(**attr)
         self.__idNumber = 0
-        self.__graph = nx.Graph()
         self.__difference = difference
 
         # 20% approximation
         self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2
-        print(f"APPROXIMATION: {self.__approximation}")
+        # print(f"APPROXIMATION: {self.__approximation}")
 
     def getDifference(self):
         return self.__difference
 
     def getNodes(self) -> []:
-        return list(self.__graph.nodes)
+        return list(super().nodes)
 
     def getAdjacent(self, node: ()):
-        return self.__graph.adj[node]
+        return super().adj[node]
 
     def getGraph(self):
-        return self.__graph.adj.items()
+        return super().adj.items()
 
     def getNode(self, id: int) -> ():
         for node in self.getNodes():
@@ -37,7 +38,7 @@ class CandyGraph:
                 return node
 
     def getPosition(self, nodeS: (), nodeD: ()):
-        return self.__graph[nodeS][nodeD]['position']
+        return self[nodeS][nodeD]['position']
 
     def setDifference(self, difference: ()) -> None:
         self.__difference = difference
@@ -46,7 +47,7 @@ class CandyGraph:
     def addNode(self, px, py, t) -> None:
         node = (px, py, t, self.__idNumber)
         self.__idNumber += 1
-        self.__graph.add_node(node)
+        super().add_node(node)
         self.__insertEdge(node)
 
     def swap(self, idNode1: int, idNode2: int) -> None:
@@ -61,20 +62,20 @@ class CandyGraph:
     def __singleSwap(self, source: (), destination: int, edges):
         for nbr, eattr in edges.items():
             idNbr = nbr[ID]
-            self.__graph.add_edge(destination, idNbr, position=eattr)
-            self.__graph.remove_edge(source, nbr)
+            super().add_edge(destination, idNbr, position=eattr)
+            super().remove_edge(source, nbr)
 
     def __insertEdge(self, node: ()) -> None:
-        for n in list(self.__graph.nodes):
+        for n in list(super().nodes):
             if node == n:
                 continue
 
             p = self.__checkConditions(node, n)
             if p == ON_THE_SAME_ROW or p == ON_THE_SAME_COLUMN:
                 # print(f"LINKING: {nodes} ---> {nodes}\nodes")
-                self.__graph.add_edge(node, n, position=p)
+                super().add_edge(node, n, position=p)
 
-    def __checkConditions(self, node, n) -> int:
+    def __checkConditions(self, node, n):
 
         # if a nodes is linked on X or on Y with another nodes.
         if self.__secondConditionDifference(node, n, PX) and self.__firstConditionDifference(node, n, PY):
@@ -91,4 +92,4 @@ class CandyGraph:
             p] + self.__approximation
 
     def __str__(self):
-        return f"================= GRAPH ================= \n{self.__graph.adj.items()}"
+        return f"================= GRAPH ================= \n {super().adj.items()}"
