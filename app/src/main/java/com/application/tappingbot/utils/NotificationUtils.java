@@ -1,4 +1,4 @@
-package com.example.tappingbot.utils;
+package com.application.tappingbot.utils;
 
 
 import android.annotation.TargetApi;
@@ -12,14 +12,14 @@ import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.util.Pair;
 
-import com.example.tappingbot.R;
+import com.application.tappingbot.R;
 
 
 public class NotificationUtils {
 
     public static final int NOTIFICATION_ID = 1337;
-    private static final String NOTIFICATION_CHANNEL_ID = "com.example.tappingbot.app";
-    private static final String NOTIFICATION_CHANNEL_NAME = "com.example.tappingbot.app";
+    private static final String NOTIFICATION_CHANNEL_ID = "com.application.tappingbot.app";
+    private static final String NOTIFICATION_CHANNEL_NAME = "com.application.tappingbot.app";
 
     public static Pair<Integer, Notification> getNotification(@NonNull Context context) {
         createNotificationChannel(context);

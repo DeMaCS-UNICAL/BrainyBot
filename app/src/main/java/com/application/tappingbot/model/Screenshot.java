@@ -1,4 +1,4 @@
-package com.example.tappingbot.model;
+package com.application.tappingbot.model;
 
 import android.graphics.Bitmap;
 

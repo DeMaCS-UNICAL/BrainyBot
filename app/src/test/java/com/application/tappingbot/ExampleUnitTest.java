@@ -1,4 +1,4 @@
-package com.example.tappingbot;
+package com.application.tappingbot;
 
 import org.junit.Test;
 

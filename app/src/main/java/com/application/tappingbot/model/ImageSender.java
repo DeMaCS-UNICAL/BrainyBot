@@ -1,4 +1,4 @@
-package com.example.tappingbot.model;
+package com.application.tappingbot.model;
 
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
@@ -6,8 +6,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
-import com.example.tappingbot.utils.BlockingLock;
-import com.example.tappingbot.utils.Settings;
+import com.application.tappingbot.utils.BlockingLock;
+import com.application.tappingbot.utils.Settings;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
 import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
 import com.koushikdutta.async.http.server.AsyncHttpServerResponse;

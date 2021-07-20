@@ -1,4 +1,4 @@
-package com.example.tappingbot.controller;
+package com.application.tappingbot.controller;
 
 import android.annotation.SuppressLint;
 import android.content.Context;

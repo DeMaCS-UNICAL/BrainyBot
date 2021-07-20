@@ -1,4 +1,4 @@
-package com.example.tappingbot.model;
+package com.application.tappingbot.model;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -8,7 +8,7 @@ import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonArrayRequest;
-import com.example.tappingbot.controller.JSONSingleton;
+import com.application.tappingbot.controller.JSONSingleton;
 
 import org.json.JSONArray;
 import org.json.JSONException;

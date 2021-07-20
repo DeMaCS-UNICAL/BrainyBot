@@ -1,4 +1,4 @@
-package com.example.tappingbot.utils;
+package com.application.tappingbot.utils;
 
 public class Settings {
     public static final int REQUEST_CODE = 100;

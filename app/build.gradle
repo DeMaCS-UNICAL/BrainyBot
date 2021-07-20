@@ -7,7 +7,7 @@ android {
     buildToolsVersion "30.0.3"
 
     defaultConfig {
-        applicationId "com.example.tappingbot"
+        applicationId "com.application.tappingbot"
         minSdkVersion 24
         targetSdkVersion 29
         versionCode 1

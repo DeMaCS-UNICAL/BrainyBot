@@ -1,4 +1,4 @@
-package com.example.tappingbot.utils;
+package com.application.tappingbot.utils;
 
 import android.util.Log;
 

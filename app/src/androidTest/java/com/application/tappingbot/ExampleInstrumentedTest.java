@@ -1,4 +1,4 @@
-package com.example.tappingbot;
+package com.application.tappingbot;
 
 import android.content.Context;
 
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
     public void useAppContext() {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.example.tappingbot", appContext.getPackageName());
+        assertEquals("com.application.tappingbot", appContext.getPackageName());
     }
 }

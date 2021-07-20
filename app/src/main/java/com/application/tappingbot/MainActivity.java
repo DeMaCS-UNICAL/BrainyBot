@@ -1,4 +1,4 @@
-package com.example.tappingbot;
+package com.application.tappingbot;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -12,9 +12,9 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.tappingbot.model.ImageSender;
-import com.example.tappingbot.model.ScreenCaptureService;
-import com.example.tappingbot.utils.Settings;
+import com.application.tappingbot.model.ImageSender;
+import com.application.tappingbot.model.ScreenCaptureService;
+import com.application.tappingbot.utils.Settings;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";

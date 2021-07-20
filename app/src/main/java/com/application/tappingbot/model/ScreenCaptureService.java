@@ -1,4 +1,4 @@
-package com.example.tappingbot.model;
+package com.application.tappingbot.model;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -26,7 +26,7 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 
-import com.example.tappingbot.utils.NotificationUtils;
+import com.application.tappingbot.utils.NotificationUtils;
 
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
