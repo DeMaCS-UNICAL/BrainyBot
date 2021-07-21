@@ -1,0 +1,8 @@
+### Example user template template
+### Example user template
+/logs
+# IntelliJ project files
+.idea
+*.iml
+out
+gen

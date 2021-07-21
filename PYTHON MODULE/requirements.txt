@@ -1,0 +1,6 @@
+mahotas~=1.4.11
+numpy~=1.17.0
+networkx~=2.2
+requests~=2.25.1
+matplotlib~=3.3.4
+pip~=21.1.3
