@@ -27,8 +27,8 @@ for file in os.listdir(SPRITE_PATH):
 
 
 class MatchingCandy:
-    def __init__(self, fileLocation):
-        self.__matrix = getImg(fileLocation)
+    def __init__(self, matrix):
+        self.__matrix = matrix
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
         self.__graph = CandyGraph()
