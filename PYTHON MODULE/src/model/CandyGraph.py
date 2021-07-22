@@ -17,10 +17,9 @@ class CandyGraph(nx.Graph):
         self.__difference = None
         if difference is not None:
             self.__difference = difference
-
-        # 20% approximation
-        self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2
-        # print(f"APPROXIMATION: {self.__approximation}")
+            # 20% approximation
+            self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2
+            # print(f"APPROXIMATION: {self.__approximation}")
 
     def getDifference(self):
         return self.__difference

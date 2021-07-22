@@ -1,6 +1,6 @@
 import os
 from datetime import datetime
-from turtle import width
+from time import sleep
 
 import cv2
 from languages.asp.asp_input_program import ASPInputProgram
@@ -14,7 +14,11 @@ from src.model.CandyGraph import CandyGraph, PX, PY
 from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, Node
 from src.model.Matching import MatchingCandy, getNodes, getImg
 
-width, height = 89, 94
+# mapping
+ASPMapper.get_instance().register_class(Swap)
+ASPMapper.get_instance().register_class(Edge)
+ASPMapper.get_instance().register_class(Node)
+ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
 
 class DLVSolution:
@@ -23,12 +27,6 @@ class DLVSolution:
         self.__countLogs = 0  # count for debug
         self.__dir = None  # log directory for debug
         self.__nodes = nodes
-
-        # mapping
-        ASPMapper.get_instance().register_class(Swap)
-        ASPMapper.get_instance().register_class(Edge)
-        ASPMapper.get_instance().register_class(Node)
-        ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
         try:
             if os.name == 'nt':
@@ -140,8 +138,9 @@ class DLVSolution:
             print(str(e))
 
 
-def draw(matrixCopy, nodes, f=10):
-    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), (255, 0, 0), f)
+def draw(matrixCopy, nodes):
+    width, height = 89, 94
+    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), (255, 0, 0), 10)
 
 
 def drawNotOptimumAnswer(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edge], candyMatrix):
@@ -185,11 +184,16 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     plt.show()
 
 
-matrix = getImg(os.path.join(MAP_PATH, "matrix1.png"))
+matrix = getImg(os.path.join(MAP_PATH, "matrix1.jpeg"))
 matching = MatchingCandy(matrix)
-candyGraph = matching.search()
+candyGraph: CandyGraph = matching.search()
 for node in getNodes(candyGraph):
+    print(f"NODE --> {node}")
     tmp = matrix.copy()
-    draw(tmp, node)
-    plt.imshow(matrix)
+    nodeOnImg = candyGraph.getNode(node.get_id())
+    print(nodeOnImg)
+    draw(tmp, nodeOnImg)
+    plt.imshow(tmp)
     plt.show()
+
+    sleep(0.25)

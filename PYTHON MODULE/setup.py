@@ -2,9 +2,6 @@ import os
 
 import conda.cli
 import pip
-from languages.asp.asp_mapper import ASPMapper
-
-from src.model.DLVClass import Swap, Node, Edge, AtLeast3Adjacent
 
 SETUP_PATH = os.path.dirname(__file__)  # Where your .py file is located
 SRC_PATH = os.path.join(SETUP_PATH, 'src')
@@ -15,11 +12,12 @@ TESTS_PATH = os.path.join(SETUP_PATH, 'tests')
 LOGS_PATH = os.path.join(TESTS_PATH, 'logs')
 MAP_PATH = os.path.join(TESTS_PATH, 'map')
 
-# mapping
-ASPMapper.get_instance().register_class(Swap)
-ASPMapper.get_instance().register_class(Edge)
-ASPMapper.get_instance().register_class(Node)
-ASPMapper.get_instance().register_class(AtLeast3Adjacent)
+
+# # mapping
+# ASPMapper.get_instance().register_class(Swap)
+# ASPMapper.get_instance().register_class(Edge)
+# ASPMapper.get_instance().register_class(Node)
+# ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
 
 def install_whl(path):
