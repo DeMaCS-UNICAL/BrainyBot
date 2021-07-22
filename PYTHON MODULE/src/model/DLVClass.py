@@ -52,13 +52,11 @@ class Swap(Predicate, Connect):
         Connect.__init__(self, id1, id2)
 
 
-class Node(Predicate):
-    predicate_name = "node"
+class Node:
 
-    def __init__(self, id=None, type=None):
-        Predicate.__init__(self, [("id", int), ("type", int)])
-        self.__id = id
-        self.__type = type
+    def __init__(self, nodeID=None, candyType=None):
+        self.__id = nodeID
+        self.__type = candyType
 
     def get_id(self):
         return self.__id
@@ -66,17 +64,36 @@ class Node(Predicate):
     def get_type(self):
         return self.__type
 
-    def set_id(self, id):
-        self.__id = id
+    def set_id(self, nodeID):
+        self.__id = nodeID
 
-    def set_type(self, type):
-        self.__type = type
+    def set_type(self, candyType):
+        self.__type = candyType
 
     def __eq__(self, o: object) -> bool:
         return self.__id == o.__id
 
     def __str__(self) -> str:
         return f"node({self.__id}, {self.__type}) \n"
+
+
+class InputNode(Predicate, Node):
+    predicate_name = "node"
+
+    def __init__(self, nodeID=None, candyType=None):
+        Predicate.__init__(self, [("id", int), ("type", int)])
+        Node.__init__(self, nodeID, candyType)
+
+
+class InputBomb(Predicate, Node):
+    predicate_name = "bomb"
+
+    def __init__(self, nodeID=None, candyType=None):
+        Predicate.__init__(self, [("id", int), ("type", int)])
+        Node.__init__(self, nodeID, candyType)
+
+    def __str__(self) -> str:
+        return f"bomb({super().get_id()}, {super().get_type()}) \n"
 
 
 class NewEdge(Predicate, Connect):
@@ -123,7 +140,7 @@ def chooseDLVSystem() -> DesktopHandler:
 
 class DLVSolution:
 
-    def __init__(self, nodes: [Node]):
+    def __init__(self, nodes: [InputNode]):
         self.__nodes = nodes
 
         try:

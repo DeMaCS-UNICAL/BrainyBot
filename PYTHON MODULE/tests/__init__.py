@@ -1,6 +1,5 @@
 import os
 from datetime import datetime
-from time import sleep
 
 import cv2
 from languages.asp.asp_input_program import ASPInputProgram
@@ -11,13 +10,14 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
 from setup import RESOURCES_PATH, LOGS_PATH, DLV_PATH, MAP_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY
-from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, Node
-from src.model.Matching import MatchingCandy, getNodes, getImg
+from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, Node, InputNode, InputBomb
+from src.model.Matching import MatchingCandy, getImg, getNodes, getEdges
 
 # mapping
 ASPMapper.get_instance().register_class(Swap)
 ASPMapper.get_instance().register_class(Edge)
-ASPMapper.get_instance().register_class(Node)
+ASPMapper.get_instance().register_class(InputNode)
+ASPMapper.get_instance().register_class(InputBomb)
 ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
 
@@ -63,6 +63,8 @@ class DLVSolution:
 
         for node in self.__nodes:
             self.__fixedInputProgram.add_object_input(node)
+            print(node)
+
         self.__handler.add_program(self.__fixedInputProgram)
 
     # DEBUG
@@ -92,6 +94,7 @@ class DLVSolution:
             # input edges
 
             for edge in edges:
+                print(f"EDGE --> {edge}")
                 self.__variableInputProgram.add_object_input(edge)
 
             if not isNone:
@@ -173,6 +176,7 @@ def drawNotOptimumAnswer(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Ed
 
 def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edge], candyMatrix):
     swap = dlvSolution.recallASP(edges, None)
+    print(f"SWAP ---> {swap}")
     tmp = candyMatrix.copy()
     node1 = graph.getNode(swap.get_id1())
     node2 = graph.getNode(swap.get_id2())
@@ -184,16 +188,20 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     plt.show()
 
 
-matrix = getImg(os.path.join(MAP_PATH, "matrix1.jpeg"))
+matrix = getImg(os.path.join(MAP_PATH, "matrix5.jpeg"))
 matching = MatchingCandy(matrix)
 candyGraph: CandyGraph = matching.search()
-for node in getNodes(candyGraph):
-    print(f"NODE --> {node}")
-    tmp = matrix.copy()
-    nodeOnImg = candyGraph.getNode(node.get_id())
-    print(nodeOnImg)
-    draw(tmp, nodeOnImg)
-    plt.imshow(tmp)
-    plt.show()
+dlvSolution = DLVSolution(getNodes(candyGraph))
 
-    sleep(0.25)
+drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), matrix)
+
+# for node in getNodes(candyGraph):
+#     print(f"NODE --> {node}")
+#     tmp = matrix.copy()
+#     nodeOnImg = candyGraph.getNode(node.get_id())
+#     print(nodeOnImg)
+#     draw(tmp, nodeOnImg)
+#     plt.imshow(tmp)
+#     plt.show()
+#
+#     sleep(0.25)

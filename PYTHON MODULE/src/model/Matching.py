@@ -1,4 +1,5 @@
 import os
+import re
 
 import cv2
 import mahotas
@@ -6,7 +7,7 @@ import numpy as np
 
 from setup import RESOURCES_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY, ID, TYPE
-from src.model.DLVClass import Node, Edge
+from src.model.DLVClass import Edge, InputBomb, InputNode
 
 SPRITE_PATH = os.path.join(RESOURCES_PATH, 'sprites')  # The resource folder path
 SPRITES = {}
@@ -59,16 +60,27 @@ class MatchingCandy:
         return self.__graph
 
 
-def getNodes(graph: CandyGraph) -> [Node]:
+def getNodes(graph: CandyGraph) -> []:
     nodes = []
     for node in graph.getNodes():
-        nodes.append(Node(node[ID], node[TYPE]))
+
+        result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
+        candyType = result.groups()[0]
+
+        if "Bomb" in candyType:
+            result = re.search(r"^(\w+)(?:Bomb)$", candyType)
+            candyType = result.groups()[0]
+            nodes.append(InputBomb(node[ID], candyType))
+
+        nodes.append(InputNode(node[ID], candyType))
 
     return nodes
 
 
-def getEdges(self, graph: CandyGraph) -> [Edge]:
+def getEdges(graph: CandyGraph) -> [Edge]:
     edges = []
-    for n, nbrs in self.__graph.getGraph():
+    for n, nbrs in graph.getGraph():
         for nbr, eattr in nbrs.items():
             edges.append(Edge(n[ID], nbr[ID], graph.getPosition(n, nbr)))
+
+    return edges

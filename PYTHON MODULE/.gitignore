@@ -289,10 +289,10 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# Pyre candyType checker
 .pyre/
 
-# pytype static type analyzer
+# pytype static candyType analyzer
 .pytype/
 
 # Cython debug symbols
@@ -502,10 +502,10 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# Pyre candyType checker
 .pyre/
 
-# pytype static type analyzer
+# pytype static candyType analyzer
 .pytype/
 
 # Cython debug symbols
