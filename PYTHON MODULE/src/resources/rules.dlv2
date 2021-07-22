@@ -44,8 +44,7 @@ nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
 %:~ nodesWithDifferentType(ID). [1@1, ID]
 
 % bomb weak
-% swapWithBombs(ID1, ID2) :- bomb(ID1, _), swap(ID1, ID2).
-% :~ swap(ID1, ID2), not swapWithBombs(ID1, ID2). [1@2, ID1, ID2]
+:~ swap(ID1, ID2), not bomb(ID1, _). [1@2, ID1, ID2]
 
 
 % jolly weak
