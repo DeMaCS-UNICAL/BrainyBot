@@ -63,7 +63,7 @@ class DLVSolution:
 
         for node in self.__nodes:
             self.__fixedInputProgram.add_object_input(node)
-            print(node)
+            # print(node)
 
         self.__handler.add_program(self.__fixedInputProgram)
 
@@ -94,7 +94,7 @@ class DLVSolution:
             # input edges
 
             for edge in edges:
-                print(f"EDGE --> {edge}")
+                # print(f"EDGE --> {edge}")
                 self.__variableInputProgram.add_object_input(edge)
 
             if not isNone:
@@ -176,7 +176,7 @@ def drawNotOptimumAnswer(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Ed
 
 def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edge], candyMatrix):
     swap = dlvSolution.recallASP(edges, None)
-    print(f"SWAP ---> {swap}")
+    # print(f"SWAP ---> {swap}")
     tmp = candyMatrix.copy()
     node1 = graph.getNode(swap.get_id1())
     node2 = graph.getNode(swap.get_id2())
@@ -188,7 +188,7 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     plt.show()
 
 
-matrix = getImg(os.path.join(MAP_PATH, "matrix5.jpeg"))
+matrix = getImg(os.path.join(MAP_PATH, "matrix3.jpeg"))
 matching = MatchingCandy(matrix)
 candyGraph: CandyGraph = matching.search()
 dlvSolution = DLVSolution(getNodes(candyGraph))

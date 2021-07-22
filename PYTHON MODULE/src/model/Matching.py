@@ -67,6 +67,10 @@ def getNodes(graph: CandyGraph) -> []:
         result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
         candyType = result.groups()[0]
 
+        # checks if the node is not swappable
+        if "notTouch" in candyType:
+            continue
+
         if "Bomb" in candyType:
             result = re.search(r"^(\w+)(?:Bomb)$", candyType)
             candyType = result.groups()[0]

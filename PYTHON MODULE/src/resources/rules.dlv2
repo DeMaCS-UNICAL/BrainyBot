@@ -1,6 +1,5 @@
-% edge(0,1,"row"). edge(0,11,"row"). edge(0,36,"column"). edge(1,0,"row"). edge(1,24,"column"). edge(1,35,"row"). edge(2,3,"row"). edge(3,2,"row"). edge(3,13,"column"). edge(3,25,"row"). edge(3,40,"column"). edge(4,17,"row"). edge(4,18,"column"). edge(4,38,"column"). edge(5,17,"column"). edge(5,18,"row"). edge(6,7,"row"). edge(6,18,"row"). edge(7,6,"row"). edge(7,41,"column"). edge(8,9,"column"). edge(8,19,"row"). edge(9,8,"column"). edge(9,19,"row"). edge(10,17,"column"). edge(10,25,"row"). edge(10,36,"column"). edge(10,38,"row"). edge(11,0,"row"). edge(11,23,"column"). edge(12,35,"row"). edge(12,37,"column"). edge(13,3,"column"). edge(13,23,"row"). edge(14,24,"row"). edge(14,26,"column"). edge(14,35,"column"). edge(14,37,"row"). edge(15,26,"row"). edge(15,37,"column"). edge(15,41,"column"). edge(16,17,"row"). edge(16,25,"column"). edge(16,40,"row"). edge(17,4,"row"). edge(17,5,"column"). edge(17,10,"column"). edge(17,16,"row"). edge(18,4,"column"). edge(18,5,"row"). edge(18,6,"row"). edge(18,30,"column"). edge(19,8,"row"). edge(19,9,"row"). edge(19,31,"column"). edge(20,31,"row"). edge(20,32,"column"). edge(21,30,"column"). edge(21,34,"row"). edge(22,34,"column"). edge(22,43,"row"). edge(23,11,"column"). edge(23,13,"row"). edge(23,25,"column"). edge(23,36,"row"). edge(24,1,"column"). edge(24,14,"row"). edge(24,36,"row"). edge(24,38,"column"). edge(25,3,"row"). edge(25,10,"row"). edge(25,16,"column"). edge(25,23,"column"). edge(26,14,"column"). edge(26,15,"row"). edge(26,38,"row"). edge(27,28,"row"). edge(27,29,"column"). edge(27,39,"column"). edge(28,27,"row"). edge(29,27,"column"). edge(30,18,"column"). edge(30,21,"column"). edge(31,19,"column"). edge(31,20,"row"). edge(31,42,"column"). edge(32,20,"column"). edge(32,33,"row"). edge(32,42,"row"). edge(32,44,"row"). edge(33,32,"row"). edge(33,44,"column"). edge(34,21,"row"). edge(34,22,"column"). edge(35,1,"row"). edge(35,12,"row"). edge(35,14,"column"). edge(36,0,"column"). edge(36,10,"column"). edge(36,23,"row"). edge(36,24,"row"). edge(37,12,"column"). edge(37,14,"row"). edge(37,15,"column"). edge(38,4,"column"). edge(38,10,"row"). edge(38,24,"column"). edge(38,26,"row"). edge(39,27,"column"). edge(40,3,"column"). edge(40,16,"row"). edge(41,7,"column"). edge(41,15,"column"). edge(42,31,"column"). edge(42,32,"row"). edge(42,43,"row"). edge(43,22,"row"). edge(43,42,"row"). edge(44,32,"row"). edge(44,33,"column").
-% node(0,"red"). node(1,"red"). node(2,"red"). node(3,"red"). node(4,"red"). node(5,"red"). node(6,"red"). node(7,"red"). node(8,"red"). node(9,"red"). bomb(10,"purple"). node(10,"purple"). node(11,"orange"). node(12,"orange"). node(13,"orange"). node(14,"orange"). node(15,"orange"). node(16,"orange"). node(17,"orange"). node(18,"orange"). node(19,"orange"). node(20,"orange"). node(21,"orange"). node(22,"orange"). node(23,"green"). node(24,"green"). node(25,"green"). node(26,"green"). node(27,"green"). node(28,"green"). node(29,"green"). node(30,"green"). node(31,"green"). node(32,"green"). bomb(33,"orange"). node(33,"orange"). node(34,"purbleHorizontal"). node(35,"purple"). node(36,"purple"). node(37,"purple"). node(38,"purple"). node(39,"purple"). node(40,"purple"). node(41,"purple"). node(42,"purple"). node(43,"purple"). bomb(44,"red"). node(44,"red").
 #show swap/2.
+#show chooseSwapJolly/2.
 
 % make graph not oriented
 edge(Y, X, P) :- edge(X, Y, P).
@@ -31,19 +30,29 @@ edgeWithoutPosition(ID1,ID2) :- edge(ID1,ID2, _).
 :- swap(ID1, ID2), node(ID1, T), node(ID2, T).
 
 % at least 3 nodes on the same position
-:- #count{ID1, ID3, P : AtLeast3Adjacent(ID1, ID3, P)} == 0.
+:- #count{ID1, ID3, P : AtLeast3Adjacent(ID1, ID3, P)} == 0, not thereIsASwapWithJolly(1).
 
 
-% weak
+% adjacent weak
 adjacentNodes(ID) :- AtLeast3Adjacent(ID, _, _).
 adjacentNodes(ID) :- AtLeast3Adjacent(_, ID, _).
 adjacentNodes(ID) :- exchangedEdge(ID, _).
 adjacentNodes(ID) :- exchangedEdge(_, ID).
+countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
 
 nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
-:~ nodesWithDifferentType(ID). [1@1, ID]
+%:~ nodesWithDifferentType(ID). [1@1, ID]
+
+% bomb weak
+% swapWithBombs(ID1, ID2) :- bomb(ID1, _), swap(ID1, ID2).
+% :~ swap(ID1, ID2), not swapWithBombs(ID1, ID2). [1@2, ID1, ID2]
 
 
-swapWithBombs(ID1, ID2) :- bomb(ID1, _), swap(ID1, ID2).
-swapWithBombs(ID1, ID2) :- bomb(ID2, _), swap(ID1, ID2).
-:~ swap(ID1, ID2), not swapWithBombs(ID1, ID2). [1@2, ID1, ID2]
+% jolly weak
+jollyCount(ID1, T, C) :- #count{IDX : node(IDX, T)} = C, node(ID1, "jolly"), edge(ID1, ID2, _), node(ID2, T). % count nodes for each jolly, max relative
+maxCountForJolly(K) :- #max{C, ID, T : jollyCount(ID, T, C)} = K. % max absolute
+maxJolly(ID, T) :- maxCountForJolly(K), jollyCount(ID, T, K). % find max jolly
+swapWithJolly(ID1, ID2) :- maxJolly(ID1, T), edge(ID1, ID2, _), node(ID2, T), maxCountForJolly(K), countAdjacentNodes(C), K > C. % choose swap with jolly
+thereIsASwapWithJolly(1) :- swapWithJolly(ID1, ID2).
+
+:~ swapWithJolly(ID1, ID2), not swap(ID1, ID2). [1@2, ID1, ID2] % if exists a swap can match so much candy
