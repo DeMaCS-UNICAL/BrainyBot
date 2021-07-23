@@ -1,5 +1,3 @@
-#show swap/2.
-#show chooseSwapJolly/2.
 
 % make graph not oriented
 edge(Y, X, P) :- edge(X, Y, P).
@@ -41,11 +39,13 @@ adjacentNodes(ID) :- exchangedEdge(_, ID).
 countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
 
 nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
-%:~ nodesWithDifferentType(ID). [1@1, ID]
+:~ nodesWithDifferentType(ID). [1@1, ID]
 
 % bomb weak
-:~ swap(ID1, ID2), not bomb(ID1, _). [1@2, ID1, ID2]
+:~ swap(ID1, ID2), not bomb(ID1). [1@2, ID1, ID2]
 
+% horizontal weak
+:~ swap(ID1, ID2), not horizontalOrVertical(ID1). [1@3, ID1, ID2]
 
 % jolly weak
 jollyCount(ID1, T, C) :- #count{IDX : node(IDX, T)} = C, node(ID1, "jolly"), edge(ID1, ID2, _), node(ID2, T). % count nodes for each jolly, max relative
@@ -54,4 +54,4 @@ maxJolly(ID, T) :- maxCountForJolly(K), jollyCount(ID, T, K). % find max jolly
 swapWithJolly(ID1, ID2) :- maxJolly(ID1, T), edge(ID1, ID2, _), node(ID2, T), maxCountForJolly(K), countAdjacentNodes(C), K > C. % choose swap with jolly
 thereIsASwapWithJolly(1) :- swapWithJolly(ID1, ID2).
 
-:~ swapWithJolly(ID1, ID2), not swap(ID1, ID2). [1@2, ID1, ID2] % if exists a swap can match so much candy
+:~ swapWithJolly(ID1, ID2), not swap(ID1, ID2). [1@4, ID1, ID2] % if exists a swap can match so much candy

@@ -52,29 +52,37 @@ class Swap(Predicate, Connect):
         Connect.__init__(self, id1, id2)
 
 
-class Node:
-
-    def __init__(self, nodeID=None, candyType=None):
+class InformationID:
+    def __init__(self, nodeID=None):
         self.__id = nodeID
-        self.__type = candyType
 
     def get_id(self):
         return self.__id
 
-    def get_type(self):
-        return self.__type
-
     def set_id(self, nodeID):
         self.__id = nodeID
-
-    def set_type(self, candyType):
-        self.__type = candyType
 
     def __eq__(self, o: object) -> bool:
         return self.__id == o.__id
 
     def __str__(self) -> str:
-        return f"node({self.__id}, {self.__type}) \n"
+        return f"Information({self.__id}) \n"
+
+
+class Node(InformationID):
+
+    def __init__(self, nodeID=None, candyType=None):
+        super().__init__(nodeID)
+        self.__type = candyType
+
+    def get_type(self):
+        return self.__type
+
+    def set_type(self, candyType):
+        self.__type = candyType
+
+    def __str__(self) -> str:
+        return f"node({super().get_id()}, {self.__type}) \n"
 
 
 class InputNode(Predicate, Node):
@@ -85,15 +93,26 @@ class InputNode(Predicate, Node):
         Node.__init__(self, nodeID, candyType)
 
 
-class InputBomb(Predicate, Node):
+class InputBomb(Predicate, InformationID):
     predicate_name = "bomb"
 
-    def __init__(self, nodeID=None, candyType=None):
-        Predicate.__init__(self, [("id", int), ("type", int)])
-        Node.__init__(self, nodeID, candyType)
+    def __init__(self, nodeID=None):
+        Predicate.__init__(self, [("id", int)])
+        InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
-        return f"bomb({super().get_id()}, {super().get_type()}) \n"
+        return f"bomb({super().get_id()}) \n"
+
+
+class InputHorizontalOrVertical(Predicate, InformationID):
+    predicate_name = "horizontalOrVertical"
+
+    def __init__(self, nodeID=None):
+        Predicate.__init__(self, [("id", int)])
+        InformationID.__init__(self, nodeID)
+
+    def __str__(self) -> str:
+        return f"horizontal({super().get_id()}) \n"
 
 
 class NewEdge(Predicate, Connect):

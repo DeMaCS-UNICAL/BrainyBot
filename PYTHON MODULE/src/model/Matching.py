@@ -7,7 +7,7 @@ import numpy as np
 
 from setup import RESOURCES_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY, ID, TYPE
-from src.model.DLVClass import Edge, InputBomb, InputNode
+from src.model.DLVClass import Edge, InputBomb, InputNode, InputHorizontalOrVertical
 
 SPRITE_PATH = os.path.join(RESOURCES_PATH, 'sprites')  # The resource folder path
 SPRITES = {}
@@ -61,7 +61,7 @@ class MatchingCandy:
 
 
 def getNodes(graph: CandyGraph) -> []:
-    nodes = []
+    nodesAndInformation = []
     for node in graph.getNodes():
 
         result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
@@ -74,11 +74,16 @@ def getNodes(graph: CandyGraph) -> []:
         if "Bomb" in candyType:
             result = re.search(r"^(\w+)(?:Bomb)$", candyType)
             candyType = result.groups()[0]
-            nodes.append(InputBomb(node[ID], candyType))
+            nodesAndInformation.append(InputBomb(node[ID]))
 
-        nodes.append(InputNode(node[ID], candyType))
+        if "Horizontal" in candyType or "Vertical" in candyType:
+            result = re.search(r"^(\w+)(?:Horizontal|Vertical)$", candyType)
+            candyType = result.groups()[0]
+            nodesAndInformation.append(InputHorizontalOrVertical(node[ID]))
 
-    return nodes
+        nodesAndInformation.append(InputNode(node[ID], candyType))
+
+    return nodesAndInformation
 
 
 def getEdges(graph: CandyGraph) -> [Edge]:

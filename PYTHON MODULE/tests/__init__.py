@@ -10,7 +10,8 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
 from setup import RESOURCES_PATH, LOGS_PATH, DLV_PATH, MAP_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY
-from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, Node, InputNode, InputBomb
+from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, \
+    InputHorizontalOrVertical
 from src.model.Matching import MatchingCandy, getImg, getNodes, getEdges
 
 # mapping
@@ -18,12 +19,13 @@ ASPMapper.get_instance().register_class(Swap)
 ASPMapper.get_instance().register_class(Edge)
 ASPMapper.get_instance().register_class(InputNode)
 ASPMapper.get_instance().register_class(InputBomb)
+ASPMapper.get_instance().register_class(InputHorizontalOrVertical)
 ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
 
 class DLVSolution:
 
-    def __init__(self, nodes: [Node]):
+    def __init__(self, nodes: []):
         self.__countLogs = 0  # count for debug
         self.__dir = None  # log directory for debug
         self.__nodes = nodes
@@ -60,10 +62,8 @@ class DLVSolution:
         # end testing
 
         self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "rules.dlv2"))
-
         for node in self.__nodes:
             self.__fixedInputProgram.add_object_input(node)
-            # print(node)
 
         self.__handler.add_program(self.__fixedInputProgram)
 
@@ -111,7 +111,7 @@ class DLVSolution:
             notOptimum = None  # only for testing
             edgeNotOptimum = []  # only for testing
             print("#######################################")
-            print(answerSets.get_answer_sets_string())
+            # print(answerSets.get_answer_sets_string())
 
             for answerSet in answerSets.get_answer_sets():  # only for testing
                 print(answerSet)
@@ -188,7 +188,7 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     plt.show()
 
 
-matrix = getImg(os.path.join(MAP_PATH, "matrix3.jpeg"))
+matrix = getImg(os.path.join(MAP_PATH, "matrix1.jpeg"))
 matching = MatchingCandy(matrix)
 candyGraph: CandyGraph = matching.search()
 dlvSolution = DLVSolution(getNodes(candyGraph))
