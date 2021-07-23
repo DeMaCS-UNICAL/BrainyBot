@@ -188,7 +188,7 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     plt.show()
 
 
-matrix = getImg(os.path.join(MAP_PATH, "matrix1.jpeg"))
+matrix = getImg(os.path.join(MAP_PATH, "img.png"))
 matching = MatchingCandy(matrix)
 candyGraph: CandyGraph = matching.search()
 dlvSolution = DLVSolution(getNodes(candyGraph))
