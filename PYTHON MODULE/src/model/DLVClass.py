@@ -86,7 +86,7 @@ class Node(InformationID):
 
 
 class InputNode(Predicate, Node):
-    predicate_name = "node2"
+    predicate_name = "node"
 
     def __init__(self, nodeID=None, candyType=None):
         Predicate.__init__(self, [("id", int), ("type", int)])
@@ -104,8 +104,19 @@ class InputBomb(Predicate, InformationID):
         return f"bomb({super().get_id()}) \n"
 
 
-class InputHorizontalOrVertical(Predicate, InformationID):
-    predicate_name = "horizontalOrVertical"
+class InputVertical(Predicate, InformationID):
+    predicate_name = "vertical"
+
+    def __init__(self, nodeID=None):
+        Predicate.__init__(self, [("id", int)])
+        InformationID.__init__(self, nodeID)
+
+    def __str__(self) -> str:
+        return f"vertical({super().get_id()}) \n"
+
+
+class InputHorizontal(Predicate, InformationID):
+    predicate_name = "horizontal"
 
     def __init__(self, nodeID=None):
         Predicate.__init__(self, [("id", int)])

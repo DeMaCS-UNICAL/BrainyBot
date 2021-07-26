@@ -7,7 +7,7 @@ import numpy as np
 
 from setup import RESOURCES_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY, ID, TYPE
-from src.model.DLVClass import Edge, InputBomb, InputNode, InputHorizontalOrVertical
+from src.model.DLVClass import Edge, InputBomb, InputNode, InputHorizontal, InputVertical
 
 SPRITE_PATH = os.path.join(RESOURCES_PATH, 'sprites')  # The resource folder path
 SPRITES = {}
@@ -76,10 +76,15 @@ def getInputDLVNodes(graph: CandyGraph) -> []:
             candyType = result.groups()[0]
             nodesAndInformation.append(InputBomb(node[ID]))
 
-        if "Horizontal" in candyType or "Vertical" in candyType:
-            result = re.search(r"^(\w+)(?:Horizontal|Vertical)$", candyType)
+        if "Horizontal" in candyType:
+            result = re.search(r"^(\w+)(?:Horizontal)$", candyType)
             candyType = result.groups()[0]
-            nodesAndInformation.append(InputHorizontalOrVertical(node[ID]))
+            nodesAndInformation.append(InputHorizontal(node[ID]))
+
+        if "Vertical" in candyType:
+            result = re.search(r"^(\w+)(?:Vertical)$", candyType)
+            candyType = result.groups()[0]
+            nodesAndInformation.append(InputVertical(node[ID]))
 
         nodesAndInformation.append(InputNode(node[ID], candyType))
 

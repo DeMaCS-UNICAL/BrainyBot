@@ -5,8 +5,8 @@ PY = 1
 TYPE = 2
 ID = 3
 
-ON_THE_SAME_COLUMN = "column"
-ON_THE_SAME_ROW = "row"
+VERTICAL = "vertical"
+HORIZONTAL = "horizontal"
 
 
 def checkInRange(node1: (), node2: (), p: int, approximation) -> bool:
@@ -91,7 +91,7 @@ class CandyGraph(nx.Graph):
                 continue
 
             p = self.__checkConditions(node, n)
-            if p == ON_THE_SAME_ROW or p == ON_THE_SAME_COLUMN:
+            if p == HORIZONTAL or p == VERTICAL:
                 super().add_edge(node, n, position=p)
                 # print(f"ADDING EDGE:  ( {node}, {n} )")
 
@@ -99,11 +99,11 @@ class CandyGraph(nx.Graph):
         # if a nodes is linked on X or on Y with another nodes.
         if checkInRange(node, n, PX, self.__approximation) and self.__checkOnTheAxis(node, n,
                                                                                      PY):
-            return ON_THE_SAME_COLUMN
+            return VERTICAL
         elif checkInRange(node, n, PY, self.__approximation) and self.__checkOnTheAxis(node,
                                                                                        n,
                                                                                        PX):
-            return ON_THE_SAME_ROW
+            return HORIZONTAL
 
     def __checkOnTheAxis(self, node, n, p) -> bool:
         return n[p] - self.__difference[p] - self.__approximation <= node[p] <= n[p] + self.__difference[

@@ -11,16 +11,16 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
 from setup import RESOURCES_PATH, LOGS_PATH, DLV_PATH, MAP_PATH
 from src.model.CandyGraph import CandyGraph, PX, PY, TYPE
-from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, \
-    InputHorizontalOrVertical
+from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
 # mapping
-from src.model.Matching import getImg, MatchingCandy, getInputDLVNodes
+from src.model.Matching import getImg, MatchingCandy, getInputDLVNodes, getEdges
 
 ASPMapper.get_instance().register_class(Swap)
 ASPMapper.get_instance().register_class(Edge)
 ASPMapper.get_instance().register_class(InputNode)
 ASPMapper.get_instance().register_class(InputBomb)
-ASPMapper.get_instance().register_class(InputHorizontalOrVertical)
+ASPMapper.get_instance().register_class(InputHorizontal)
+ASPMapper.get_instance().register_class(InputVertical)
 ASPMapper.get_instance().register_class(AtLeast3Adjacent)
 
 STRING = {
@@ -281,26 +281,18 @@ def drawAllNodesAndEdges(candyGraph: CandyGraph, candyMatrix):
 
 
 ########################## remove comment for testing ASP optimum solution
-# def submission(file):
-#     candyMatrix = getImg(os.path.join(MAP_PATH, file))
-#     matching = MatchingCandy(candyMatrix, difference)
-#     candyGraph: CandyGraph = matching.search()
-#     dlvSolution = DLVSolution(getInputDLVNodes(candyGraph))
-#     drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), candyMatrix)
+def submission(file):
+    candyMatrix = getImg(os.path.join(MAP_PATH, file))
+    matching = MatchingCandy(candyMatrix, difference)
+    candyGraph: CandyGraph = matching.search()
+    dlvSolution = DLVSolution(getInputDLVNodes(candyGraph))
+    drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), candyMatrix)
 
 
-#
-#
-# with ThreadPoolExecutor(max_workers=5) as exe:
-#     for file in os.listdir(MAP_PATH):
-#         if "6" in file:
-#             exe.submit(submission, file)
-#
+# with ThreadPoolExecutor(max_workers=2) as exe:
+for file in os.listdir(MAP_PATH):
+    # exe.submit(submission, file)
+    if "11" in file:
+        submission(file)
 
-
-candyMatrix = getImg(os.path.join(MAP_PATH, "Matrix6.png"))
-matching = MatchingCandy(candyMatrix, difference)
-candyGraph: CandyGraph = matching.search()
-dlvSolution = DLVSolution(getInputDLVNodes(candyGraph))
-drawOptimumSolution(dlvSolution, candyGraph, candyMatrix)
 ##########################
