@@ -42,7 +42,7 @@ class MatchingCandy:
         locMax = mahotas.regmax(res)
 
         # modify this to change the algorithm precision
-        threshold = 0.90
+        threshold = 0.85
         loc = np.where((res * locMax) >= threshold)
 
         # take candy sprites value
@@ -60,7 +60,7 @@ class MatchingCandy:
         return self.__graph
 
 
-def getNodes(graph: CandyGraph) -> []:
+def getInputDLVNodes(graph: CandyGraph) -> []:
     nodesAndInformation = []
     for node in graph.getNodes():
 
