@@ -1,6 +1,5 @@
 import os
 import re
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import cv2
@@ -15,7 +14,7 @@ from src.model.CandyGraph import CandyGraph, PX, PY, TYPE
 from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, \
     InputHorizontalOrVertical
 # mapping
-from src.model.Matching import getImg, MatchingCandy
+from src.model.Matching import getImg, MatchingCandy, getEdges, getInputDLVNodes
 
 ASPMapper.get_instance().register_class(Swap)
 ASPMapper.get_instance().register_class(Edge)
@@ -77,7 +76,7 @@ class DLVSolution:
 
         # show
         self.__fixedInputProgram.add_program("\n  #show swap/2. \n ")
-        # self.__fixedInputProgram.add_program("#show edgeWithTheSameTypeAndPosition/3.")
+        # self.__fixedInputProgram.add_program("\n #show AtLeast3Adjacent/3. \n ")
         # self.__fixedInputProgram.add_program("#show AtLeast3Adjacent/3.")
 
         # only for testing
@@ -136,7 +135,7 @@ class DLVSolution:
             notOptimum = None  # only for testing
             edgeNotOptimum = []  # only for testing
             print("#######################################")
-            # print(answerSets.get_answer_sets_string())
+            print(answerSets.get_answer_sets_string())
 
             for answerSet in answerSets.get_answer_sets():  # only for testing
                 print(answerSet)
@@ -166,23 +165,26 @@ class DLVSolution:
             print(str(e))
 
 
-def draw(matrixCopy, nodes):
+def draw(matrixCopy, nodes, color=None):
     width, height = 70, 70
-    result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", nodes[TYPE])
-    candyType = result.groups()[0]
 
-    if "Horizontal" in candyType or "Vertical" in candyType:
-        result = re.search(r"^(\w+)(?:Horizontal|Vertical)$", candyType)
+    if color is None:
+        result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", nodes[TYPE])
         candyType = result.groups()[0]
 
-    if "Bomb" in candyType:
-        result = re.search(r"^(\w+)(?:Bomb)$", candyType)
-        candyType = result.groups()[0]
+        if "Horizontal" in candyType or "Vertical" in candyType:
+            result = re.search(r"^(\w+)(?:Horizontal|Vertical)$", candyType)
+            candyType = result.groups()[0]
 
-    if "notTouch" in candyType or "jolly" in candyType or "2" in candyType:
-        return
+        if "Bomb" in candyType:
+            result = re.search(r"^(\w+)(?:Bomb)$", candyType)
+            candyType = result.groups()[0]
 
-    color = COLOR[candyType]
+        if "notTouch" in candyType or "jolly" in candyType or "2" in candyType:
+            return
+
+        color = COLOR[candyType]
+
     cv2.rectangle(matrixCopy, (nodes[PX] + 35, nodes[PY] + 35), (nodes[PX] + width, nodes[PY] + height),
                   color,
                   10)
@@ -223,8 +225,8 @@ def drawOptimumSolution(dlvSolution: DLVSolution, graph: CandyGraph, edges: [Edg
     node1 = graph.getNode(swap.get_id1())
     node2 = graph.getNode(swap.get_id2())
 
-    draw(tmp, node1)
-    draw(tmp, node2)
+    draw(tmp, node1, (255, 255, 255))
+    draw(tmp, node2, (255, 255, 255))
     plt.imshow(tmp)
     plt.title(f"----------- OPTIMUM ---- swap {node1} --> {node2}.")
     plt.show()
@@ -238,27 +240,49 @@ def drawDetection(graph: CandyGraph, candyMatrix):
     plt.show()
 
 
+def drawSingleNodeWithID(id, graph, matrix):
+    draw(matrix, graph.getNode(id), (255, 255, 0))
+    plt.imshow(matrix)
+    plt.title(id)
+    plt.show()
+
+
 ########################## remove comment for testing matching
-
-def submission(file):
-    print(f"Analysis {file}")
-    matrix = getImg(os.path.join(MAP_PATH, file))
-    matching = MatchingCandy(matrix)
-    candyGraph: CandyGraph = matching.search()
-    drawDetection(candyGraph, matrix)
-
-
-for file in os.listdir(MAP_PATH):
-    with ThreadPoolExecutor(max_workers=10) as exe:
-        exe.submit(submission, file)
-
+# def submission(file):
+#     print(f"Analysis {file}")
+#     matrix = getImg(os.path.join(MAP_PATH, file))
+#     matching = MatchingCandy(matrix)
+#     candyGraph: CandyGraph = matching.search()
+#     drawDetection(candyGraph, matrix)
+#
+#
+# with ThreadPoolExecutor(max_workers=3) as exe:
+#     for file in os.listdir(MAP_PATH):
+#         exe.submit(submission, file)
 ##########################
 
 
 ########################## remove comment for testing ASP optimum solution
-# for file in os.listdir(MAP_PATH):
-#     matrix = getImg(os.path.join(MAP_PATH, file))
-#     matching = MatchingCandy(matrix)
-#     candyGraph: CandyGraph = matching.search()
-#     dlvSolution = DLVSolution(getNodes(candyGraph))
-#     drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), matrix)
+def submission(file):
+    matrix = getImg(os.path.join(MAP_PATH, file))
+    matching = MatchingCandy(matrix)
+    candyGraph: CandyGraph = matching.search()
+    dlvSolution = DLVSolution(getInputDLVNodes(candyGraph))
+    drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), matrix)
+
+
+#
+#
+# with ThreadPoolExecutor(max_workers=5) as exe:
+#     for file in os.listdir(MAP_PATH):
+#         if "6" in file:
+#             exe.submit(submission, file)
+
+matrix = getImg(os.path.join(MAP_PATH, "Matrix6.png"))
+matching = MatchingCandy(matrix)
+candyGraph: CandyGraph = matching.search()
+dlvSolution = DLVSolution(getInputDLVNodes(candyGraph))
+drawOptimumSolution(dlvSolution, candyGraph, getEdges(candyGraph), matrix)
+for i in [7, 15, 9, 13]:
+    drawSingleNodeWithID(i, candyGraph, matrix.copy())
+##########################

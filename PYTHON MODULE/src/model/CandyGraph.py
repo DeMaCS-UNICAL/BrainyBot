@@ -85,8 +85,7 @@ class CandyGraph(nx.Graph):
             return ON_THE_SAME_ROW
 
     def __secondConditionDifference(self, node, n, p) -> bool:
-        difference = self.__difference[p] // 2
-        return n[p] - difference <= node[p] <= n[p] + difference
+        return n[p] - self.__approximation <= node[p] <= n[p] + self.__approximation
 
     def __firstConditionDifference(self, node, n, p) -> bool:
         return n[p] - self.__difference[p] - self.__approximation <= node[p] <= n[p] + self.__difference[
