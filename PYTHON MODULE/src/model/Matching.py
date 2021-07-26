@@ -28,28 +28,28 @@ for file in os.listdir(SPRITE_PATH):
 
 
 class MatchingCandy:
-    def __init__(self, matrix):
+    def __init__(self, matrix, difference: ()):
         self.__matrix = matrix
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
-        self.__graph = CandyGraph()
+        self.__graph = CandyGraph(difference)
 
     def __searchByName(self, typeCandy) -> None:
         # execute template match
         res = cv2.matchTemplate(self.__matrix, SPRITES[typeCandy], self.__method)
 
-        # find local maxElem
-        locMax = mahotas.regmax(res)
+        # find regional maxElem
+        regMax = mahotas.regmax(res)
 
         # modify this to change the algorithm precision
         threshold = 0.85
-        loc = np.where((res * locMax) >= threshold)
+        loc = np.where((res * regMax) >= threshold)
 
         # take candy sprites value
         height, width, _ = SPRITES[typeCandy].shape
         self.__graph.setDifference((width, height))
 
-        # add node and edge
+        # add node2 and edge
         for pt in zip(*loc[::-1]):
             self.__graph.addNode(pt[PX], pt[PY], typeCandy)
 
@@ -67,7 +67,7 @@ def getInputDLVNodes(graph: CandyGraph) -> []:
         result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
         candyType = result.groups()[0]
 
-        # checks if the node is not swappable
+        # checks if the node2 is not swappable
         if "notTouch" in candyType:
             continue
 

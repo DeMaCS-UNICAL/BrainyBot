@@ -82,11 +82,11 @@ class Node(InformationID):
         self.__type = candyType
 
     def __str__(self) -> str:
-        return f"node({super().get_id()}, {self.__type}) \n"
+        return f"node2({super().get_id()}, {self.__type}) \n"
 
 
 class InputNode(Predicate, Node):
-    predicate_name = "node"
+    predicate_name = "node2"
 
     def __init__(self, nodeID=None, candyType=None):
         Predicate.__init__(self, [("id", int), ("type", int)])
