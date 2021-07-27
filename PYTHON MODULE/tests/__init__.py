@@ -77,7 +77,7 @@ class DLVSolution:
 
         # show
         self.__fixedInputProgram.add_program("\n  #show swap/2. \n ")
-        # self.__fixedInputProgram.add_program("\node1 #show AtLeast3Adjacent/3. \node1 ")
+        self.__fixedInputProgram.add_program("\n #show adjacentHorizontalNodes/2. \n ")
         # self.__fixedInputProgram.add_program("#show AtLeast3Adjacent/3.")
 
         # only for testing
@@ -281,6 +281,7 @@ def drawAllNodesAndEdges(candyGraph: CandyGraph, candyMatrix):
 
 
 ########################## remove comment for testing ASP optimum solution
+
 def submission(file):
     candyMatrix = getImg(os.path.join(MAP_PATH, file))
     matching = MatchingCandy(candyMatrix, difference)
@@ -292,7 +293,6 @@ def submission(file):
 # with ThreadPoolExecutor(max_workers=2) as exe:
 for file in os.listdir(MAP_PATH):
     # exe.submit(submission, file)
-    if "11" in file:
-        submission(file)
+    submission(file)
 
 ##########################
