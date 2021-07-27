@@ -96,13 +96,13 @@ nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
 :~ nodesWithDifferentType(ID). [1@1, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  bomb weak
-:~ bomb(ID), not swappedNodes(ID). [1@2, ID]
+:~ bomb(ID), not adjacentNodes(ID). [1@2, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% horizontal weak
-:~ horizontal(ID), not swappedNodes(ID). [1@3, ID]
+:~ horizontal(ID), not adjacentNodes(ID). [1@3, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% vertical weak
-:~ vertical(ID), not swappedNodes(ID). [1@3, ID]
+:~ vertical(ID), not adjacentNodes(ID). [1@3, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  jolly weak
 jollyCount(ID1, T, C) :- #count{IDX : node(IDX, T)} = C, node(ID1, "jolly"), edge(ID1, ID2, _), node(ID2, T). % count nodes for each jolly, max relative
