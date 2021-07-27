@@ -1,16 +1,7 @@
 import networkx as nx
 
-PX = 0
-PY = 1
-TYPE = 2
-ID = 3
-
-VERTICAL = "vertical"
-HORIZONTAL = "horizontal"
-
-
-def checkInRange(node1: (), node2: (), p: int, approximation) -> bool:
-    return node1[p] - approximation <= node2[p] <= node1[p] + approximation
+from Application.candygraph.constants import *
+from Application.candygraph.helpers import *
 
 
 class CandyGraph(nx.Graph):

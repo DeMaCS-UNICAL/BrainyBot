@@ -2,10 +2,9 @@ import os
 
 from languages.asp.asp_input_program import ASPInputProgram
 from languages.predicate import Predicate
-from platforms.desktop.desktop_handler import DesktopHandler
-from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
-from setup import DLV_PATH, RESOURCES_PATH
+from Application.costants import RESOURCES_PATH
+from Application.dlv.helpers import chooseDLVSystem
 
 
 class Connect:
@@ -154,18 +153,6 @@ class AtLeast3Adjacent(Predicate, Connect):
 
     def set_position(self, position):
         self.__position = position
-
-
-def chooseDLVSystem() -> DesktopHandler:
-    if os.name == 'nt':
-        return DesktopHandler(
-            DLV2DesktopService(os.path.join(DLV_PATH, "DLV2.exe")))
-    elif os.uname().sysname == 'Darwin':
-        return DesktopHandler(
-            DLV2DesktopService(os.path.join(DLV_PATH, "dlv2.mac_7")))
-    else:
-        return DesktopHandler(
-            DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux-64_6")))
 
 
 class DLVSolution:

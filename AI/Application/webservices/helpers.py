@@ -9,8 +9,7 @@ def requireImageFromURL(url, port):
 
 
 def makeJson(coodinateType: []):
-    json_obj = {}
-    json_obj['coordinates'] = []
+    json_obj = {'coordinates': []}
 
     for x, y, t in coodinateType:
         json_obj['coordinates'].append({

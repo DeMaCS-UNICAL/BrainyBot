@@ -1,30 +1,12 @@
-import os
 import re
 
 import cv2
 import mahotas
 import numpy as np
 
-from setup import RESOURCES_PATH
-from src.model.CandyGraph import CandyGraph, PX, PY, ID, TYPE
-from src.model.DLVClass import Edge, InputBomb, InputNode, InputHorizontal, InputVertical
-
-SPRITE_PATH = os.path.join(RESOURCES_PATH, 'sprites')  # The resource folder path
-SPRITES = {}
-
-
-def getImg(file):
-    try:
-        im = cv2.imread(file)
-        return cv2.cvtColor(im, cv2.COLOR_BGR2RGB)
-    except:
-        raise Exception(f"NO {file} FOUND. \n")
-
-
-for file in os.listdir(SPRITE_PATH):
-    img = getImg(os.path.join(SPRITE_PATH, file))
-    typeCandy = os.path.basename(file)
-    SPRITES[typeCandy] = img
+from Application.candygraph.candygraph import CandyGraph, PX, PY, ID, TYPE
+from Application.detect import SPRITES
+from Application.dlv.dlv import InputBomb, InputNode, InputHorizontal, InputVertical
 
 
 class MatchingCandy:
@@ -89,12 +71,3 @@ def getInputDLVNodes(graph: CandyGraph) -> []:
         nodesAndInformation.append(InputNode(node[ID], candyType))
 
     return nodesAndInformation
-
-
-def getEdges(graph: CandyGraph) -> [Edge]:
-    edges = []
-    for n, nbrs in graph.getGraph():
-        for nbr, eattr in nbrs.items():
-            edges.append(Edge(n[ID], nbr[ID], graph.getPosition(n, nbr)))
-
-    return edges

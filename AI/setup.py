@@ -3,14 +3,7 @@ import os
 import conda.cli
 import pip
 
-SETUP_PATH = os.path.dirname(__file__)  # Where your .py file is located
-SRC_PATH = os.path.join(SETUP_PATH, 'src')
-RESOURCES_PATH = os.path.join(SRC_PATH, 'resources')
-DLV_PATH = os.path.join(RESOURCES_PATH, 'dlv')
-SPRITE_PATH = os.path.join(RESOURCES_PATH, 'sprites')
-TESTS_PATH = os.path.join(SETUP_PATH, 'tests')
-LOGS_PATH = os.path.join(TESTS_PATH, 'logs')
-MAP_PATH = os.path.join(TESTS_PATH, 'map')
+from Application.costants import DLV_PATH
 
 
 def install_whl(path):

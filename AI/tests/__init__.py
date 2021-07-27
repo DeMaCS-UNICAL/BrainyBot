@@ -9,11 +9,17 @@ from matplotlib import pyplot as plt
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
-from setup import RESOURCES_PATH, LOGS_PATH, DLV_PATH, MAP_PATH
-from src.model.CandyGraph import CandyGraph, PX, PY, TYPE
-from src.model.DLVClass import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
+from Application.candygraph.candygraph import CandyGraph, PX, PY, TYPE
 # mapping
-from src.model.Matching import getImg, MatchingCandy, getInputDLVNodes, getEdges
+from Application.costants import DLV_PATH, RESOURCES_PATH
+from Application.detect import getImg
+from Application.detect.detect import MatchingCandy, getInputDLVNodes
+from Application.detect.helpers import getEdges
+from Application.dlv.dlv import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
+
+TESTS_PATH = os.path.dirname(__file__)
+LOGS_PATH = os.path.join(TESTS_PATH, 'logs')
+MAP_PATH = os.path.join(TESTS_PATH, 'map')
 
 ASPMapper.get_instance().register_class(Swap)
 ASPMapper.get_instance().register_class(Edge)
@@ -270,7 +276,7 @@ def drawAllNodesAndEdges(candyGraph: CandyGraph, candyMatrix):
 #     print(f"Analysis {file}")
 #     candyMatrix = getImg(os.path.join(MAP_PATH, file))
 #     matching = MatchingCandy(candyMatrix, difference)
-#     candyGraph: CandyGraph = matching.search()
+#     candyGraph: candygraph = matching.search()
 #     drawDetection(candyGraph, candyMatrix)
 #
 #
