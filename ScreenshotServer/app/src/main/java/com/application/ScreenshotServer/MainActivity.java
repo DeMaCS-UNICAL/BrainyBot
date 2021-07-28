@@ -12,6 +12,7 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.application.ScreenshotServer.model.HandlerScreenshot;
 import com.application.ScreenshotServer.model.ImageSender;
 import com.application.ScreenshotServer.model.ScreenCaptureService;
 import com.application.ScreenshotServer.utils.Settings;
@@ -55,6 +56,7 @@ public class MainActivity extends AppCompatActivity {
 
         // start projection
         startProjection();
+
         // start server
         ImageSender.getInstance().startServer();
 

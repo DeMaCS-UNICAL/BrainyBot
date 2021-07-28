@@ -69,6 +69,7 @@ public class ImageSender {
                 if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
                     try {
                         Log.d(TAG, "onRequest: request");
+                        HandlerScreenshot.getInstance().takeScreenshot();
                         Screenshot screenshot = lockImage.take();
                         Log.e(TAG, "take data -> " + screenshot.toString());
                         byte[] bytes = convertToArray(screenshot.getBitmap());
