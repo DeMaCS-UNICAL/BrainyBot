@@ -20,7 +20,6 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 import android.view.Display;
-import android.view.OrientationEventListener;
 import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
@@ -28,7 +27,6 @@ import androidx.core.util.Pair;
 
 import com.application.ScreenshotServer.utils.NotificationUtils;
 
-import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -53,69 +51,21 @@ public class ScreenCaptureService extends Service {
     private static final String ACTION = "ACTION";
     private static final String START = "START";
     private static final String STOP = "STOP";
-    private static final String SCREENCAP_NAME = "screencap";
-
-//    private static int IMAGES_PRODUCED;
-
+    private static final String SCREENCAP_NAME = "TappingBOT Capture Service";
     private MediaProjection mMediaProjection;
-    private String mStoreDir;
     private ImageReader mImageReader;
     private Handler mHandler;
-    private Display mDisplay;
-    private VirtualDisplay mVirtualDisplay;
     private int mDensity;
     private int mWidth;
     private int mHeight;
-    private int mRotation;
-    private OrientationChangeCallback mOrientationChangeCallback;
-
-    private static boolean isStartCommand(@NonNull Intent intent) {
-        Log.d(TAG, "isStartCommand");
-
-        return intent.hasExtra(RESULT_CODE) && intent.hasExtra(DATA)
-                && intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), START);
-    }
-
-    private static boolean isStopCommand(@NonNull Intent intent) {
-        Log.d(TAG, "isStopCommand");
-
-        return intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), STOP);
-    }
-
-    private static int getVirtualDisplayFlags() {
-        Log.d(TAG, "getVirtualDisplayFlags");
-        return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        Log.d(TAG, "onBind");
-        return null;
-    }
-
-
-    //    first call
-    @NonNull
-    public static Intent getStartIntent(Context context, int resultCode, Intent data) {
-        Log.d(TAG, "getStartIntent");
-
-        Intent intent = new Intent(context, ScreenCaptureService.class);
-        intent.putExtra(ACTION, START);
-        intent.putExtra(RESULT_CODE, resultCode);
-        intent.putExtra(DATA, data);
-        return intent;
-    }
-
-    @NonNull
-    public static Intent getStopIntent(Context context) {
-        Log.d(TAG, "getStopIntent");
-        Intent intent = new Intent(context, ScreenCaptureService.class);
-        intent.putExtra(ACTION, STOP);
-        return intent;
-    }
+    private int resultCode;
+    private Intent data;
 
     private void startProjection(int resultCode, Intent data) {
         Log.d(TAG, "startProjection");
+
+        this.resultCode = resultCode;
+        this.data = data;
 
 
         /*
@@ -134,37 +84,12 @@ public class ScreenCaptureService extends Service {
                 // display metrics
                 mDensity = Resources.getSystem().getDisplayMetrics().densityDpi;
                 WindowManager windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-                mDisplay = windowManager.getDefaultDisplay();
+                Display mDisplay = windowManager.getDefaultDisplay();
 
                 // create virtual display depending on device width / height
                 createVirtualDisplay(); // initialize virtual display
 
-                // register orientation change callback
-                mOrientationChangeCallback = new OrientationChangeCallback(this);
-                if (mOrientationChangeCallback.canDetectOrientation()) {
-                    mOrientationChangeCallback.enable();
-                }
-
-                // register media projection stop callback
-                // registerCallback Register a listener to receive notifications about when the MediaProjection changes state.
-                mMediaProjection.registerCallback(new MediaProjectionStopCallback(), mHandler);
-
             }
-        }
-    }
-
-    private void stopProjection() {
-        Log.d(TAG, "stopProjection");
-
-        if (mHandler != null) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (mMediaProjection != null) {
-                        mMediaProjection.stop();
-                    }
-                }
-            });
         }
     }
 
@@ -181,25 +106,23 @@ public class ScreenCaptureService extends Service {
 
         // initialize our virtual display
 
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay(SCREENCAP_NAME, mWidth, mHeight,
+        VirtualDisplay mVirtualDisplay = mMediaProjection.createVirtualDisplay(SCREENCAP_NAME, mWidth, mHeight,
                 mDensity, getVirtualDisplayFlags(), mImageReader.getSurface(), null, mHandler);
+
         mImageReader.setOnImageAvailableListener(new ImageAvailableListener(), mHandler);
     }
 
     @Override
     public void onCreate() {
         Log.d(TAG, "onCreate");
-        super.onCreate();
-
-        // start capture handling thread
+        super.onCreate();// start capture handling thread
         new Thread() {
             @Override
             public void run() {
 
 
-//                it will make a screen only when the surface change state!
                 try {
-                    Looper.prepare(); // infinite loop
+                    Looper.prepare();
 
 
                     Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
@@ -252,17 +175,22 @@ public class ScreenCaptureService extends Service {
         return START_NOT_STICKY;
     }
 
-
     private class ImageAvailableListener implements ImageReader.OnImageAvailableListener { // management by an handler
 
         @Override
         public void onImageAvailable(ImageReader reader) {
+
             Log.d(TAG, "onImageAvailable");
 
+//            it can make only one screenshot
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mImageReader.setOnImageAvailableListener(null, mHandler);
+                    mMediaProjection.stop();
+                }
+            });
 
-            FileOutputStream fos = null;
-            Bitmap bitmap = null;
-            String name = null;
             try (Image image = mImageReader.acquireLatestImage()) { // acquire last image
                 if (image != null) {
                     Image.Plane[] planes = image.getPlanes();
@@ -272,15 +200,13 @@ public class ScreenCaptureService extends Service {
                     int rowPadding = rowStride - pixelStride * mWidth;
 
                     // create bitmap
-                    bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
+                    Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(buffer);
 
                     Screenshot screenshot = new Screenshot(bitmap, Integer.toString(0));
                     ImageSender.getInstance().uploadImage(screenshot);
                     Log.e(TAG, "screenshot name: " + screenshot);
-//                  stop projection
-//                    HandlerProjection.getInstance().stopProjection();
-//                    Looper.myLooper().quitSafely();
+
                 }
 
             } catch (Exception e) {
@@ -289,45 +215,63 @@ public class ScreenCaptureService extends Service {
         }
     }
 
-    private class OrientationChangeCallback extends OrientationEventListener {
 
-        OrientationChangeCallback(Context context) {
-            super(context);
-        }
+    private void stopProjection() {
+        Log.d(TAG, "stopProjection");
 
-        @Override
-        public void onOrientationChanged(int orientation) {
-            Log.d(TAG, "onOrientationChanged");
-            final int rotation = mDisplay.getRotation();
-            if (rotation != mRotation) {
-                mRotation = rotation;
-                try {
-                    // clean up
-                    if (mVirtualDisplay != null) mVirtualDisplay.release();
-                    if (mImageReader != null) mImageReader.setOnImageAvailableListener(null, null);
-
-                    // re-create virtual display depending on device width / height
-                    createVirtualDisplay();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private class MediaProjectionStopCallback extends MediaProjection.Callback {
-        @Override
-        public void onStop() {
-            Log.d(TAG, "stopping projection.");
+        if (mHandler != null) {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    if (mVirtualDisplay != null) mVirtualDisplay.release();
-                    if (mImageReader != null) mImageReader.setOnImageAvailableListener(null, null);
-                    if (mOrientationChangeCallback != null) mOrientationChangeCallback.disable();
-                    mMediaProjection.unregisterCallback(MediaProjectionStopCallback.this);
+                    if (mMediaProjection != null) {
+                        mMediaProjection.stop();
+                    }
                 }
             });
         }
+    }
+
+    private static boolean isStartCommand(@NonNull Intent intent) {
+        Log.d(TAG, "isStartCommand");
+
+        return intent.hasExtra(RESULT_CODE) && intent.hasExtra(DATA)
+                && intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), START);
+    }
+
+    private static boolean isStopCommand(@NonNull Intent intent) {
+        Log.d(TAG, "isStopCommand");
+
+        return intent.hasExtra(ACTION) && Objects.equals(intent.getStringExtra(ACTION), STOP);
+    }
+
+    private static int getVirtualDisplayFlags() {
+        Log.d(TAG, "getVirtualDisplayFlags");
+        return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        Log.d(TAG, "onBind");
+        return null;
+    }
+
+    //    first call
+    @NonNull
+    public static Intent getStartIntent(Context context, int resultCode, Intent data) {
+        Log.d(TAG, "getStartIntent");
+
+        Intent intent = new Intent(context, ScreenCaptureService.class);
+        intent.putExtra(ACTION, START);
+        intent.putExtra(RESULT_CODE, resultCode);
+        intent.putExtra(DATA, data);
+        return intent;
+    }
+
+    @NonNull
+    public static Intent getStopIntent(Context context) {
+        Log.d(TAG, "getStopIntent");
+        Intent intent = new Intent(context, ScreenCaptureService.class);
+        intent.putExtra(ACTION, STOP);
+        return intent;
     }
 }
