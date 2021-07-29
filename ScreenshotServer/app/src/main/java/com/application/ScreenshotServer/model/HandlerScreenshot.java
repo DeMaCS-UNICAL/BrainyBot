@@ -47,39 +47,7 @@ public class HandlerScreenshot {
         this.mpManager = mpManager;
         this.resultCode = resultCode;
         this.data = data;
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Looper.prepare();
-
-
-                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
-
-                    /*
-                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
-                     *   Each Handler instance is associated with a single thread and that thread's message queue.
-                     *   When you create a new Handler it is bound to a Looper.
-                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
-                     *
-                     * */
-                    mHandler = new Handler();
-
-                    /*
-                     * Loop is a Class used to run a message loop for a thread.
-                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
-                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
-                     * */
-                    Looper.loop();
-
-                } catch (Exception e) {
-
-                    Log.e(TAG, "ERROR IN LOOPER");
-                    e.printStackTrace();
-                }
-
-            }
-        }.start();
+        startLooper();
     }
 
     public static Builder getBuilder() {
@@ -98,39 +66,7 @@ public class HandlerScreenshot {
     }
 
     private HandlerScreenshot() {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Looper.prepare();
-
-
-                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
-
-                    /*
-                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
-                     *   Each Handler instance is associated with a single thread and that thread's message queue.
-                     *   When you create a new Handler it is bound to a Looper.
-                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
-                     *
-                     * */
-                    mHandler = new Handler();
-
-                    /*
-                     * Loop is a Class used to run a message loop for a thread.
-                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
-                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
-                     * */
-                    Looper.loop();
-
-                } catch (Exception e) {
-
-                    Log.e(TAG, "ERROR IN LOOPER");
-                    e.printStackTrace();
-                }
-
-            }
-        }.start();
+        startLooper();
     }
 
     public void takeScreenshot() {
@@ -272,5 +208,42 @@ public class HandlerScreenshot {
     private static int getVirtualDisplayFlags() {
         Log.d(TAG, "getVirtualDisplayFlags");
         return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
+    }
+
+
+    private void startLooper() {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    Looper.prepare();
+
+
+                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
+
+                    /*
+                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
+                     *   Each Handler instance is associated with a single thread and that thread's message queue.
+                     *   When you create a new Handler it is bound to a Looper.
+                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
+                     *
+                     * */
+                    mHandler = new Handler();
+
+                    /*
+                     * Loop is a Class used to run a message loop for a thread.
+                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
+                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
+                     * */
+                    Looper.loop();
+
+                } catch (Exception e) {
+
+                    Log.e(TAG, "ERROR IN LOOPER");
+                    e.printStackTrace();
+                }
+
+            }
+        }.start();
     }
 }

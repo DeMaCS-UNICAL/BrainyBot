@@ -1,6 +1,5 @@
 package com.application.ScreenshotServer;
 
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -12,10 +11,11 @@ import android.widget.Button;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.application.ScreenshotServer.model.HandlerScreenshot;
 import com.application.ScreenshotServer.model.ImageSender;
 import com.application.ScreenshotServer.model.ScreenCaptureService;
 import com.application.ScreenshotServer.utils.Settings;
+
+import java.util.HashMap;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -27,53 +27,115 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         startStop = findViewById(R.id.start_stop);
-        final boolean[] isStarted = {false};
 
+        ContextState contextState = new ContextState(ContextState.STOP);
         startStop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 try {
-                    if (isStarted[0])
-                        stop();
-                    else
-                        start();
-
-                    isStarted[0] = !isStarted[0];
+                    contextState.changeState();
+                    contextState.getState().execute();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         });
 
-
     }
 
-    private void start() throws Exception {
-        Log.d(TAG, "start: ");
-        //        change label text
-        startStop.setText(R.string.stop);
-
-
-        // start projection
-        startProjection();
-
-        // start server
-        ImageSender.getInstance().startServer();
-
+    private interface State {
+        void execute() throws Exception;
     }
 
-    @SuppressLint("SetTextI18n")
-    private void stop() throws Exception {
-        Log.d(TAG, "stop: ");
-//        change label text
-        startStop.setText(R.string.start);
 
-//        stop projection
-        stopProjection();
+    private class ContextState {
+        public static final String START = "START";
+        public static final String STOP = "STOP";
 
-//        stop server
-        ImageSender.getInstance().stopServer();
+        private State state;
+        private final HashMap<String, State> stringStateHashMap;
+
+        public ContextState(String state) {
+
+            stringStateHashMap = new HashMap<>();
+
+            try {
+                setState(state);
+            } catch (Exception e) {
+                try {
+                    setState(STOP);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }
+
+        public void changeState() throws Exception {
+            if (this.state instanceof Start)
+                setState(STOP);
+            else
+                setState(START);
+        }
+
+        private void setState(String state) throws Exception {
+
+            State stateTmp = null;
+            if (stringStateHashMap.containsKey(state))
+                stateTmp = stringStateHashMap.get(state);
+            else {
+                switch (state) {
+                    case START:
+                        stateTmp = new Start();
+                        break;
+                    case STOP:
+                        stateTmp = new Stop();
+                        break;
+                    default:
+                        throw new Exception("State does not exist.");
+                }
+
+                stringStateHashMap.put(state, stateTmp);
+            }
+
+            Log.d(TAG, "setState: " + state);
+            this.state = stateTmp;
+        }
+
+        public State getState() {
+            return state;
+        }
     }
+
+    private class Start implements State {
+
+        @Override
+        public void execute() throws Exception {
+
+            Log.d(TAG, "start: ");
+            //  change label text
+            startStop.setText(R.string.stop);
+            // start projection
+            startProjection();
+            // start server
+            ImageSender.getInstance().startServer();
+
+        }
+    }
+
+    private class Stop implements State {
+
+        @Override
+        public void execute() throws Exception {
+            Log.d(TAG, "stop: ");
+            //  change label text
+            startStop.setText(R.string.start);
+            //  stop projection
+            stopProjection();
+            //  stop server
+            ImageSender.getInstance().stopServer();
+        }
+    }
+
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) { // result of startActivityForResult
@@ -85,9 +147,6 @@ public class MainActivity extends AppCompatActivity {
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
-
-    /****************************************** UI Widget Callbacks *******************************/
-
 
     private void stopProjection() {
         Log.d(TAG, "stopProjection: ");

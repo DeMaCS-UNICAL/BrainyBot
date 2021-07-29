@@ -66,6 +66,7 @@ public class ImageSender {
             @Override
             public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
 
+                Log.d(TAG, "onRequest: LOGIN");
                 if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
                     try {
                         Log.d(TAG, "onRequest: request");
