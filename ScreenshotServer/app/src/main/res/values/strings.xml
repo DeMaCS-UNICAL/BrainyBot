@@ -1,6 +1,7 @@
 <resources>
-    <string name="app_name">TappingBot</string>
+    <string name="app_name">ScreenshotServer</string>
     <string name="start">Start</string>
+    <string name="tappingbot">TappingBot</string>
     <string name="stop">Stop</string>
-    <string name="recording">Recording</string>
+    <string name="recording">Redording</string>
 </resources>
