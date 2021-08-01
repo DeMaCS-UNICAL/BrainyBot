@@ -1,17 +1,17 @@
-import re
+import os
 
 import cv2
 import mahotas
 import numpy as np
 
-from Application.candygraph.candygraph import CandyGraph, PX, PY, ID, TYPE
-from Application.detect import SPRITES
-from Application.dlv.dlv import InputBomb, InputNode, InputHorizontal, InputVertical
+from Application.candygraph.candygraph import CandyGraph, PX, PY
+from Application.costants import RESOURCES_PATH
+from Application.detect import SPRITES, getImg
 
 
 class MatchingCandy:
-    def __init__(self, matrix, difference: ()):
-        self.__matrix = matrix
+    def __init__(self, difference: ()):
+        self.__matrix = getImg(os.path.join(RESOURCES_PATH, 'matrix.png'))
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
         self.__graph = CandyGraph(difference)
@@ -41,33 +41,5 @@ class MatchingCandy:
 
         return self.__graph
 
-
-def getInputDLVNodes(graph: CandyGraph) -> []:
-    nodesAndInformation = []
-    for node in graph.getNodes():
-
-        result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
-        candyType = result.groups()[0]
-
-        # checks if the node2 is not swappable
-        if "notTouch" in candyType:
-            continue
-
-        if "Bomb" in candyType:
-            result = re.search(r"^(\w+)(?:Bomb)$", candyType)
-            candyType = result.groups()[0]
-            nodesAndInformation.append(InputBomb(node[ID]))
-
-        if "Horizontal" in candyType:
-            result = re.search(r"^(\w+)(?:Horizontal)$", candyType)
-            candyType = result.groups()[0]
-            nodesAndInformation.append(InputHorizontal(node[ID]))
-
-        if "Vertical" in candyType:
-            result = re.search(r"^(\w+)(?:Vertical)$", candyType)
-            candyType = result.groups()[0]
-            nodesAndInformation.append(InputVertical(node[ID]))
-
-        nodesAndInformation.append(InputNode(node[ID], candyType))
-
-    return nodesAndInformation
+    def getMatrix(self):
+        return self.__matrix

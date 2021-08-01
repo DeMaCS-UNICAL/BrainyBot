@@ -16,7 +16,7 @@
 # from Application.detect import getImg
 # from Application.detect.detect import MatchingCandy, getInputDLVNodes
 # from Application.detect.helpers import getEdges
-# from Application.dlv.dlv import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
+# from Application.dlvsolution.dlvsolution import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
 #
 # ASPMapper.get_instance().register_class(Swap)
 # ASPMapper.get_instance().register_class(Edge)
@@ -303,6 +303,7 @@
 
 # image
 import os
+
 import cv2
 
 from Application.costants import SPRITE_PATH
@@ -329,5 +330,3 @@ else:
 
 bottom_right = (top_left[0] + w, top_left[1] + h)
 cv2.rectangle(img, top_left, bottom_right, 255, 2)
-
-

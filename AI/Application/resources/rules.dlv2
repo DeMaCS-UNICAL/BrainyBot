@@ -1,3 +1,5 @@
+#show swap/2.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  make graph not oriented
 edge(Y, X, P) :- edge(X, Y, P).
 

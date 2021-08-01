@@ -1,10 +1,13 @@
 import os
+import re
 
-from languages.asp.asp_input_program import ASPInputProgram
 from languages.predicate import Predicate
+from platforms.desktop.desktop_handler import DesktopHandler
+from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
-from Application.costants import RESOURCES_PATH
-from Application.dlv.helpers import chooseDLVSystem
+from Application import CandyGraph
+from Application.candygraph.constants import TYPE, ID
+from Application.costants import DLV_PATH
 
 
 class Connect:
@@ -155,44 +158,56 @@ class AtLeast3Adjacent(Predicate, Connect):
         self.__position = position
 
 
-class DLVSolution:
+def chooseDLVSystem() -> DesktopHandler:
+    try:
+        if os.name == 'nt':
+            return DesktopHandler(
+                DLV2DesktopService(os.path.join(DLV_PATH, "DLV2.exe")))
+        elif os.uname().sysname == 'Darwin':
+            return DesktopHandler(
+                DLV2DesktopService(os.path.join(DLV_PATH, "dlv2.mac_7")))
+        else:
+            return DesktopHandler(
+                DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux-64_6")))
+    except Exception as e:
+        print(e)
 
-    def __init__(self, nodes: [InputNode]):
-        self.__nodes = nodes
 
-        try:
-            self.__handler = chooseDLVSystem()
-            self.__variableInputProgram = None
-            self.__fixedInputProgram = ASPInputProgram()
+def getInputDLVNodes(graph: CandyGraph) -> []:
+    nodesAndInformation = []
+    for node in graph.getNodes():
 
-            self.__initFixed()
-        except Exception as e:
-            print(str(e))
+        result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
+        candyType = result.groups()[0]
 
-    def __initFixed(self):
-        self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "rules.dlv2"))
-        for node in self.__nodes:
-            self.__fixedInputProgram.add_object_input(node)
-        self.__handler.add_program(self.__fixedInputProgram)
+        # checks if the node2 is not swappable
+        if "notTouch" in candyType:
+            continue
 
-    def recallASP(self, edges: [Edge]) -> Swap:
-        try:
-            self.__variableInputProgram = ASPInputProgram()
-            for edge in edges:  # add edges input to dlv program
-                self.__variableInputProgram.add_object_input(edge)
+        if "Bomb" in candyType:
+            result = re.search(r"^(\w+)(?:Bomb)$", candyType)
+            candyType = result.groups()[0]
+            nodesAndInformation.append(InputBomb(node[ID]))
 
-            index = self.__handler.add_program(self.__variableInputProgram)
-            answerSets = self.__handler.start_sync()
+        if "Horizontal" in candyType:
+            result = re.search(r"^(\w+)(?:Horizontal)$", candyType)
+            candyType = result.groups()[0]
+            nodesAndInformation.append(InputHorizontal(node[ID]))
 
-            swap = None
-            for answerSet in answerSets.get_optimal_answer_sets():
-                print(answerSet)
-                for obj in answerSet.get_atoms():
-                    if isinstance(obj, Swap):
-                        swap = Swap(obj.get_id1(), obj.get_id2())
+        if "Vertical" in candyType:
+            result = re.search(r"^(\w+)(?:Vertical)$", candyType)
+            candyType = result.groups()[0]
+            nodesAndInformation.append(InputVertical(node[ID]))
 
-            self.__handler.remove_program_from_id(index)
-            return swap
+        nodesAndInformation.append(InputNode(node[ID], candyType))
 
-        except Exception as e:
-            print(str(e))
+    return nodesAndInformation
+
+
+def getEdges(graph: CandyGraph) -> [Edge]:
+    edges = []
+    for n, nbrs in graph.getGraph():
+        for nbr, eattr in nbrs.items():
+            edges.append(Edge(n[ID], nbr[ID], graph.getPosition(n, nbr)))
+
+    return edges
