@@ -1,11 +1,15 @@
-import requests as requests
+import os
+
+import requests
+
+from Application.costants import RESOURCES_PATH
 
 
 def requireImageFromURL(url, port):
-    upLoads = {'name': 'requestimage'}
-    receive = requests.get(f'{url}:{port}/', params=upLoads)
-    # with open(os.path.join(res, 'screenshot.png'), 'wb') as f:
-    #     f.write(receive.content)
+    response = requests.get(f"http://{url}:{port}/?name=requestimage")
+    file = open(os.path.join(RESOURCES_PATH, 'matrix.png'), "wb")
+    file.write(response.content)
+    file.close()
 
 
 def makeJson(coodinateType: []):
