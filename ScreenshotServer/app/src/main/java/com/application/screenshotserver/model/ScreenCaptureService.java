@@ -21,19 +21,6 @@ import java.util.Objects;
 // official resources: https://github.com/mtsahakis/MediaProjectionDemo
 public class ScreenCaptureService extends Service {
 
-
-    /*
-     *   CALL ORDER LIST:
-     *       - getStartIntent
-     *       - onCreate
-     *       - onStartCommand
-     *       - startProjection
-     *          - createVirtualDisplay
-     *          - getVirtualDisplayFlags
-     *          - onImageAvailable (loop)
-     *       - getStopIntent
-     * */
-
     private static final String TAG = "ScreenCaptureService";
     private static final String RESULT_CODE = "RESULT_CODE";
     private static final String DATA = "DATA";
