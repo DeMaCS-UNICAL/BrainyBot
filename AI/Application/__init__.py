@@ -6,7 +6,7 @@ from Application.candygraph.constants import PX, PY
 from Application.detect.detect import MatchingCandy
 from Application.dlvsolution.dlvsolution import DLVSolution
 from Application.dlvsolution.helpers import getInputDLVNodes, getEdges, Swap
-from Application.webservices.helpers import requireImageFromURL
+from Application.webservices.helpers import requireImageFromURL, makeJson
 
 
 def draw(matrixCopy, nodes, color):
@@ -18,9 +18,10 @@ def draw(matrixCopy, nodes, color):
 
 def main():
     # require image from server
-    serverIp, port = "192.168.1.61", 5432
-    requireImageFromURL(serverIp, port)
-    print("requireImageFromURL check")
+    # TODO: remove comment !
+    # serverIp, port = "192.168.1.61", 5432
+    # requireImageFromURL(serverIp, port)
+    # print("requireImageFromURL check")
 
     # execute template matching
     spriteSize = (110, 110)
@@ -44,6 +45,7 @@ def main():
     solution = DLVSolution(nodesAndInformation)
     swap: Swap = solution.recallASP(edges)
 
+    # draw
     tmp = matchingCandy.getMatrix().copy()
     node1 = candyGraph.getNode(swap.get_id1())
     node2 = candyGraph.getNode(swap.get_id2())
@@ -53,6 +55,9 @@ def main():
     plt.imshow(tmp)
     plt.title(f"OPTIMUM {node1} --> {node2}.")
     plt.show()
+
+    # make json file
+    makeJson((node1[PX], node1[PY], node2[PX], node2[PY]))
 
 
 if __name__ == '__main__':
