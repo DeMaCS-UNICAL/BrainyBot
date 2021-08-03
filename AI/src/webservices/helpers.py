@@ -23,7 +23,10 @@ def appendToJSON(json_obj: {}, string, x, y) -> None:
 def makeJson(x, y, x1, y1) -> {}:
     json_obj = {'first': [], 'second': []}
 
+    # first movement
     appendToJSON(json_obj, 'first', x, y)
+
+    # second movement
     appendToJSON(json_obj, 'second', x1, y1)
 
     # Write the object to file.
@@ -31,3 +34,8 @@ def makeJson(x, y, x1, y1) -> {}:
         json.dump(json_obj, jsonFile)
 
     return json_obj
+
+
+def sendJson(ip, json_obj: {}) -> int:
+    r = requests.post(ip, json_obj)
+    return r.status_code
