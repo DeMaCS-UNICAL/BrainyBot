@@ -13,13 +13,18 @@ def requireImageFromURL(url, port) -> None:
     file.close()
 
 
-def makeJson(swap: ()) -> {}:
-    json_obj = {'swap': []}
-
-    x, y, x1, y1 = swap
-    json_obj['swap'].append({
-        f'{x},{y}': f'{x1}, {y1}'
+def appendToJSON(json_obj: {}, string, x, y) -> None:
+    json_obj[string].append({
+        "x": f"{x}",
+        "y": f"{y}"
     })
+
+
+def makeJson(x, y, x1, y1) -> {}:
+    json_obj = {'first': [], 'second': []}
+
+    appendToJSON(json_obj, 'first', x, y)
+    appendToJSON(json_obj, 'second', x1, y1)
 
     # Write the object to file.
     with open(os.path.join(RESOURCES_PATH, 'swap.json'), 'w') as jsonFile:
