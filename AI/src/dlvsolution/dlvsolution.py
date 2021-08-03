@@ -2,8 +2,8 @@ import os
 
 from languages.asp.asp_input_program import ASPInputProgram
 
-from Application.costants import RESOURCES_PATH
-from Application.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap
+from src.costants import RESOURCES_PATH
+from src.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap
 
 
 class DLVSolution:

@@ -136,5 +136,5 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
-/Application/resources/matrix.png
-!/Application/resources/swap.json
+/src/resources/matrix.png
+!/src/resources/swap.json

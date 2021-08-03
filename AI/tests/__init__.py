@@ -10,13 +10,13 @@
 # from platforms.desktop.desktop_handler import DesktopHandler
 # from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 #
-# from Application.candygraph.candygraph import CandyGraph, PX, PY, TYPE
+# from src.candygraph.candygraph import CandyGraph, PX, PY, TYPE
 # # mapping
-# from Application.costants import DLV_PATH, RESOURCES_PATH, SPRITE_PATH
-# from Application.detect import getImg
-# from Application.detect.detect import MatchingCandy, getInputDLVNodes
-# from Application.detect.helpers import getEdges
-# from Application.dlvsolution.dlvsolution import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
+# from src.costants import DLV_PATH, RESOURCES_PATH, SPRITE_PATH
+# from src.detect import getImg
+# from src.detect.detect import MatchingCandy, getInputDLVNodes
+# from src.detect.helpers import getEdges
+# from src.dlvsolution.dlvsolution import Edge, Swap, AtLeast3Adjacent, InputNode, InputBomb, InputHorizontal, InputVertical
 #
 # ASPMapper.get_instance().register_class(Swap)
 # ASPMapper.get_instance().register_class(Edge)
@@ -306,7 +306,7 @@ import os
 
 import cv2
 
-from Application.costants import SPRITE_PATH
+from src.costants import SPRITE_PATH
 
 TESTS_PATH = os.path.dirname(__file__)
 LOGS_PATH = os.path.join(TESTS_PATH, 'logs')

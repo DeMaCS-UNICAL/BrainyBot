@@ -4,9 +4,9 @@ import cv2
 import mahotas
 import numpy as np
 
-from Application.candygraph.candygraph import CandyGraph, PX, PY
-from Application.costants import RESOURCES_PATH
-from Application.detect import SPRITES, getImg
+from src.candygraph.candygraph import CandyGraph, PX, PY
+from src.costants import RESOURCES_PATH
+from src.detect import SPRITES, getImg
 
 
 class MatchingCandy:

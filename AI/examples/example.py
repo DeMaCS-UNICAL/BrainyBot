@@ -1,12 +1,12 @@
 import cv2
 from matplotlib import pyplot as plt
 
-from Application.candygraph.candygraph import CandyGraph
-from Application.candygraph.constants import PX, PY
-from Application.detect.detect import MatchingCandy
-from Application.dlvsolution.dlvsolution import DLVSolution
-from Application.dlvsolution.helpers import getInputDLVNodes, getEdges, Swap
-from Application.webservices.helpers import requireImageFromURL, makeJson
+from src.candygraph.candygraph import CandyGraph
+from src.candygraph.constants import PX, PY
+from src.detect.detect import MatchingCandy
+from src.dlvsolution.dlvsolution import DLVSolution
+from src.dlvsolution.helpers import getInputDLVNodes, getEdges, Swap
+from src.webservices.helpers import makeJson
 
 
 def draw(matrixCopy, nodes, color):
