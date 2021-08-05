@@ -43,17 +43,6 @@ countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
 nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
 :~ nodesWithDifferentType(ID). [1@1, ID]
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  adjacent weak
-adjacentNodes(ID) :- atLeast3Adjacent(ID, _, _).
-adjacentNodes(ID) :- atLeast3Adjacent(_, ID, _).
-adjacentNodes(ID) :- exchangedEdge(ID, _).
-adjacentNodes(ID) :- exchangedEdge(_, ID).
-countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
-
-nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
-:~ nodesWithDifferentType(ID). [1@1, ID]
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  bomb weak
 :~ bomb(ID), not adjacentNodes(ID). [1@2, ID]
 
