@@ -13,7 +13,7 @@ exchangedEdge(ID1, ID3, P) :- edge(ID2, ID3, P), swap(ID1, ID2), ID1!=ID3, node(
 deletedEdge(ID2, ID3) :- edge(ID2, ID3, P), swap(ID1, ID2).
 
 % at least 3 adjacent
-atLeast3Adjacent(ID1, ID3, P) :- exchangedEdge(ID1, ID2, P), exchangedEdge(ID1, ID3, P), ID2!=ID3.
+atLeast3Adjacent(ID2, ID3, P) :- exchangedEdge(ID1, ID2, P), exchangedEdge(ID1, ID3, P), ID2!=ID3.
 atLeast3Adjacent(ID1, ID3, P) :- exchangedEdge(ID1, ID2, P), edge(ID2, ID3, P), ID1!=ID3, node(ID2, T), node(ID3, T), not deletedEdge(ID2, ID3).
 atLeast3Adjacent(ID1, ID3, P) :- atLeast3Adjacent(ID1, ID2, P), edge(ID2, ID3, P), ID1!=ID3, node(ID2, T), node(ID3, T), not deletedEdge(ID2, ID3).
 
