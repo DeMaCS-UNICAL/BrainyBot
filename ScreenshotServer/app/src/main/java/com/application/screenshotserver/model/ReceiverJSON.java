@@ -42,30 +42,21 @@ public class ReceiverJSON {
     
     public void request(String url) {
         JsonArrayRequest jsonArrayRequest = new JsonArrayRequest
-                (Request.Method.GET, url, null, new Response.Listener<JSONArray>() {
+                (Request.Method.GET, url, null, response -> {
 
-                    @Override
-                    public void onResponse(JSONArray response) {
-
-                        for (int i = 0; i < response.length(); ++i) {
-                            try {
-                                JSONObject jsonObject = response.getJSONObject(i);
-                                Log.d(TAG, "Response n." + i + " : " + jsonObject.toString());
-                            } catch (JSONException e) {
-                                e.printStackTrace();
-                            }
-
+                    for (int i = 0; i < response.length(); ++i) {
+                        try {
+                            JSONObject jsonObject = response.getJSONObject(i);
+                            Log.d(TAG, "Response n." + i + " : " + jsonObject.toString());
+                        } catch (JSONException e) {
+                            e.printStackTrace();
                         }
 
                     }
 
-                }, new Response.ErrorListener() {
-
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        // TODO: Handle error
-                        Log.e(TAG, "Error: " + error.toString());
-                    }
+                }, error -> {
+                    // TODO: Handle error
+                    Log.e(TAG, "Error: " + error.toString());
                 });
 
 

@@ -3,23 +3,17 @@ package com.application.screenshotserver.model;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.util.Log;
-
 import androidx.annotation.NonNull;
-
 import com.application.screenshotserver.utils.BlockingLock;
 import com.application.screenshotserver.utils.Settings;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
-import com.koushikdutta.async.http.server.AsyncHttpServerRequest;
-import com.koushikdutta.async.http.server.AsyncHttpServerResponse;
-import com.koushikdutta.async.http.server.HttpServerRequestCallback;
-
 import java.io.ByteArrayOutputStream;
 
 public class ImageSender {
     private static final String TAG = "ImageSender";
     @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
-    private final BlockingLock<Screenshot> lockImage;
+    private final BlockingLock<Bitmap> lockImage;
     private static final String REQUEST_IMAGE = "requestimage";
     private final AsyncHttpServer server;
 
@@ -36,7 +30,7 @@ public class ImageSender {
         return instance;
     }
 
-    public void uploadImage(@NonNull Screenshot screenshot) throws Exception {
+    public void uploadImage(@NonNull Bitmap screenshot) throws Exception {
         lockImage.put(screenshot);
         Log.d(TAG, "uploadImage " + screenshot.toString());
     }
@@ -60,29 +54,26 @@ public class ImageSender {
         return outputStream.toByteArray();
     }
 
-    public void startServer() throws Exception {
+    public void startServer() {
         Log.e(TAG, "Start Server");
-        server.get("/", new HttpServerRequestCallback() {
-            @Override
-            public void onRequest(AsyncHttpServerRequest request, AsyncHttpServerResponse response) {
+        server.get("/", (request, response) -> {
 
-                Log.d(TAG, "onRequest: LOGIN");
-                if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
-                    try {
-                        Log.d(TAG, "onRequest: request");
-                        HandlerScreenshot.getInstance().takeScreenshot();
-                        Screenshot screenshot = lockImage.take();
-                        Log.e(TAG, "take data -> " + screenshot.toString());
-                        byte[] bytes = convertToArray(screenshot.getBitmap());
-                        response.send("image/png", bytes);
-                        Log.e(TAG, "send data");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    Log.d(TAG, "onRequest: Error");
-                    response.send("ERROR");
+            Log.d(TAG, "onRequest: LOGIN");
+            if (request.getQuery().toString().contains(REQUEST_IMAGE)) {
+                try {
+                    Log.d(TAG, "onRequest: request");
+                    HandlerScreenshot.getInstance().takeScreenshot();
+                    Bitmap screenshot = lockImage.take();
+                    Log.e(TAG, "take data -> " + screenshot.toString());
+                    byte[] bytes = convertToArray(screenshot);
+                    response.send("image/png", bytes);
+                    Log.e(TAG, "send data");
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
+            } else {
+                Log.d(TAG, "onRequest: Error");
+                response.send("ERROR");
             }
         });
 
@@ -91,7 +82,7 @@ public class ImageSender {
         server.listen(Settings.PORT);
     }
 
-    public void stopServer() throws Exception {
+    public void stopServer() {
         server.stop();
     }
 }

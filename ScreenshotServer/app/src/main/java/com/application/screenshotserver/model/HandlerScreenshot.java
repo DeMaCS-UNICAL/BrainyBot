@@ -135,9 +135,8 @@ public class HandlerScreenshot {
                     Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
                     bitmap.copyPixelsFromBuffer(buffer);
 
-                    Screenshot screenshot = new Screenshot(bitmap, Integer.toString(0));
-                    ImageSender.getInstance().uploadImage(screenshot);
-                    Log.e(TAG, "screenshot name: " + screenshot);
+                    ImageSender.getInstance().uploadImage(bitmap);
+                    Log.e(TAG, "screenshot name: " + bitmap);
 
                 }
 
@@ -176,22 +175,6 @@ public class HandlerScreenshot {
             Log.d(TAG, "setIntent: ");
             this.data = data;
             return builderInstance;
-        }
-
-        private WindowManager getWindowManager() {
-            return windowManager;
-        }
-
-        private MediaProjectionManager getMpManager() {
-            return mpManager;
-        }
-
-        private int getResultCode() {
-            return resultCode;
-        }
-
-        private Intent getData() {
-            return data;
         }
 
         @NonNull
