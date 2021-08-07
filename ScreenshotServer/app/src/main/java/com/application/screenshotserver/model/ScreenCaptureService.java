@@ -13,7 +13,6 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.core.util.Pair;
 
-
 import com.application.screenshotserver.utils.NotificationUtils;
 
 import java.util.Objects;
@@ -29,6 +28,24 @@ public class ScreenCaptureService extends Service {
     private static final String STOP = "STOP";
     private HandlerScreenshot.Builder builder;
 
+    @NonNull
+    public static Intent getStartIntent(Context context, int resultCode, Intent data) {
+        Log.d(TAG, "getStartIntent");
+
+        Intent intent = new Intent(context, ScreenCaptureService.class);
+        intent.putExtra(ACTION, START);
+        intent.putExtra(RESULT_CODE, resultCode);
+        intent.putExtra(DATA, data);
+        return intent;
+    }
+
+    @NonNull
+    public static Intent getStopIntent(Context context) {
+        Log.d(TAG, "getStopIntent");
+        Intent intent = new Intent(context, ScreenCaptureService.class);
+        intent.putExtra(ACTION, STOP);
+        return intent;
+    }
 
     @Override
     public void onCreate() {
@@ -74,30 +91,10 @@ public class ScreenCaptureService extends Service {
         return START_NOT_STICKY;
     }
 
-
     @Override
     public IBinder onBind(Intent intent) {
         Log.d(TAG, "onBind");
         return null;
-    }
-
-    @NonNull
-    public static Intent getStartIntent(Context context, int resultCode, Intent data) {
-        Log.d(TAG, "getStartIntent");
-
-        Intent intent = new Intent(context, ScreenCaptureService.class);
-        intent.putExtra(ACTION, START);
-        intent.putExtra(RESULT_CODE, resultCode);
-        intent.putExtra(DATA, data);
-        return intent;
-    }
-
-    @NonNull
-    public static Intent getStopIntent(Context context) {
-        Log.d(TAG, "getStopIntent");
-        Intent intent = new Intent(context, ScreenCaptureService.class);
-        intent.putExtra(ACTION, STOP);
-        return intent;
     }
 
     private boolean isStartCommand(@NonNull Intent intent) {

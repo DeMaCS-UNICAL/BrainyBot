@@ -3,18 +3,21 @@ package com.application.screenshotserver.model;
 import android.annotation.SuppressLint;
 import android.graphics.Bitmap;
 import android.util.Log;
+
 import androidx.annotation.NonNull;
+
 import com.application.screenshotserver.utils.BlockingLock;
 import com.application.screenshotserver.utils.Settings;
 import com.koushikdutta.async.http.server.AsyncHttpServer;
+
 import java.io.ByteArrayOutputStream;
 
 public class ImageSender {
     private static final String TAG = "ImageSender";
+    private static final String REQUEST_IMAGE = "requestimage";
     @SuppressLint("StaticFieldLeak")
     private static ImageSender instance;
     private final BlockingLock<Bitmap> lockImage;
-    private static final String REQUEST_IMAGE = "requestimage";
     private final AsyncHttpServer server;
 
     private ImageSender() {
