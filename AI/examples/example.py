@@ -42,8 +42,8 @@ def main():
     print(f"NODES --> {nodesAndInformation}")
 
     # recall ASP program
-    solution = DLVSolution(nodesAndInformation)
-    swap: Swap = solution.recallASP(edges)
+    solution = DLVSolution()
+    swap: Swap = solution.recallASP(edges, nodesAndInformation)
 
     # draw
     tmp = matchingCandy.getMatrix().copy()
