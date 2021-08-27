@@ -5,7 +5,7 @@ import mahotas
 import numpy as np
 
 from src.candygraph.candygraph import CandyGraph, PX, PY
-from src.costants import RESOURCES_PATH
+from src.constants import RESOURCES_PATH
 from src.detect import SPRITES, getImg
 
 

@@ -7,7 +7,7 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
 from src.candygraph.candygraph import CandyGraph
 from src.candygraph.constants import TYPE, ID
-from src.costants import DLV_PATH
+from src.constants import DLV_PATH
 
 
 class Connect:

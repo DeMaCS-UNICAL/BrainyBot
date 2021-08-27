@@ -304,29 +304,46 @@
 # image
 import os
 
-import cv2
+import cv2 as cv
+from cv2.xfeatures2d import SIFT_create
+from matplotlib import pyplot as plt
 
-from src.costants import SPRITE_PATH
+from src.constants import SPRITE_PATH
 
 TESTS_PATH = os.path.dirname(__file__)
 LOGS_PATH = os.path.join(TESTS_PATH, 'logs')
 MAP_PATH = os.path.join(TESTS_PATH, 'map')
 
-img_rgb = cv2.imread(os.path.join(MAP_PATH, "Matrix1.png"))
-img = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
-template = cv2.imread(os.path.join(SPRITE_PATH, "red.png"), 0)
-w, h = template.shape[::-1]
+img1 = cv.imread(os.path.join(SPRITE_PATH, "red.png"), cv.IMREAD_GRAYSCALE)  # queryImage
+img2 = cv.imread(os.path.join(MAP_PATH, "Matrix1.png"), cv.IMREAD_GRAYSCALE)
+# Initiate SIFT detector
+sift = SIFT_create()
 
-# use CCOEFF_NORMED method
-method = eval('cv2.TM_CCOEFF_NORMED')
-res = cv2.matchTemplate(img, template, method)
+# find the keypoints and descriptors with SIFT
+kp1, des1 = sift.detectAndCompute(img1, None)
+kp2, des2 = sift.detectAndCompute(img2, None)
 
-min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-# If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
-if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
-    top_left = min_loc
-else:
-    top_left = max_loc
+# FLANN parameters
+FLANN_INDEX_KDTREE = 1
+index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+search_params = dict(checks=50)  # or pass empty dictionary
+flann = cv.FlannBasedMatcher(index_params, search_params)
+matches = flann.knnMatch(des1, des2, k=2)
 
-bottom_right = (top_left[0] + w, top_left[1] + h)
-cv2.rectangle(img, top_left, bottom_right, 255, 2)
+# Need to draw only good matches, so create a mask
+matchesMask = [[0, 0] for i in range(len(matches))]
+
+# ratio test
+for i, (m, n) in enumerate(matches):
+    if m.distance < 0.7 * n.distance:
+        matchesMask[i] = [1, 0]
+
+draw_params = dict(matchColor=(0, 255, 0),
+                   singlePointColor=(255, 0, 0),
+                   matchesMask=matchesMask,
+                   flags=cv.DrawMatchesFlags_DEFAULT)
+
+img3 = cv.drawMatchesKnn(img1, kp1, img2, kp2, matches, None, **draw_params)
+plt.imshow(img3)
+# plt.show()
+plt.savefig(os.path.join(TESTS_PATH, 'flann.png'), dpi=300)
