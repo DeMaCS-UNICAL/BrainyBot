@@ -3,11 +3,9 @@ The TappingBot projects features a full-stack architecture currently capable of 
 
 # Required hardware
 
- 1. __PH__: an Android mobile phone. This is device where the game will be played on
- 2. __TP__: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
+ 1. __PH__: an Android mobile phone. This is the device where the game will be played on;
+ 2. __TP__: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.);
  3. __LI__: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
-
-The TappingBot requires the installation and interaction of several modules:
 
 # Installation and set up
 
@@ -19,7 +17,7 @@ You will need to make several applications up and running:
   
     curl http://<PHone-IP>:5432/?name=requestimage --output screen.png
     
- You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server.
+ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of <PHone-IP>.
  
  ## Tapsterbot
  
@@ -32,23 +30,23 @@ You will need to make several applications up and running:
  
  ## Tappy server
  
- You find a fork of the tappy project under the tappy-original submodule. Follow installation instructions there. The Tappy server is expected to run on the __LI__ subsystem on port 80. The `config.js` file under the `tappy-original` folder allows to customize the listening port and other parameters of the robot.
+ You find a fork of the tappy project under the tappy-original submodule. Follow installation instructions there. The Tappy server is expected to run on the __LI__ subsystem on port 80. The `config.js` file under the `tappy-original` folder allows to customize the listening port and other physical parameters of the robot.
  Recall you can use `nvm` for managing the required node.js version,  (currently 10.11.0).
- If your current user has no access rights to serial ports, recall to use `sudo npm start` when starting the tappy server.
+ If your current user has no access rights to serial ports, recall to use `sudo npm start` when starting the tappy server instead of a plain `npm start`.
  
  ## Python client
  
- This python client for the tappy server is located under the `tapsterbot-original/clients/python` folder. You will possibly need to tweak IP and listening port of the Tappy server and other stuff in the `config.py` file. Example usage:
+ This python client for the tappy server is located under the `tapsterbot-original/clients/python` folder. You will possibly need to tweak IP and listening port of the Tappy server and other stuff in the `config.py` file. There is also a python API, which is currently incompatible with the rest of tappingbot, but you can use command line calls. Example usage:
  
     python client.py --url http://127.0.0.1 --light 'swipe 325 821 540 821'
     
-Detailed documentation for the python client can be found in the README of the https://github.com/DeMaCS-UNICAL/tapsterbot-original/tree/master/clients/python folder
+Detailed documentation for the python client can be found in the README of the https://github.com/DeMaCS-UNICAL/tapsterbot-original/tree/master/clients/python folder.
 
 ## AI
 
 The AI module takes screenshots from PH and produces swipe coordinates to be sent to the robot arm using the Tappy server. Installation requires a bit of a tweak:
 
-1. Prepare an anaconda environment with Python 3.6
+1. Prepare an anaconda environment with Python 3.6:
 
       conda create --name=p36 python=3.6
       
@@ -65,19 +63,19 @@ The AI module takes screenshots from PH and produces swipe coordinates to be sen
       
 the `whl` file for EmbASP 7.4.0 is located under the `AI/src/resources` folder.
       
-4. Customize the IP and port of ScreenshotServer (which is running on PH) by modifying `AI/examples/main.py`.
+4. Customize the IP and port of ScreenshotServer (which is running on PH and reachable on your <Phone-IP> value) by modifying `AI/examples/main.py`.
 
 ## Sample usage
 
-All the modules are currently loosely integrated. You can however test the full stack of the application (ScreenshotServer -> AI -> Python Client -> Tappy server -> Tapsterbot, this way:
+All the modules are currently loosely integrated. You can however test the full stack of the application (ScreenshotServer -> Vision -> Decision making -> Python Client -> Tappy server -> Tapsterbot, this way:
 
 1. Ensure ScreenshotServer and Tappy server are up and running and reachable from your configured IP:Ports.
-2. On a first terminal, move to the `AI` folder, and set up your environment:
+2. On a first terminal, move to the `AI` folder, and switch to your environment:
 
       conda activate p36
       export PYTHONPATH=.:$PYTHONPATH
       
-3. On a second terminal, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (__note: the python client invoked from within runstream.pl currently requires Python 2.7__):
+3. On a second terminal, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (__note: the python client invoked from within runstream.pl currently requires Python 2.7 and NOT Python 3__):
 
       tail -f -n0 ../../../AI/coord.txt | perl runstream.pl
       
