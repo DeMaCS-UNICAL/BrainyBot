@@ -17,8 +17,13 @@ class MatchingCandy:
         self.__graph = CandyGraph(difference)
 
     def __searchByName(self, typeCandy) -> None:
+
+        #print("Matching %s" % typeCandy)
+
         # execute template match
         res = cv2.matchTemplate(self.__matrix, SPRITES[typeCandy], self.__method)
+
+#        print ("Found %d matches." % len(res))
 
         # find regional maxElem
         regMax = mahotas.regmax(res)
@@ -32,8 +37,11 @@ class MatchingCandy:
         self.__graph.setDifference((width, height))
 
         # add node2 and edge
+        count = 0
         for pt in zip(*loc[::-1]):
             self.__graph.addNode(pt[PX], pt[PY], typeCandy)
+            count += 1
+        print ("Found %d matches for %s" % (count,typeCandy))
 
     def search(self) -> CandyGraph:
         for typeCandy in SPRITES.keys():

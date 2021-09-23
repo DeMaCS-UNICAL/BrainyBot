@@ -53,13 +53,14 @@ def getColor(str) -> ():
 def main():
     # require image from server
     # TODO: change ip!
-    serverIp, port = "192.168.1.37", 5432
+    '''
+    serverIp, port = "192.168.0.50", 5432
     try:
         requireImageFromURL(serverIp, port)
         print("REQUIRE OK!")
     except Exception as e:
         print(e)
-
+    '''
     # execute template matching
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(spriteSize)

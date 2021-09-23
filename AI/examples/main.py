@@ -53,7 +53,7 @@ def main():
     # require image from server
     # TODO: change ip!
     serverIp, port = "192.168.0.50", 5432
-    serverIp, port = "192.168.43.48", 5432
+#    serverIp, port = "192.168.43.48", 5432
     try:
         requireImageFromURL(serverIp, port)
         print("REQUIRE OK!")
