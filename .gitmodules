@@ -1,0 +1,6 @@
+[submodule "tappy-original"]
+	path = tappy-original
+	url = git@github.com:DeMaCS-UNICAL/tappy-original.git
+[submodule "tapsterbot-original"]
+	path = tapsterbot-original
+	url = git@github.com:DeMaCS-UNICAL/tapsterbot-original.git
