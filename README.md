@@ -2,13 +2,22 @@
 
 The TappingBot projects features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen.
 
-- **Author**: Giovambattista Ianni, Mario Avolio.
+- **Authors**: Giovambattista Ianni, Mario Avolio.
 - **Licensed** under the Apache-2.0 License.
 
 [<img src="new.png" width="25">Download Latest Release</img>](https://github.com/DeMaCS-UNICAL/TappingBot/releases/tag/v0.1-alpha)
 
 <div>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
 
+# Important notes on cloning and pulling updates
+
+Don't forget to 
+    
+    git submodule update --init --recursive
+    
+after your first cloning in order to pull submodules. To keep submodules up to date:
+    
+    git pull --recurse-submodules
 
 # Required hardware
 
