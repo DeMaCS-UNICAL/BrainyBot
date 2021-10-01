@@ -9,6 +9,15 @@ The TappingBot projects features a full-stack architecture currently capable of 
 
 <div>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
 
+# Important notes on cloning and pulling updates
+
+Don't forget to 
+    
+    git submodule update --init --recursive
+    
+after your first cloning in order to pull submodules. To keep submodules up to date:
+    
+    git pull --recurse-submodules
 
 # Required hardware
 
