@@ -35,7 +35,7 @@ The ScreenshotServer is an Android application which opens an HTTP server on PH.
 
     curl http://<PHone-IP>:5432/?name=requestimage --output screen.png
 
-You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of <PHone-IP>.
+You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PHone-IP.
 
 ## Tapsterbot
 
