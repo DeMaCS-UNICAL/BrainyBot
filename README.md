@@ -91,6 +91,7 @@ All the modules are currently loosely integrated. You can however test the full 
 2. On a first terminal, move to the `AI` folder, and switch to your environment:
 
    conda activate p36
+    
    export PYTHONPATH=.:$PYTHONPATH
 
 3. On a second terminal, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (**note: the python client invoked from within runstream.pl currently requires Python 2.7 and NOT Python 3**):
