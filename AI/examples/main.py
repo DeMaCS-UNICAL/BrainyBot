@@ -1,4 +1,5 @@
 import cv2
+import sys
 from matplotlib import pyplot as plt
 
 from src.candygraph.candygraph import CandyGraph
@@ -82,8 +83,8 @@ def main():
     nodesAndInformation = getInputDLVNodes(candyGraph)
     edges = getEdges(candyGraph)
 
-    print(f"EDGES --> {edges}")
-    print(f"NODES --> {nodesAndInformation}")
+#    print(f"EDGES --> {edges}")
+#    print(f"NODES --> {nodesAndInformation}")
 
     # recall ASP program
     solution = DLVSolution()
@@ -98,28 +99,31 @@ def main():
     draw(tmp, node2, nameColor[WHITE])
     plt.imshow(tmp)
     plt.title(f"OPTIMUM {node1} --> {node2}.")
-    plt.show()
+#    plt.ion()
 
     # make json file
     width, height = 110, 110
-    x1,y1,x2,y2 = node1[PX], node1[PY], node2[PX], node2[PY]
-    EL = 0  #percent of swipe enlargement
+    x1,y1,x2,y2 = node1[PX], node1[PY]+height/2, node2[PX], node2[PY]+height/2
+    EL = 15  #pixels of swipe restriction
     if (abs(x1-x2) < 10):
 	#swipe vertical
         SX1 = (x1+x2)/2+width/2
         SX2 = SX1
-        SY1 = min(y1,y2) - height*EL/100  #+height/4
-        SY2 = max(y1,y2) + height*(1+EL/100) #+height/4*3
+        SY1 = min(y1,y2) + EL # + height/10 #- height*EL/100  #+height/4
+        SY2 = max(y1,y2) + height - EL # - height/10  #+ height*(1+EL/100) #+height/4*3
     else:
         # assumiamo swipe orizzontale
         SY1 = (y1+y2)/2+height/2
         SY2 = SY1
-        SX1 = min(x1,x2) - width*EL/100  #+width/4
-        SX2 = max(x1,x2) + width*(1+EL/100)  #+width/4*3
+        SX1 = min(x1,x2) + EL # + height/10 # +height/2  #- width*EL/100  #+width/4
+        SX2 = max(x1,x2) + height - EL # - height/10  #+ width*(1+EL/100)  #+width/4*3
 
     makeJson(SX1, SY1, SX2, SY2)
     print("COORD: %d %d %d %d" % (SX1, SY1, SX2, SY2))
+    sys.stdout.flush()
+    plt.show()
 
 
 if __name__ == '__main__':
     main()
+#    input("Press any key to continue")
