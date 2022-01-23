@@ -28,6 +28,7 @@ class DLVSolution:
 
             # insert nodes from graph to asp program
             for node in nodes:
+                #print(node)
                 self.__variableInputProgram.add_object_input(node)
 
             for edge in edges:  # add edges input to dlv solution program
