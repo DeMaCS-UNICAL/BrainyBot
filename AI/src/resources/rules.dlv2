@@ -41,7 +41,7 @@ adjacentNodes(ID) :- exchangedEdge(_, ID).
 countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
 
 nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
-:~ nodesWithDifferentType(ID). [1@1, ID]
+:~ nodesWithDifferentType(ID). [1@4, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  bomb weak
 :~ bomb(ID), not adjacentNodes(ID). [1@2, ID]
@@ -64,4 +64,4 @@ thereIsASwapWithColourBomb(1) :- swapWithColourBomb(ID1, ID2).
 %
 % Level 1 demo. Prefer to swap blue candies
 %
-:~ swap(ID1, ID2), node(ID1, T), node(ID2, T), T != blue. [1@4, ID1, ID2]
+%:~ exchangedEdge(ID1, ID3, P), node(ID1, T), node(ID3, T), T != "blue". [1@1, ID1, ID2]

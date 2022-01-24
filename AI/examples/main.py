@@ -8,6 +8,7 @@ from src.detect.detect import MatchingCandy
 from src.dlvsolution.dlvsolution import DLVSolution
 from src.dlvsolution.helpers import getInputDLVNodes, getEdges, Swap
 from src.webservices.helpers import makeJson, requireImageFromURL
+from time import sleep
 
 def draw(matrixCopy, nodes, color):
     width, height = 110, 110
@@ -59,7 +60,7 @@ def main():
 #    serverIp, port = "192.168.43.48", 5432
     try:
         requireImageFromURL(serverIp, port)
-        print("REQUIRE OK!")
+        print("SCREENSHOT TAKEN.")
     except Exception as e:
         print(e)
 
@@ -86,12 +87,15 @@ def main():
     edges = getEdges(candyGraph)
 
 #    print(f"EDGES --> {edges}")
-    print(f"NODES --> {nodesAndInformation}")
+#    print(f"NODES --> {nodesAndInformation}")
 
     # call ASP program
     solution = DLVSolution()
     swap: Swap = solution.recallASP(edges, nodesAndInformation)
 
+    if swap is None:
+        print ("No moves found. Maybe there is no candy on screen?")
+        quit()
     # draw
     tmp = matchingCandy.getMatrix().copy()
     node1 = candyGraph.getNode(swap.get_id1())
@@ -101,7 +105,7 @@ def main():
     draw(tmp, node2, nameColor[WHITE])
     plt.imshow(tmp)
     plt.title(f"OPTIMUM {node1} --> {node2}.")
-#    plt.ion()
+#   plt.ion()
 
     # make json file
     width, height = 110, 110
@@ -140,8 +144,12 @@ def main():
     print("COORD: %d %d %d %d" % (SX1, SY1, SX2, SY2))
     sys.stdout.flush()
     plt.show()
+    plt.pause(1)
 
 
 if __name__ == '__main__':
-    main()
+    plt.ion()
+    for i in range(0,15):
+        main()
+        sleep(10)
 #    input("Press any key to continue")
