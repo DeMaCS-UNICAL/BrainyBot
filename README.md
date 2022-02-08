@@ -87,16 +87,16 @@ All the modules are currently loosely integrated. You can however test the full 
 1. Ensure ScreenshotServer and Tappy server are up and running and reachable from your configured IP:Ports.
 2. On a first terminal, move to the `AI` folder, and switch to your environment:
 
-      conda activate p36    
-      export PYTHONPATH=.:$PYTHONPATH
+            conda activate p36    
+            export PYTHONPATH=.:$PYTHONPATH
 
 3. On a second terminal, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (**note: the python client invoked from within runstream.pl currently requires Python 2.7 and NOT Python 3**. Python 3.6 is needed for the AI module, instead):
 
-      tail -f -n0 ../../../AI/coord.txt | perl runstream.pl
+            tail -f -n0 ../../../AI/coord.txt | perl runstream.pl
 
 Open the Candy Crush Saga game and start a game on a level of choice. Then run on the first terminal:
 
-      python examples/main.py | tee -a coord.txt
+            python examples/main.py | tee -a coord.txt
 
 This will take a screenshot, then perform computer vision and decision making on it. You will see the just made decision appear graphically on the screen, some output will appear on terminal and will be piped in the `coord.txt` file. If everything is correct, the runstream.pl script will collect the swipe coordinates from the coord.txt file and execute the actual move with the robot arm.
 
