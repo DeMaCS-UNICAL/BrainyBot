@@ -5,9 +5,6 @@ The TappingBot projects features a full-stack architecture currently capable of 
 - **Authors**: Giovambattista Ianni, Mario Avolio.
 - **Licensed** under the Apache-2.0 License.
 
-[<img src="new.png" width="25">Download Latest Release</img>](https://github.com/DeMaCS-UNICAL/TappingBot/releases/tag/v0.1-alpha)
-
-<div>Icons made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a></div>
 
 # Important notes on cloning and pulling updates
 
