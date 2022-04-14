@@ -1,0 +1,66 @@
+Elenco dei pezzi non stampabili 3D per la costruzione del TappingBot-T (per tablet)
+
+CPU:
+Va benissimo un Arduino Uno
+
+
+MOTORI:
+
+-n.3 XL430-250T
+vanno completati con raccordi per usare i motori su due lati dell'asse:
+-n.3 Idle Bearing per dynamixel XL430-250T, cod: HN11-I101
+
+e con lo shield:
+-Dynamixel shield 
+https://emanual.robotis.com/docs/en/parts/interface/dynamixel_shield/
+
+Profilati 40x20 tipo V-slot:
+
+-per la base:
+7 barre da 350
+
+-per il sostegno verticale:
+1 barra alta 330
+
+-per il sostegno orizzontale:
+1 barra lunga 200
+
+profilato 20x20 tipo ?
+
+2 barre leggermente più corte di 350, da misurare (togliere 4 cm da 350mm)
+
+Servono i cosicelli a V che scorrono nelle scanalature, un certo numero, con filettatura M5.
+
+Per i giunti verticali
+
+n.12 6 viti M3x18mm
+n.12 bulloni M3 per chiudere le 12 viti
+
+Per i giunti orizzontali
+
+n.6 viti M3x35
+n.6 bulloni M3
+
+Cilindri del braccio (filettati M4): 208 mm 
+Terminazioni dei bracci filettati: Traxxas Rod Ends 5347 
+(i braccetti sono 6, servono almeno 3 coppie. Il kit comprende i giunti e le sfere forate in cui
+dentro passa una vite M3)
+Comprati su e-bay qui:
+https://www.ebay.it/itm/382914127073
+
+Viti reggi braccio filettati (ne servono 12): M3 20mm (15mm è troppo corto perchè il pezzo è 13mm)
+
+
+Viti orizzontali da mettere tra i cuscinetti: M3 x 35. Ne servono almeno 6.
+Comprate su Amazon qui:
+https://www.amazon.it/gp/product/B01DIUJO14/ref=ppx_yo_dt_b_asin_title_o02_s00?ie=UTF8&psc=1
+
+
+Viti ferma oggetti per i profilati:
+-Vanno bene le M5 apposite per scorrere le scanalature. Il profilato che è arrivato è leggermente più largo di una M5,
+dovrebbero autofilettarsi all'interno delle M6. Ci provo.
+
+altre viti da definire:
+
+per via della disponibilità di barre intere da solo 1metro, 
+le barre da 350 sono state adattate a 330. in questo caso le barre corte di supporto al tablet diventano da 290 anzichè da 310)
