@@ -41,7 +41,7 @@ adjacentNodes(ID) :- exchangedEdge(_, ID).
 countAdjacentNodes(C) :- #count{ID : adjacentNodes(ID)} = C.
 
 nodesWithDifferentType(ID) :- node(ID, _), not adjacentNodes(ID).
-:~ nodesWithDifferentType(ID). [1@1, ID]
+:~ nodesWithDifferentType(ID). [1@4, ID]
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  bomb weak
 :~ bomb(ID), not adjacentNodes(ID). [1@2, ID]
@@ -59,7 +59,9 @@ maxColourBomb(ID, T) :- maxCountForColourBomb(K), colourBombCount(ID, T, K). % f
 swapWithColourBomb(ID1, ID2) :- maxColourBomb(ID1, T), edge(ID1, ID2, _), node(ID2, T), maxCountForColourBomb(K), countAdjacentNodes(C), K > C. % choose swap with colourBomb
 thereIsASwapWithColourBomb(1) :- swapWithColourBomb(ID1, ID2).
 
-:~ swapWithColourBomb(ID1, ID2), not swap(ID1, ID2). [1@4, ID1, ID2] % if exists a swap can match so much candy
+:~ swapWithColourBomb(ID1, ID2), not swap(ID1, ID2). [1@5, ID1, ID2] % if exists a swap can match so much candy
 
-
-
+%
+% Level 1 demo. Prefer to swap blue candies
+%
+%:~ exchangedEdge(ID1, ID3, P), node(ID1, T), node(ID3, T), T != "blue". [1@1, ID1, ID2]
