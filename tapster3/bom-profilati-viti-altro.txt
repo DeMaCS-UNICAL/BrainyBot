@@ -41,7 +41,7 @@ Per i giunti orizzontali
 n.6 viti M3x35
 n.6 bulloni M3
 
-Cilindri del braccio (filettati M4): 208 mm 
+Cilindri del braccio (filettati M4): 208 mm - facciamo 210
 Terminazioni dei bracci filettati: Traxxas Rod Ends 5347 
 (i braccetti sono 6, servono almeno 3 coppie. Il kit comprende i giunti e le sfere forate in cui
 dentro passa una vite M3)
