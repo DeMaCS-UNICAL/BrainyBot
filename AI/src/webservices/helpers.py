@@ -3,7 +3,7 @@ import os
 
 import requests
 
-from src.constants import RESOURCES_PATH
+from AI.src.constants import RESOURCES_PATH
 
 
 def requireImageFromURL(url, port) -> None:

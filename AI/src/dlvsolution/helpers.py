@@ -5,9 +5,9 @@ from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
-from src.candygraph.candygraph import CandyGraph
-from src.candygraph.constants import TYPE, ID
-from src.constants import DLV_PATH
+from AI.src.candygraph.candygraph import CandyGraph
+from AI.src.candygraph.constants import TYPE, ID
+from AI.src.constants import DLV_PATH
 
 
 class Connect:

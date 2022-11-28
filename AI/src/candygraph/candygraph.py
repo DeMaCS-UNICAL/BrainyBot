@@ -1,7 +1,7 @@
 import networkx as nx
 
-from src.candygraph.constants import *
-from src.candygraph.helpers import *
+from AI.src.candygraph.constants import *
+from AI.src.candygraph.helpers import *
 
 
 class CandyGraph(nx.Graph):

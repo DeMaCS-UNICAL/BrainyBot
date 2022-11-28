@@ -2,8 +2,8 @@ import os
 
 from languages.asp.asp_input_program import ASPInputProgram
 
-from src.constants import RESOURCES_PATH
-from src.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap
+from AI.src.constants import RESOURCES_PATH
+from AI.src.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap
 
 failureException = ValueError
 
