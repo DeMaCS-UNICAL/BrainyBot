@@ -87,16 +87,18 @@ The AI module takes screenshots from PH by asking the ScreenshotServer, then it 
 All the modules are currently loosely integrated. You can however test the full stack of the application (ScreenshotServer -> Vision -> Decision making -> Python Client -> Tappy server -> Tapsterbot, this way:
 
 1. Ensure ScreenshotServer and Tappy server are up and running and reachable from your configured IP:Ports.
-2. On a first terminal, move to the `AI` folder, and switch to your environment:
+2. Open two terminal windows, T1 and T2.
+3. On T1, move to the `AI` folder, and switch to your environment:
 
             conda activate p36    
             export PYTHONPATH=.:$PYTHONPATH
 
-3. On a second terminal, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (**note: the python client invoked from within runstream.pl currently requires Python 2.7 and NOT Python 3**. Python 3.6 is needed for the AI module, instead):
+4. On T2, move to the `tapsterbot-original/clients/python` folder and keep the following command running. (**note: the python client invoked from within runstream.pl currently requires Python 2.7 and NOT Python 3**. Python 3.6 is needed for the AI module, instead):
 
             tail -f -n0 ../../../AI/coord.txt | perl runstream.pl
 
-Open the Candy Crush Saga game and start a game on a level of choice. Then run on the first terminal:
+5. Open the Candy Crush Saga game and start a game on a level of choice. 
+6. Run on T1:
 
             python examples/main.py | tee -a coord.txt
 
