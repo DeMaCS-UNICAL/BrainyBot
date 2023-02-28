@@ -100,6 +100,7 @@ Open the Candy Crush Saga game and start a game on a level of choice. Then run o
 
             python examples/main.py | tee -a coord.txt
 
+The above command requires Python 3 and not Python 2 (this will be uniformed in the near future!).
 This will take a screenshot, then perform computer vision and decision making on it. You will see the just made decision appear graphically on the screen, some output will appear on terminal and will be piped in the `coord.txt` file. If everything is correct, the runstream.pl script will collect the swipe coordinates from the coord.txt file and execute the actual move with the robot arm.
 
 # Collaborators
