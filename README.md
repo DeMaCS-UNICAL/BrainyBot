@@ -97,7 +97,7 @@ All the modules are currently loosely integrated. You can however test the full 
 
             tail -f -n0 ../../../AI/coord.txt | perl runstream.pl
 
-5. Open the Candy Crush Saga game and start a game on a level of choice. 
+5. Open the Candy Crush Saga game on PH (your mobile phone) and start a game on a level of choice. 
 6. Run on T1:
 
             python examples/main.py | tee -a coord.txt
