@@ -1,6 +1,6 @@
-# TappingBot
+# BrainyBot
 
-The TappingBot projects features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen. Based on the great TapsterBot design from Jason Huggins 
+The BrainyBot project features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen. Based on the great TapsterBot design from Jason Huggins 
 (https://github.com/tapsterbot/tapsterbot , https://tapster.io/)
 
 - **Authors**: Giovambattista Ianni, Mario Avolio.
