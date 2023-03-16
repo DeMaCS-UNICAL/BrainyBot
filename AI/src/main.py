@@ -13,39 +13,6 @@ def __get_ball_tube(ball, ons, step):
         if on.get_ball_above() == ball and on.get_step() == step:
             return on.get_tube()
         
-RED = "red"
-BLUE = "blue"
-YELLOW = "yellow"
-GREEN = "green"
-PURPLE = "purple"
-ORANGE = "orange"
-WHITE = "white"
-nameColor = {
-    RED: (255, 0, 0),
-    BLUE: (0, 0, 255),
-    YELLOW: (255, 255, 0),
-    GREEN: (0, 255, 0),
-    PURPLE: (128, 0, 128),
-    ORANGE: (255, 165, 0),
-    WHITE: (255, 255, 255)
-}
-
-
-def getColor(str) -> ():
-    # print(str)
-    name = None
-    for color in [RED, BLUE, YELLOW, GREEN, PURPLE, ORANGE]:
-        if color in str:
-            name = color
-
-    if "colourB" in str:
-        name = WHITE
-
-    if name in nameColor:
-        return nameColor[name]
-
-    return nameColor[RED]
-
         
 def ball_sort():
     matching_tubes = MatchingBalls()
