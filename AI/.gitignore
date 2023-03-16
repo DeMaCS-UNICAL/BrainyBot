@@ -142,11 +142,11 @@ dmypy.json
 AI/src/resources/matrix.png
 !AI/src/resources/swap.json
 
-src/resources/screenshots/*
-src/resources/sprites/*
+src/candy_crush/resources/screenshots/*
+src/candy_crush/resources/sprites/*
 
-!src/resources/screenshots/.gitkeep
-!src/resources/sprites/tube_http.png
-!src/resources/sprites/tall_tube_http.png
-!src/resources/sprites/small_tube_http.png
+!src/candy_crush/resources/screenshots/.gitkeep
+!src/candy_crush/resources/sprites/tube_http.png
+!src/candy_crush/resources/sprites/tall_tube_http.png
+!src/candy_crush/resources/sprites/small_tube_http.png
 
