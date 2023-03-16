@@ -100,6 +100,7 @@ class MatchingBalls:
         resized_output = cv.cvtColor(cv.resize(self.__output, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
         resized_blurred = cv.cvtColor(cv.resize(self.__blurred, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
         result = np.concatenate((resized_input, resized_edges, resized_output, resized_blurred), axis=1)
+        plt.figure(dpi=300)
         plt.imshow(result)
         plt.show()
         cv.waitKey(0)

@@ -17,7 +17,7 @@ def __get_ball_tube(ball, ons, step):
 def main():
 
      # TODO: change ip!
-    server_ip, port = "192.168.1.33", 5432
+    server_ip, port = "192.168.85.45", 5432
     try:
         require_image_from_url(server_ip, port)
         print("SCREENSHOT TAKEN.")
@@ -78,8 +78,9 @@ def main():
                 x2 = tube.get_x()
                 y2 = tube.get_y()
         coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-        os.system(f"python2 client.py --url http://192.168.1.38:8000 --light 'tap {x1} {y1}'")
-        os.system(f"python2 client.py --url http://192.168.1.38:8000 --light 'tap {x2} {y2}'")
+        # TODO: change ip!
+        os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'tap {x1} {y1}'")
+        os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'tap {x2} {y2}'")
 
     make_json(coordinates)
 
