@@ -36,17 +36,18 @@
 <h3 align="center">BrainyBot</h3>
 
   <p align="center">
-    The BrainyBot project features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen. Based on the great TapsterBot design from Jason Huggins
+    The BrainyBot project features a full-stack architecture currently capable of solving the Candy Crush Saga and Ball Sort Puzzle video game using a real robotic arm touching a moving screen. Based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
     <br />
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/DeMaCS-UNICAL/BrainyBot">View Demo</a>
+    <a href="https://www.youtube.com/watch?v=pgNjBhVs7_4">View Demo</a>
     ·
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Report Bug</a>
     ·
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Request Feature</a>
   </p>
+
 </div>
 
 
@@ -82,33 +83,57 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+![product-screenshot]
 
-TODO
+In this project, we propose a delta robot capable of
+playing match-3 games and ball-sorting puzzles by acting on
+mobile phones. The robot recognizes objects of different colors
+and shapes through a vision module, is capable of making
+strategic decisions based on declarative models of the game’s
+rules and of the game playing strategy, and features an effector
+that execute moves on physical devices.
+Our solution integrates multiple AI methods, including vision
+processing and answer set programming. Helpful and
+reusable infrastructure is provided: the vision task is facilitated,
+while robot motion control is inherently simplified by
+the usage of a delta robot layout.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+### How it works
+![operating-workflow]
 
+The main hardware parts of a BrainyBot are a mobile device PH,
+a computer C and the robotic effector E controlled using an Arduino board. 
+The figure shows the operating workflow of an instance of
+a BrainyBot. Software components are placed respectively on PH or on C, 
+which in turn controls all the parts of the system. 
+A game G of choice runs on PH. BrainyBot cyclically processes information taken
+from PH’s display, then decides and executes arm moves on
+the touch display itself. More in detail, in each iteration, the
+Sense-Think-Act workflow is executed.
 
 ### Built With
 
 - Python
+- Java
+- Answer Set Programming
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
 <!-- GETTING STARTED -->
 ## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
 To get a local copy up and running follow these simple example steps.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+This is a list of prerequisites for using the project:
+* **PH**: an Android mobile phone. This is the device where the ScreenshotServer application is installed and where the game will be played on.
+You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PH IP address.
+* **TP**: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
+* **LI**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
+
 
 ### Installation
 
@@ -218,7 +243,8 @@ Project Link: [https://github.com/DeMaCS-UNICAL/BrainyBot](https://github.com/De
 [license-url]: https://github.com/DeMaCS-UNICAL/BrainyBot/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: images/BrainyBot.jpg
+[operating-workflow]: images/Sense-Think-Act.png
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
