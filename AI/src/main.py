@@ -1,6 +1,6 @@
 import argparse
 from AI.src.ball_sort.helper import ball_sort
-#from AI.src.candy_crush.helper import candy_crush
+from AI.src.candy_crush.helper import candy_crush
 from AI.src.webservices.helpers import require_image_from_url
 
 if __name__ == '__main__':
@@ -23,6 +23,5 @@ if __name__ == '__main__':
     if game.__eq__("ball_sort"):
         ball_sort()
     elif game.__eq__("candy_crush"):
-        pass
-        #candy_crush()
+        candy_crush()
         
