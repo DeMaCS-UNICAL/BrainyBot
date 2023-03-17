@@ -1,6 +1,7 @@
 import os
 
 from AI.src.constants import CLIENT_PATH
+from AI.src.constants import SRC_PATH
 from AI.src.ball_sort.detect.detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
@@ -30,7 +31,6 @@ def ball_sort():
     moves.sort(key=lambda x: x.get_step())
     ons.sort(key=lambda x: x.get_step())
 
-    print(CLIENT_PATH)
     os.chdir(CLIENT_PATH)
 
     coordinates = []

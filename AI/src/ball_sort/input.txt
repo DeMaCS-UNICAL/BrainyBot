@@ -1,1 +1,0 @@
- color(1). color(2). color(3). ball(1,1). ball(2,1). ball(3,2). ball(4,3). ball(5,3). ball(6,1). ball(7,3). ball(8,2). ball(9,3). ball(10,2). ball(11,1). ball(12,2). tube(1). tube(2). tube(3). tube(4). tube(5). tubeSize(4). fullTube(3). step(809).
