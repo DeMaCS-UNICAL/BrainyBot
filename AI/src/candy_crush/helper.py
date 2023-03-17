@@ -1,3 +1,5 @@
+import os
+
 import cv2
 from matplotlib import pyplot as plt
 
@@ -6,7 +8,8 @@ from AI.src.candy_crush.candygraph import PX, PY, TYPE
 from AI.src.candy_crush.detect.detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution import getInputDLVNodes, getEdges, Swap
-from AI.src.candy_crush.webservices.helpers import makeJson
+from AI.src.constants import CLIENT_PATH
+
 
 def draw(matrixCopy, nodes, color):
     width, height = 110, 110
@@ -49,17 +52,8 @@ def getColor(str) -> ():
     return nameColor[RED]
 
 
-def main():
-    # require image from server
-    # TODO: change ip!
-    '''
-    serverIp, port = "192.168.0.50", 5432
-    try:
-        requireImageFromURL(serverIp, port)
-        print("REQUIRE OK!")
-    except Exception as e:
-        print(e)
-    '''
+def candy_crush():
+
     # execute template matching
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(spriteSize)
@@ -100,9 +94,9 @@ def main():
     plt.title(f"OPTIMUM {node1} --> {node2}.")
     plt.show()
 
-    # make json file
-    makeJson(node1[PX], node1[PY], node2[PX], node2[PY])
+    os.chdir(CLIENT_PATH)
 
-
-if __name__ == '__main__':
-    main()
+    os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'swipe {node1[PX]} {node1[PY]}'")
+    os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'swipe {node2[PX]} {node2[PY]}'")
+    
+    
