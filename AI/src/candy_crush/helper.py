@@ -1,49 +1,30 @@
 import os
 
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-from AI.src.candy_crush.candygraph import CandyGraph
-from AI.src.candy_crush.candygraph import PX, PY, TYPE
+from AI.src.candy_crush.candygraph.candygraph import CandyGraph
+from AI.src.candy_crush.candygraph.constants import PX, PY, TYPE
+from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 from AI.src.candy_crush.detect.detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
-from AI.src.candy_crush.dlvsolution import getInputDLVNodes, getEdges, Swap
+from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
 from AI.src.constants import CLIENT_PATH
 
 
 def draw(matrixCopy, nodes, color):
     width, height = 110, 110
-    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height),
-                  color,
-                  10)
+    cv.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
 
 
-RED = "red"
-BLUE = "blue"
-YELLOW = "yellow"
-GREEN = "green"
-PURPLE = "purple"
-ORANGE = "orange"
-WHITE = "white"
-nameColor = {
-    RED: (255, 0, 0),
-    BLUE: (0, 0, 255),
-    YELLOW: (255, 255, 0),
-    GREEN: (0, 255, 0),
-    PURPLE: (128, 0, 128),
-    ORANGE: (255, 165, 0),
-    WHITE: (255, 255, 255)
-}
-
-
-def getColor(str) -> ():
-    # print(str)
+def get_color(strg) -> ():
+    # print(strg)
     name = None
     for color in [RED, BLUE, YELLOW, GREEN, PURPLE, ORANGE]:
-        if color in str:
+        if color in strg:
             name = color
 
-    if "colourB" in str:
+    if "colourB" in strg:
         name = WHITE
 
     if name in nameColor:
@@ -53,19 +34,18 @@ def getColor(str) -> ():
 
 
 def candy_crush():
-
     # execute template matching
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(spriteSize)
-    matrixCopy = matchingCandy.getMatrix().copy()  # copy img
+    matrixCopy = matchingCandy.get_matrix().copy()  # copy img
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
     plt.show()
 
     # take graph
     candyGraph: CandyGraph = matchingCandy.search()
-    for node in candyGraph.getNodes():
-        color = getColor(node[TYPE])
+    for node in candyGraph.get_nodes():
+        color = get_color(node[TYPE])
         draw(matrixCopy, node, color)
 
     plt.imshow(matrixCopy)
@@ -73,20 +53,20 @@ def candy_crush():
     plt.show()
 
     # get nodes and edges of graph for DLV
-    nodesAndInformation = getInputDLVNodes(candyGraph)
-    edges = getEdges(candyGraph)
+    nodesAndInformation = get_input_dlv_nodes(candyGraph)
+    edges = get_edges(candyGraph)
 
     print(f"EDGES --> {edges}")
     print(f"NODES --> {nodesAndInformation}")
 
     # recall ASP program
     solution = DLVSolution()
-    swap: Swap = solution.recallASP(edges, nodesAndInformation)
+    swap: Swap = solution.recall_asp(edges, nodesAndInformation)
 
     # draw
-    tmp = matchingCandy.getMatrix().copy()
-    node1 = candyGraph.getNode(swap.get_id1())
-    node2 = candyGraph.getNode(swap.get_id2())
+    tmp = matchingCandy.get_matrix().copy()
+    node1 = candyGraph.get_node(swap.get_id1())
+    node2 = candyGraph.get_node(swap.get_id2())
 
     draw(tmp, node1, nameColor[WHITE])
     draw(tmp, node2, nameColor[WHITE])

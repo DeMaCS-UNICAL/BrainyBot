@@ -1,6 +1,7 @@
 import os
 from itertools import count
 from math import sqrt
+
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
@@ -16,7 +17,7 @@ class Color(Predicate):
     __MAX_DISTANCE = 40
 
     def __init__(self, bgr=None):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("idx", int)])
         self.__id = next(Color.__ids)
         self.__bgr = bgr
 
@@ -52,7 +53,7 @@ class Ball(Predicate):
     __ids = count(1, 1)
 
     def __init__(self, color=None):
-        Predicate.__init__(self, [("id", int), ("color", int)])
+        Predicate.__init__(self, [("idx", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
 
@@ -75,7 +76,7 @@ class Tube(Predicate):
     __ids = count(1, 1)
 
     def __init__(self, x=None, y=None, ):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("idx", int)])
         self.__id = next(Tube.__ids)
         self.__balls = []
         self.__x = x
