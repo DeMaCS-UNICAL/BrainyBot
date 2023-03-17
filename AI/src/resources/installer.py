@@ -2,7 +2,7 @@ import os
 
 import pip
 
-from AI.src.candy_crush.constants import RESOURCES_PATH
+from AI.src.constants import RESOURCES_PATH
 
 
 def install_whl(path):

@@ -1,6 +1,7 @@
 antlr4-python3-runtime
 numpy
 networkx
+mahotas
 requests
 matplotlib
 pip
