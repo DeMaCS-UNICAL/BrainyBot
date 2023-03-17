@@ -74,7 +74,7 @@
 #
 #             self.__initFixed()
 #         except Exception as e:
-#             print(str(e))
+#             print(strg(e))
 #
 #     def __initFixed(self):
 #
@@ -166,7 +166,7 @@
 #                 return swap
 #
 #         except Exception as e:
-#             print(str(e))
+#             print(strg(e))
 #
 #
 # def draw(matrixCopy, nodes, color=None):
@@ -244,12 +244,12 @@
 #     plt.show()
 #
 #
-# def drawSingleNodeWithID(id, candyGraph, matrix):
-#     if candyGraph.getNode(id) is None:
+# def drawSingleNodeWithID(idx, candyGraph, matrix):
+#     if candyGraph.getNode(idx) is None:
 #         return
-#     draw(matrix, candyGraph.getNode(id), (255, 255, 0))
+#     draw(matrix, candyGraph.getNode(idx), (255, 255, 0))
 #     plt.imshow(matrix)
-#     plt.title(id)
+#     plt.title(idx)
 #     plt.show()
 #
 #
@@ -307,7 +307,6 @@ import os
 import cv2 as cv
 from cv2.xfeatures2d import SIFT_create
 from matplotlib import pyplot as plt
-
 from src.constants import SPRITE_PATH
 
 TESTS_PATH = os.path.dirname(__file__)

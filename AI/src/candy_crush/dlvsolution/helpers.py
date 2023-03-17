@@ -1,9 +1,7 @@
 import os
 import re
 
-from languages.predicate import Predicate
-from platforms.desktop.desktop_handler import DesktopHandler
-from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from antlr4.atn.SemanticContext import Predicate
 
 from AI.src.candy_crush.candygraph.candygraph import CandyGraph
 from AI.src.candy_crush.candygraph.constants import TYPE, ID
@@ -91,7 +89,7 @@ class InputNode(Predicate, Node):
     predicate_name = "node"
 
     def __init__(self, nodeID=None, candyType=None):
-        Predicate.__init__(self, [("id", int), ("type", int)])
+        Predicate.__init__(self, [("idx", int), ("type", int)])
         Node.__init__(self, nodeID, candyType)
 
 
@@ -99,7 +97,7 @@ class InputBomb(Predicate, InformationID):
     predicate_name = "bomb"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("idx", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
@@ -110,7 +108,7 @@ class InputVertical(Predicate, InformationID):
     predicate_name = "vertical"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("idx", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
@@ -121,7 +119,7 @@ class InputHorizontal(Predicate, InformationID):
     predicate_name = "horizontal"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("idx", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
@@ -173,9 +171,9 @@ def chooseDLVSystem() -> DesktopHandler:
         print(e)
 
 
-def getInputDLVNodes(graph: CandyGraph) -> []:
+def get_input_dlv_nodes(graph: CandyGraph) -> []:
     nodesAndInformation = []
-    for node in graph.getNodes():
+    for node in graph.get_nodes():
 
         result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", node[TYPE])
         candyType = result.groups()[0]
@@ -204,10 +202,17 @@ def getInputDLVNodes(graph: CandyGraph) -> []:
     return nodesAndInformation
 
 
-def getEdges(graph: CandyGraph) -> [Edge]:
+def get_edges(graph: CandyGraph) -> [Edge]:
     edges = []
-    for n, nbrs in graph.getGraph():
+    for n, nbrs in graph.get_graph():
         for nbr, eattr in nbrs.items():
-            edges.append(Edge(n[ID], nbr[ID], graph.getPosition(n, nbr)))
+            edges.append(Edge(n[ID], nbr[ID], graph.get_position(n, nbr)))
 
     return edges
+
+
+def assert_true(expr, msg=None):
+    """Check that the expression is true."""
+    if not expr:
+        msg = f"{msg}: {(expr)} is not true"
+        raise ValueError(msg)

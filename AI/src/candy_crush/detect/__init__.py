@@ -1,11 +1,12 @@
 import os
 
-from src.detect.constants import SPRITE_PATH, SPRITES
-from src.detect.helpers import getImg
+from AI.src.candy_crush.constants import SPRITE_PATH
+from AI.src.candy_crush.detect.constants import SPRITES
+from AI.src.candy_crush.detect.helpers import get_img
 
 # take sprites
 for file in os.listdir(SPRITE_PATH):
-    img = getImg(os.path.join(SPRITE_PATH, file))
+    img = get_img(os.path.join(SPRITE_PATH, file))
     typeCandy = os.path.basename(file)
     SPRITES[typeCandy] = img
-    #print(typeCandy)
+    # print(typeCandy)
