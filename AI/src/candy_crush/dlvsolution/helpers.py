@@ -5,7 +5,7 @@ from antlr4.atn.SemanticContext import Predicate
 
 from AI.src.candy_crush.candygraph.candygraph import CandyGraph
 from AI.src.candy_crush.candygraph.constants import TYPE, ID
-from AI.src.candy_crush.constants import DLV_PATH
+from AI.src.constants import DLV_PATH
 
 
 class Connect:

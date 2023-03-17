@@ -30,6 +30,7 @@ def ball_sort():
     moves.sort(key=lambda x: x.get_step())
     ons.sort(key=lambda x: x.get_step())
 
+    print(CLIENT_PATH)
     os.chdir(CLIENT_PATH)
 
     coordinates = []

@@ -134,23 +134,48 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 * **TP**: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
 * **LI**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
 
+* npm
+  ```sh
+  npm install npm@latest -g
+  ```
+
 
 ### Installation
 
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
+1. Clone the repo
    ```sh
    git clone https://github.com/DeMaCS-UNICAL/BrainyBot.git
    ```
-3. Install NPM packages
+2. Pull submodules
    ```sh
-   npm install
+   git submodule update --init --recursive
    ```
-4. Enter your API in `config.js`
-   ```js
-   const API_KEY = 'ENTER YOUR API';
+3. Keep submodules up to date
+    ```sh
+   git pull --recurse-submodules
    ```
-
+4. Prepare an anaconda environment with Python 3.6:
+    ```sh
+    conda create --name=p36 python=3.6
+   ```
+5. Activate the environment
+    ```sh
+    conda activate p36
+   ```
+6. The command `conda install --file=requirements.txt` will likely not work, 
+as some packages are not available from default repositories. 
+We suggest to manually install the packages listed in `requirements.txt` 
+from your default repository, 
+then install separately `mahotas`, `antlr` and `embasp`, i.e., 
+move in the `AI` folder, and:
+    ```sh
+    conda install --file=requirements.txt
+    conda install -c conda-forge mahotas=1.4.11
+    conda install -c carta antlr4-python3-runtime=4.7
+    pip install EmbASP-7.4.0-py2.py3-none-any.whl
+   ```
+    
+**EmbASP Info** : The `whl` file mentioned above for EmbASP 7.4.0 is located under the `AI/src/resources` folder.
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 

@@ -6,7 +6,7 @@ from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
-from AI.src.ball_sort.constants import DLV_PATH
+from AI.src.constants import DLV_PATH
 
 
 class Color(Predicate):
