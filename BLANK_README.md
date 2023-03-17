@@ -185,7 +185,7 @@ Distributed under the MIT License. See `LICENSE.txt` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+Mario AVolio - [@linkedin](https://www.linkedin.com/in/MarioAvolio/) - marioavolio@protonmail.com
 
 Project Link: [https://github.com/DeMaCS-UNICAL/BrainyBot](https://github.com/DeMaCS-UNICAL/BrainyBot)
 
