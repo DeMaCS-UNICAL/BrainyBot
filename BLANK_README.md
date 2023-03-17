@@ -36,17 +36,18 @@
 <h3 align="center">BrainyBot</h3>
 
   <p align="center">
-    The BrainyBot project features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen. Based on the great TapsterBot design from Jason Huggins
+    The BrainyBot project features a full-stack architecture currently capable of playing the Candy Crush Saga videogame using a real robotic arm tapping on a mobile screen. Based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
     <br />
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/DeMaCS-UNICAL/BrainyBot">View Demo</a>
+    <a href="https://www.youtube.com/watch?v=pgNjBhVs7_4">View Demo</a>
     ·
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Report Bug</a>
     ·
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Request Feature</a>
   </p>
+
 </div>
 
 
@@ -218,7 +219,7 @@ Project Link: [https://github.com/DeMaCS-UNICAL/BrainyBot](https://github.com/De
 [license-url]: https://github.com/DeMaCS-UNICAL/BrainyBot/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: images/screenshot.png
+[product-screenshot]: images/BrainyBot.png
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
