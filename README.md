@@ -194,10 +194,9 @@ _For more examples, please refer to the [Documentation](https://github.com/DeMaC
 <!-- ROADMAP -->
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
+- [ ] Upgrade EmbASP and all other requirements from old to new versions.
+  - [ ] Modify requirements.txt
+- [ ] Upgrade python to latest version
 
 See the [open issues](https://github.com/DeMaCS-UNICAL/BrainyBot/issues) for a full list of proposed features (and known issues).
 
@@ -226,7 +225,7 @@ Don't forget to give the project a star! Thanks again!
 <!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
+Distributed under the APACHE-2.0 License. See `LICENSE.txt` for more information.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

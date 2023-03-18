@@ -1,18 +1,18 @@
 import os
 
-import cv2
 import mahotas
 import numpy as np
+import cv2
 
-from AI.src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
-from AI.src.candy_crush.detect.constants import SPRITES
-from AI.src.candy_crush.detect.helpers import get_img
-from AI.src.constants import SCREENSHOT_PATH
+from src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
+from src.candy_crush.detect.constants import SPRITES
+from src.candy_crush.detect.helpers import get_img
+from src.constants import SCREENSHOT_PATH
 
 
 class MatchingCandy:
     def __init__(self, difference: ()):
-        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'screenshot.png'))
+        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'Matrix2.png')) # TODO: modify name
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
         self.__graph = CandyGraph(difference)

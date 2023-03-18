@@ -1,9 +1,11 @@
-antlr4-python3-runtime
-numpy
-networkx
-mahotas
-requests
-matplotlib
-pip
-opencv-contrib-python
-opencv-python
+mahotas==1.4.*
+numpy==1.17.*
+networkx==2.2.*
+# requests==2.25.*
+matplotlib==3.3.*
+pip==21.1.*
+antlr4-python3-runtime==4.7.*
+opencv-python==3.4.*
+opencv-contrib-python==3.4.*
+# TODO: UPGRADE!
+

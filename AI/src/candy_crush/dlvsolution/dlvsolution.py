@@ -2,8 +2,8 @@ import os
 
 from languages.asp.asp_input_program import ASPInputProgram
 
-from AI.src.candy_crush.constants import RESOURCES_PATH
-from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap, assert_true
+from src.candy_crush.constants import RESOURCES_PATH
+from src.candy_crush.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap, assert_true
 
 
 class DLVSolution:

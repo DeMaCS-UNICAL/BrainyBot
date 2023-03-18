@@ -2,7 +2,7 @@ import os
 
 import pip
 
-from AI.src.constants import RESOURCES_PATH
+from src.constants import RESOURCES_PATH
 
 
 def install_whl(path):

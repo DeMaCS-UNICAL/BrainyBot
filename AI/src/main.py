@@ -1,11 +1,12 @@
 import argparse
-from AI.src.ball_sort.helper import ball_sort
-from AI.src.candy_crush.helper import candy_crush
-from AI.src.webservices.helpers import require_image_from_url
+
+# from src.ball_sort.helper import ball_sort
+from src.candy_crush.helper import candy_crush
+from src.webservices.helpers import require_image_from_url
 
 if __name__ == '__main__':
 
-    msg = "Description"
+    msg = "candy_crush"
     
     parser = argparse.ArgumentParser(description=msg)
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
@@ -20,8 +21,8 @@ if __name__ == '__main__':
     except Exception as e:
         print(e)
         
-    if game.__eq__("ball_sort"):
-        ball_sort()
-    elif game.__eq__("candy_crush"):
+    #if game.__eq__("ball_sort"):
+    #    ball_sort()
+    if game.__eq__("candy_crush"):
         candy_crush()
         
