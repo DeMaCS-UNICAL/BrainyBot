@@ -113,6 +113,8 @@ from PH’s display, then decides and executes arm moves on
 the touch display itself. More in detail, in each iteration, the
 Sense-Think-Act workflow is executed.
 
+<img src="images/BrainyBot.jpg" width="300" height="500">
+
 ### Built With
 
 - Python
