@@ -1,6 +1,6 @@
 from languages.asp.asp_mapper import ASPMapper
 
-from src.candy_crush.dlvsolution.helpers import Edge, InputBomb, InputNode, InputHorizontal, InputVertical, \
+from AI.src.candy_crush.dlvsolution.helpers import Edge, InputBomb, InputNode, InputHorizontal, InputVertical, \
     AtLeast3Adjacent, Swap
 
 ASPMapper.get_instance().register_class(Swap)
