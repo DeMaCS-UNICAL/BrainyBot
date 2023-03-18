@@ -9,7 +9,7 @@ from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE
 from AI.src.candy_crush.detect.detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
-from AI.src.constants import CLIENT_PATH
+from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 
 
 def draw(matrixCopy, nodes, color):
@@ -76,7 +76,7 @@ def candy_crush():
 
     os.chdir(CLIENT_PATH)
 
-    os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'swipe {node1[PX]} {node1[PY]}'")
-    os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'swipe {node2[PX]} {node2[PY]}'")
+    os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node1[PX]} {node1[PY]}'")
+    os.system(f"python2 client.py --url http://1"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node2[PX]} {node2[PY]}'")
     
     

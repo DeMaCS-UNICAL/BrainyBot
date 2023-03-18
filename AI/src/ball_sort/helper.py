@@ -1,7 +1,6 @@
 import os
 
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
-from AI.src.constants import SRC_PATH
 from AI.src.ball_sort.detect.detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position

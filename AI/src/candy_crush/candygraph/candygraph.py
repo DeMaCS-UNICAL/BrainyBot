@@ -1,7 +1,7 @@
 import networkx as nx
 
-from src.candy_crush.candygraph.constants import PX, PY, ID, VERTICAL, HORIZONTAL
-from src.candy_crush.candygraph.helpers import check_in_range
+from AI.src.candy_crush.candygraph.constants import PX, PY, ID, VERTICAL, HORIZONTAL
+from AI.src.candy_crush.candygraph.helpers import check_in_range
 
 
 class CandyGraph(nx.Graph):

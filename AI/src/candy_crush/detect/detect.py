@@ -4,10 +4,10 @@ import mahotas
 import numpy as np
 import cv2
 
-from src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
-from src.candy_crush.detect.constants import SPRITES
-from src.candy_crush.detect.helpers import get_img
-from src.constants import SCREENSHOT_PATH
+from AI.src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
+from AI.src.candy_crush.detect.constants import SPRITES
+from AI.src.candy_crush.detect.helpers import get_img
+from AI.src.constants import SCREENSHOT_PATH
 
 
 class MatchingCandy:
