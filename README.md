@@ -132,12 +132,11 @@ This is a list of prerequisites for using the project:
 * **PH**: an Android mobile phone. This is the device where the ScreenshotServer application is installed and where the game will be played on.
 You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PH IP address.
 * **TP**: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
-* **LI**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
+* **C**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
 
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+* npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
+  
+* Anaconda: https://www.anaconda.com/products/distribution
 
 
 ### Installation
@@ -162,7 +161,9 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
     ```sh
     conda activate p36
    ```
-6. The command `conda install --file=requirements.txt` will likely not work, 
+6. Install the requirements from the requirement.txt file
+located in the `AI` folder.
+The command `conda install --file=requirements.txt` will likely not work, 
 as some packages are not available from default repositories. 
 We suggest to manually install the packages listed in `requirements.txt` 
 from your default repository, 
@@ -172,20 +173,51 @@ move in the `AI` folder, and:
     conda install --file=requirements.txt
     conda install -c conda-forge mahotas=1.4.11
     conda install -c carta antlr4-python3-runtime=4.7
-    pip install EmbASP-7.4.0-py2.py3-none-any.whl
    ```
-    
-**EmbASP Info** : The `whl` file mentioned above for EmbASP 7.4.0 is located under the `AI/src/resources` folder.
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+7. Install EmbASP by running the `installer.py` script 
+located in the folder `AI/src/resources`
 
+8. Move to the `tappy-original` folder and 
+install the server contained in that folder:
+    ```sh
+    nvm use 10.19.0
+    npm install
+   ```
+   For more information check the official repository: 
+   https://github.com/DeMaCS-UNICAL/tappy-original/tree/1b84f8f6693395dc8597a9e9f6eb7555082e4dd1
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 <!-- USAGE EXAMPLES -->
 ## Usage
+These are the steps to follow to use and make the project work properly:
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+1. After connecting the arduino that controls the effector E 
+to the Linux host C through a usb port, on a first terminal
+run the server by navigating to the `tappy-original` folder 
+and running the following command:
+   ```sh
+    sudo npm start
+   ```
+   Write down the IP address of the Linux host C.
+   You can also perform PH display calibration at this point.
+   For more information check the official repository: 
+   https://github.com/DeMaCS-UNICAL/tappy-original/tree/1b84f8f6693395dc8597a9e9f6eb7555082e4dd1
 
-_For more examples, please refer to the [Documentation](https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md)_
+2. Run the ScreenshotServer application on the PH and the server 
+by clicking on the start button. Write down the IP address of 
+the PH. Note that the PH and Linux host C must both be connected 
+to the same network in order to communicate.
+
+3. Change the IP addresses of the ScreenshotServer and the 
+tappy-original server in the `constant.py` file contained in 
+the folder `AI/src`
+
+4. 
+
+
+For more examples, please refer to the [Documentation](https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

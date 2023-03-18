@@ -1,20 +1,20 @@
 import os
 
-import cv2
+import cv2 as cv
 from matplotlib import pyplot as plt
 
-from src.candy_crush.candygraph.candygraph import CandyGraph
-from src.candy_crush.candygraph.constants import PX, PY, TYPE
-from src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
-from src.candy_crush.detect.detect import MatchingCandy
-from src.candy_crush.dlvsolution.dlvsolution import DLVSolution
-from src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
-from src.constants import CLIENT_PATH
+from AI.src.candy_crush.candygraph.candygraph import CandyGraph
+from AI.src.candy_crush.candygraph.constants import PX, PY, TYPE
+from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
+from AI.src.candy_crush.detect.detect import MatchingCandy
+from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
+from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
+from AI.src.constants import CLIENT_PATH
 
 
 def draw(matrixCopy, nodes, color):
     width, height = 110, 110
-    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
+    cv.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
 
 
 def get_color(strg) -> ():

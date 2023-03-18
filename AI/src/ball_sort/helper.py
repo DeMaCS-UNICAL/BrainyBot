@@ -1,6 +1,6 @@
 import os
 
-from AI.src.constants import CLIENT_PATH
+from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.constants import SRC_PATH
 from AI.src.ball_sort.detect.detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
@@ -46,7 +46,6 @@ def ball_sort():
                 x2 = tube.get_x()
                 y2 = tube.get_y()
         coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-        # TODO: change ip!
-        os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'tap {x1} {y1}'")
-        os.system(f"python2 client.py --url http://192.168.85.37:8000 --light 'tap {x2} {y2}'")
+        os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'tap {x1} {y1}'")
+        os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'tap {x2} {y2}'")
         
