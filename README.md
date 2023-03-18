@@ -214,8 +214,26 @@ to the same network in order to communicate.
 tappy-original server in the `constant.py` file contained in 
 the folder `AI/src`
 
-4. 
+4. Open the Candy Crush Saga or Ball Sort Puzzle game on the PH 
+and start a game on a level of choice. Then in a second terminal, 
+navigate to the `AI/src` folder and run the python script `main.py`,
+specifying one of the following values as an argument to
+the `-g/--game` option:
+   * `ball_sort` if you want to run the AI module related to the ball sort puzzle game
+   * `candy_crush` if you want to run the AI module related to the ball sort puzzle game
+   
+   For example:
+   ```sh
+   python3 main.py -g ball_sort
+   ```
 
+   This will take a screenshot, then perform computer vision
+   and decision making on it. The results of this process, 
+   i.e. the coordinates (x, y) representing the moves to be 
+   performed on the PH, are automatically communicated by a 
+   python client to the tappy-original server, which in turn 
+   will command the robotic effector E who will execute
+   the moves on the PH
 
 For more examples, please refer to the [Documentation](https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md)
 
@@ -227,7 +245,7 @@ For more examples, please refer to the [Documentation](https://github.com/DeMaCS
 ## Roadmap
 
 - [ ] Upgrade EmbASP and all other requirements from old to new versions.
-  - [ ] Modify requirements.txt
+- [ ] Modify requirements.txt
 - [ ] Upgrade python to latest version
 
 See the [open issues](https://github.com/DeMaCS-UNICAL/BrainyBot/issues) for a full list of proposed features (and known issues).
@@ -239,16 +257,50 @@ See the [open issues](https://github.com/DeMaCS-UNICAL/BrainyBot/issues) for a f
 <!-- CONTRIBUTING -->
 ## Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
 If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!
 
+Also, if you want to add your favorite game to the project, the steps to follow are these:
+
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+2. Create your Game Branch (`git checkout -b yourGame`)
 3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+4. Push to the Branch (`git push origin yourGame`)
 5. Open a Pull Request
+
+The code to modify for adding a new game is roughly the following:
+1. Create your own package renaming it with the name of your game 
+and add it in the `AI/src` folder. In this main package 
+add some subpackages trying to keep the current structure 
+of the project:
+   * A package renamed `detect` for analyzing game screenshot 
+   using your favorite computer vision algorithms
+   * A package with the name you prefer to translate 
+   the information extrapolated from the analysis of the 
+   screenshot into python objects representing the entities 
+   of the game
+   * A package renamed `dlvsolution` for translating python 
+   objects into logical predicates and for finding a game 
+   solution through ASP and the EmbASP framework
+   * A package renamed `resources` in which to insert the 
+   sprites to be used for the analysis of the screenshot 
+   (if necessary) and the ASP encoding for the resolution 
+   of the game
+   * A `constant.py` script where you specify the path to the various 
+   elements you need in the code
+   * A `helper.py` script in which you call the methods of 
+   your objects in the right order in order to find the solution
+   to the game. Finally in this script the identified moves 
+   to be performed to solve the game are communicated to 
+   the tappy-original server
+
+2. In the `AI/src/main.py` script add an argument to be used 
+at runtime to choose the game you have added and an if to 
+conveniently call the main method present in your 
+`AI/src/yourGame/helper.py` script. For example:
+   ```sh
+   python3 main.py -g yourGame
+   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -265,24 +317,13 @@ Distributed under the APACHE-2.0 License. See `LICENSE.txt` for more information
 
 <!-- CONTACT -->
 ## Contact
+Giovanni Beraldi - [@linkedin](https://www.linkedin.com/in/GiovanniBeraldi/) - gvnberaldi@gmail.com
 
 Mario Avolio - [@linkedin](https://www.linkedin.com/in/MarioAvolio/) - marioavolio@protonmail.com
 
 Project Link: [https://github.com/DeMaCS-UNICAL/BrainyBot](https://github.com/DeMaCS-UNICAL/BrainyBot)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
-
-* []()
-* []()
-* []()
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
