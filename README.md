@@ -97,7 +97,8 @@ Our solution integrates multiple AI methods, including vision
 processing and answer set programming. Helpful and
 reusable infrastructure is provided: the vision task is facilitated,
 while robot motion control is inherently simplified by
-the usage of a delta robot layout.
+the usage of a delta robot layout. The figure above shows the 
+operating workflow of an instance of a BrainyBot.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -105,8 +106,7 @@ the usage of a delta robot layout.
 
 The main hardware parts of a BrainyBot are a mobile device PH,
 a computer C and the robotic effector E controlled using an Arduino board. 
-The figure shows the operating workflow of an instance of
-a BrainyBot. Software components are placed respectively on PH or on C, 
+Software components are placed respectively on PH or on C, 
 which in turn controls all the parts of the system. 
 A game G of choice runs on PH. BrainyBot cyclically processes information taken
 from PH’s display, then decides and executes arm moves on
@@ -222,7 +222,7 @@ navigate to the `AI/src` folder and run the python script `main.py`,
 specifying one of the following values as an argument to
 the `-g/--game` option:
    * `ball_sort` if you want to run the AI module related to the ball sort puzzle game
-   * `candy_crush` if you want to run the AI module related to the ball sort puzzle game
+   * `candy_crush` if you want to run the AI module related to the candy crush game
    
    For example:
    ```sh
@@ -297,7 +297,7 @@ of the project:
    the tappy-original server
 
 2. In the `AI/src/main.py` script add an argument to be used 
-at runtime to choose the game you have added and an if to 
+at runtime to choose the game you have added and the code to 
 conveniently call the main method present in your 
 `AI/src/yourGame/helper.py` script. For example:
    ```sh
