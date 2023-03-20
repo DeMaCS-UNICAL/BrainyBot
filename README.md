@@ -203,12 +203,12 @@ to the Linux host C through a usb port, on a first terminal
 run the server by navigating to the `tappy-original` folder 
 and running the following command:
    ```sh
-    sudo npm start
+    sudo node server.js
    ```
-   Write down the IP address of the Linux host C.
+   Write down the IP and port address of the Linux host server C.
    You can also perform PH display calibration at this point.
-   For more information check the official repository: 
-   https://github.com/DeMaCS-UNICAL/tappy-original/tree/1b84f8f6693395dc8597a9e9f6eb7555082e4dd1
+   For more information check the official repository for the Tappy Server Module: 
+   https://github.com/DeMaCS-UNICAL/tappy-original/
 
 2. Run the ScreenshotServer application on the PH and the server 
 by clicking on the start button. Write down the IP address of 
