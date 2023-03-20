@@ -166,15 +166,15 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 6. Install the requirements from the requirement.txt file
 located in the `AI` folder.
 The command `conda install --file=requirements.txt` will likely not work, 
-as some packages are not available from default repositories. 
-We suggest to manually install the packages listed in `requirements.txt` 
-from your default repository, 
-then install separately `mahotas`, `antlr` and `embasp`, i.e., 
-move in the `AI` folder, and:
+as some older packages are not available from default repositories. 
+As of March 2023, you can have luck looking in the channels conda-forge, carta, mindspy. 
+Install separately these older package like `mahotas`, `antlr`, `opencv-python-headless` etc. For instance, 
+move in the `AI` folder, and type:
     ```sh
     conda install --file=requirements.txt
     conda install -c conda-forge mahotas=1.4.11
     conda install -c carta antlr4-python3-runtime=4.7
+    conda install -c mindspy opencv-python-headless
    ```
 7. Install EmbASP by running the `installer.py` script 
 located in the folder `AI/src/resources`
