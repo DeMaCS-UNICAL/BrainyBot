@@ -177,10 +177,14 @@ move in the `AI` folder, and type:
     conda install -c mindspy opencv-python-headless
    ```
 7. Install EmbASP by running the `installer.py` script 
-located in the folder `AI/src/resources`
+located in the folder `AI/src/resources`:
+    ```sh
+    cd AI
+    python3 src/resources/installer.py
+    ```
 
 8. Move to the `tappy-original` folder and 
-install the server contained in that folder:
+install the server contained in that folder (requires node.js helper tools: nvm and npm; and a node.js 10.19.0 version):
     ```sh
     nvm use 10.19.0
     npm install
