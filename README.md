@@ -184,9 +184,8 @@ located in the folder `AI/src/resources`:
     ```
 
 8. Move to the `tappy-original` folder and 
-install the server contained in that folder (requires node.js helper tools: nvm and npm; and a node.js 10.19.0 version):
+install the server contained in that folder (tested with node.js lts/gallium (16.13.2)):
     ```sh
-    nvm use 10.19.0
     npm install
    ```
    For more information check the official repository: 
