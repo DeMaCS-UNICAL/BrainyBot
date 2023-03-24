@@ -6,5 +6,5 @@ SCREENSHOT_PATH = os.path.join(RESOURCES_PATH, 'screenshot')
 CLIENT_PATH = os.path.join(SRC_PATH, '../../tapsterbot-original/clients/python')
 DLV_PATH = os.path.join(RESOURCES_PATH, 'dlv')
 # TODO: change IP!
-SCREENSHOT_SERVER_IP = '192.168.1.33'
-TAPPY_ORIGINAL_SERVER_IP = '192.168.85.37'
+SCREENSHOT_SERVER_IP = '192.168.0.51'
+TAPPY_ORIGINAL_SERVER_IP = '192.168.0.3'

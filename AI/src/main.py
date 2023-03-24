@@ -2,6 +2,7 @@ import argparse
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
 from AI.src.webservices.helpers import require_image_from_url
+import constants
 
 if __name__ == '__main__':
 
@@ -11,9 +12,9 @@ if __name__ == '__main__':
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
     parser.parse_args()
     game = parser.parse_args()
-
+    print ("Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
-    server_ip, port = "192.168.1.33", 5432
+    server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
     try:
         require_image_from_url(server_ip, port)
         print("SCREENSHOT TAKEN.")
