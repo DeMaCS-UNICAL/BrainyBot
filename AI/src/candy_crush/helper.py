@@ -56,27 +56,28 @@ def candy_crush():
     nodesAndInformation = get_input_dlv_nodes(candyGraph)
     edges = get_edges(candyGraph)
 
-    print(f"EDGES --> {edges}")
-    print(f"NODES --> {nodesAndInformation}")
+    #print(f"EDGES --> {edges}")
+    #print(f"NODES --> {nodesAndInformation}")
 
     # recall ASP program
     solution = DLVSolution()
     swap: Swap = solution.recall_asp(edges, nodesAndInformation)
 
-    # draw
-    tmp = matchingCandy.get_matrix().copy()
-    node1 = candyGraph.get_node(swap.get_id1())
-    node2 = candyGraph.get_node(swap.get_id2())
+    if swap is None:
+        print("No moves found. Maybe there is no candy on screen?")
+    else:
+        # draw
+        tmp = matchingCandy.get_matrix().copy()
+        node1 = candyGraph.get_node(swap.get_id1())
+        node2 = candyGraph.get_node(swap.get_id2())
 
-    draw(tmp, node1, nameColor[WHITE])
-    draw(tmp, node2, nameColor[WHITE])
-    plt.imshow(tmp)
-    plt.title(f"OPTIMUM {node1} --> {node2}.")
-    plt.show()
+        draw(tmp, node1, nameColor[WHITE])
+        draw(tmp, node2, nameColor[WHITE])
+        plt.imshow(tmp)
+        plt.title(f"OPTIMUM {node1} --> {node2}.")
+        plt.show()
 
-    os.chdir(CLIENT_PATH)
-
-    os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node1[PX]} {node1[PY]}'")
-    os.system(f"python2 client.py --url http://1"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node2[PX]} {node2[PY]}'")
+        os.chdir(CLIENT_PATH)
+        os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node1[PX]} {node1[PY]} {node2[PX]} {node2[PY]}'")
     
     

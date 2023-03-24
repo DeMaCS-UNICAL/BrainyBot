@@ -4,7 +4,8 @@ networkx==3.*
 requests==2.28.*
 matplotlib==3.3.*
 pip==21.1.*
-#antlr4-python3-runtime==4.9.*  can be taken from carta channel
+py-opencv==4.7.*
+antlr4-python3-runtime==4.7.*  # can be taken from carta channel
 #opencv-python-headless==4.7.*  can be taken from fastai channel
 #  OR use the two packages
 ## opencv-python==4.7.*

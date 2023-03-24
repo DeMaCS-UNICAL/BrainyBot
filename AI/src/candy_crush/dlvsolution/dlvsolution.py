@@ -19,27 +19,35 @@ class DLVSolution:
             print(str(e))
 
     def __init_fixed(self):
+        print (f"Looking for rules in {os.path.join(RESOURCES_PATH, 'rules.dlv2')}")
         self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "rules.dlv2"))
         self.__handler.add_program(self.__fixedInputProgram)
 
     def recall_asp(self, edges: [Edge], nodes: [InputNode]) -> Swap:
         try:
+            print (f"Calling ASP Solver.")
+            
             self.__variableInputProgram = ASPInputProgram()
-
+            print (f"Created ASP program.")
+            
             # insert nodes from graph to asp program
             for node in nodes:
-                # print(node)
+                print(node)
                 self.__variableInputProgram.add_object_input(node)
+            print (f"Created Nodes.")
+            
 
             for edge in edges:  # add edges input to dlv solution program
                 self.__variableInputProgram.add_object_input(edge)
+            print (f"Created Edges.")
 
             index = self.__handler.add_program(self.__variableInputProgram)
+            print (f"Let'see.")
             answerSets = self.__handler.start_sync()
-
-            #assertTrue(answerSets is not None)
-            #assertTrue(isinstance(answerSets, Swap),
-            #                "Error, result object is not Swap")
+            print (f"Answer sets: {answerSets}")
+            assert_true(answerSets is not None)
+            assert_true(isinstance(answerSets, Swap),
+                            "Error, result object is not Swap")
             assert_true(answerSets.get_errors() == "",
                         "Found error:\n" + str(answerSets.get_errors()))
             assert_true(len(answerSets.get_optimal_answer_sets()) != 0)

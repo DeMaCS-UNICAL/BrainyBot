@@ -166,8 +166,9 @@ def chooseDLVSystem() -> DesktopHandler:
             return DesktopHandler(
                 DLV2DesktopService(os.path.join(DLV_PATH, "dlv2.mac_7")))
         else:
+            print(f"I will use this ASP Solver: {os.path.join(DLV_PATH, 'dlv2-linux')}")
             return DesktopHandler(
-                DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux-64_6")))
+                DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux")))
     except Exception as e:
         print(e)
 

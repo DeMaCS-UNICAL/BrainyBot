@@ -12,7 +12,11 @@ from AI.src.constants import SCREENSHOT_PATH
 
 class MatchingCandy:
     def __init__(self, difference: ()):
-        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'Matrix2.png')) # TODO: modify name
+        #
+        # Use Matrix2.png for testing
+        #
+        #self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'Matrix2.png')) # TODO: modify name
+        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'screenshot.png')) # TODO: modify name        
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
         self.__graph = CandyGraph(difference)
