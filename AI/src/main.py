@@ -10,19 +10,19 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description=msg)
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
-    parser.parse_args()
+    args = parser.parse_args()
     game = parser.parse_args()
-    print ("Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
-    # TODO: change ip!
+    print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
+    ''' TODO: change ip!
     server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
     try:
         require_image_from_url(server_ip, port)
         print("SCREENSHOT TAKEN.")
     except Exception as e:
-        print(e)
+        print(e)'''
         
-    if game.__eq__("ball_sort"):
+    if args.game == "ball_sort":
         ball_sort()
-    elif game.__eq__("candy_crush"):
+    elif args.game == "candy_crush":
         candy_crush()
         

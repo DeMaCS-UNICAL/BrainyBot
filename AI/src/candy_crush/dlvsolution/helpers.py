@@ -1,8 +1,6 @@
 import os
 import re
 
-#from antlr4.atn.SemanticContext import Predicate
-
 from languages.predicate import Predicate
 from AI.src.candy_crush.candygraph.candygraph import CandyGraph
 from platforms.desktop.desktop_handler import DesktopHandler
