@@ -166,23 +166,26 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 6. Install the requirements from the requirement.txt file
 located in the `AI` folder.
 The command `conda install --file=requirements.txt` will likely not work, 
-as some packages are not available from default repositories. 
-We suggest to manually install the packages listed in `requirements.txt` 
-from your default repository, 
-then install separately `mahotas`, `antlr` and `embasp`, i.e., 
-move in the `AI` folder, and:
+as some older packages are not available from default repositories. 
+As of March 2023, you can have luck looking in the channels conda-forge, carta, mindspy. 
+Install separately these older package like `mahotas`, `antlr`, `opencv-python-headless` etc. For instance, 
+move in the `AI` folder, and type:
     ```sh
     conda install --file=requirements.txt
     conda install -c conda-forge mahotas=1.4.11
     conda install -c carta antlr4-python3-runtime=4.7
+    conda install -c mindspy opencv-python-headless
    ```
 7. Install EmbASP by running the `installer.py` script 
-located in the folder `AI/src/resources`
+located in the folder `AI/src/resources`:
+    ```sh
+    cd AI
+    python3 src/resources/installer.py
+    ```
 
 8. Move to the `tappy-original` folder and 
-install the server contained in that folder:
+install the server contained in that folder (tested with node.js lts/gallium (16.13.2)):
     ```sh
-    nvm use 10.19.0
     npm install
    ```
    For more information check the official repository: 
@@ -200,12 +203,12 @@ to the Linux host C through a usb port, on a first terminal
 run the server by navigating to the `tappy-original` folder 
 and running the following command:
    ```sh
-    sudo npm start
+    sudo node server.js
    ```
-   Write down the IP address of the Linux host C.
+   Write down the IP and port address of the Linux host server C.
    You can also perform PH display calibration at this point.
-   For more information check the official repository: 
-   https://github.com/DeMaCS-UNICAL/tappy-original/tree/1b84f8f6693395dc8597a9e9f6eb7555082e4dd1
+   For more information check the official repository for the Tappy Server Module: 
+   https://github.com/DeMaCS-UNICAL/tappy-original/
 
 2. Run the ScreenshotServer application on the PH and the server 
 by clicking on the start button. Write down the IP address of 
