@@ -61,9 +61,9 @@ class MatchingBalls:
             self.__ball_chart.setup_full_tubes(balls)
 
     def detect_empty_tube(self):
-        for image in self.__tubeTemplates:
-            print(f"Trying to detect empty tube {image}")
-            match = self.__empty_tube(self.__tubeTemplates[image])
+        for name in self.__tubeTemplates:
+            print(f"Trying to detect empty tube {name}")
+            match = self.__empty_tube(self.__tubeTemplates[name])
             if match != None:
                 break
 
@@ -74,7 +74,8 @@ class MatchingBalls:
         width = self.__image.shape[1]
 
         image_gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)
-        w, h = template.shape[::-1]
+        print(f"Template size: {template.shape}")
+        w, h = template.shape[:2]
         res = cv.matchTemplate(image_gray, template, cv.TM_CCOEFF_NORMED)
         threshold = 0.8
         loc = np.where(res >= threshold)
