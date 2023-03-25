@@ -1,8 +1,15 @@
 #! /bin/bash
+#
+#  This script wraps dlv-linux.bin by logging all its STDIN, STDOUT, STDERR. Arguments to dlv-linux are logged to $ERR.
+#
 DIRPATH="$(dirname "$BASH_SOURCE[0]")"
 IN=$DIRPATH/dlv-in.log
 OUT=$DIRPATH/dlv-out.log
 ERR=$DIRPATH/dlv-err.log
 echo "Start dlv wrapping script" > $ERR
 echo "Arguments to dlv are $@" > $ERR
-cat | tee $IN | $DIRPATH/dlv2-linux.bin "$@" > $OUT 2>> $ERR
+cat | tee $IN | $DIRPATH/dlv2-linux.bin "$@" 2>>$ERR | tee $OUT 
+#
+# This can be different as STDERR is printed at the end. WARNING
+#
+cat $ERR >&2
