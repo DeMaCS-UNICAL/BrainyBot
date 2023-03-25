@@ -36,7 +36,8 @@
 <h3 align="center">BrainyBot</h3>
 
   <p align="center">
-    The BrainyBot project features a full-stack architecture currently capable of solving the Candy Crush Saga and Ball Sort Puzzle video game using a real robotic arm touching a moving screen. Based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
+    BrainyBot is a robot capable of solving the Candy Crush Saga and Ball Sort Puzzle video games using touching a phone screen. 
+    Based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
     <br />
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md"><strong>Explore the docs »</strong></a>
     <br />
@@ -86,7 +87,7 @@
 ![operating-workflow]
 <!-- ![product-screenshot] -->
 
-In this project, we propose a delta robot capable of
+BrainyBot is a delta robot capable of
 playing match-3 games and ball-sorting puzzles by acting on
 mobile phones. The robot recognizes objects of different colors
 and shapes through a vision module, is capable of making
@@ -117,8 +118,8 @@ Sense-Think-Act workflow is executed.
 
 ### Built With
 
-- Python
-- Java
+- Python3
+- Javascript (Node.js)
 - Answer Set Programming
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -128,7 +129,7 @@ Sense-Think-Act workflow is executed.
 ## Getting Started
 To get a local copy up and running follow these simple example steps.
 
-### Prerequisites
+### Required hardware and software
 
 This is a list of prerequisites for using the project:
 * **PH**: an Android mobile phone. This is the device where the ScreenshotServer application is installed and where the game will be played on.
@@ -136,60 +137,73 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 * **TP**: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
 * **C**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
 
-* npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm
-  
-* Anaconda: https://www.anaconda.com/products/distribution
+* npm: https://docs.npmjs.com/downloading-and-installing-node-js-and-npm 
+* pipenv: https://pypi.org/project/pipenv/
 
 
-### Installation
+### Installation and set up 
+
+You will need to set up some modules which are briefly described next:
+
+## ScreenshotServer
+
+The ScreenshotServer is an Android application which opens an HTTP server on PH. You can manually HTTP GET screenshots on demand from the Screenshotserver this way:
+
+    curl http://<PHone-IP>:5432/?name=requestimage --output screen.png
+
+You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PHone-IP.
+
+## Tapsterbot
+
+The robotic arm needs to be 3D-printed and assembled as described in several tutorials online like: https://www.instructables.com/Tapsterbot-20-Servo-Arm-Assembly/.
+The software on the embedded Arduino board must be the Standard Firmata script: from the Arduino IDE find and upload the "Firmata" script:
+
+    File -> Open -> Examples > Firmata > StandardFirmata
+
+Calibration and testing of the robot can be done by following the installation guide of the Tappy server: https://github.com/DeMaCS-UNICAL/tappy-original
+
+## Tappy server 
+
+You find a fork of the tappy project under the tappy-server submodule. The Tappy server is expected to run on some system on port 80. The `config.js` file under the `tappy-server` folder allows to customize the listening port and other physical parameters of the robot.
+Recall you can use `nvm` for managing the required node.js version, (currently it is needed node 16.*).
+If your current user has no access rights to serial ports, recall to use `sudo npm start` when starting the tappy server instead of a plain `npm start`, and ensure the correct version of node is available also under sudo privileges (the default node might differ when sudo-ing).
+
+## Python client
+
+This python client for controlling tappy server from a client is located under the `tappy-client/clients/python` folder. You will possibly need to tweak IP and listening port of the Tappy server and other stuff in the `config3.py` file. Example usage:
+
+    python3 client3.py --url http://127.0.0.1 --light 'swipe 325 821 540 821'
+
+Detailed documentation for the python client can be found in the README of the https://github.com/DeMaCS-UNICAL/tapsterbot-original
+
+## Basic installation instructions
 
 1. Clone the repo
    ```sh
    git clone https://github.com/DeMaCS-UNICAL/BrainyBot.git
    ```
-2. Pull submodules
+2. Don't forget to pull submodules
    ```sh
    git submodule update --init --recursive
    ```
-3. Keep submodules up to date
+3. If needed, keep submodules up to date
     ```sh
    git pull --recurse-submodules
    ```
-4. Prepare an anaconda environment with Python 3.6:
+4. Set up a pipenv environment after cd-ing in BrainyBot/Brain. The command will download all required libraries in a new virtual environment:
     ```sh
-    conda create --name=p36 python=3.6
+    cd BrainyBot/Brain
+    pipenv install
    ```
-5. Activate the environment
-    ```sh
-    conda activate p36
-   ```
-6. Install the requirements from the requirement.txt file
-located in the `AI` folder.
-The command `conda install --file=requirements.txt` will likely not work, 
-as some older packages are not available from default repositories. 
-As of March 2023, you can have luck looking in the channels conda-forge, carta, mindspy. 
-Install separately these older package like `mahotas`, `antlr`, `opencv-python-headless` etc. For instance, 
-move in the `AI` folder, and type:
-    ```sh
-    conda install --file=requirements.txt
-    conda install -c conda-forge mahotas=1.4.11
-    conda install -c carta antlr4-python3-runtime=4.7
-    conda install -c mindspy opencv-python-headless
-   ```
-7. Install EmbASP by running the `installer.py` script 
-located in the folder `AI/src/resources`:
-    ```sh
-    cd AI
-    python3 src/resources/installer.py
-    ```
-
-8. Move to the `tappy-original` folder and 
+   We assume you have either Python 3.9 or 3.10 on C (Python 3.8 and 3.7 should work too).
+   
+8. Move to the `BrainyBot/tappy-server` folder and 
 install the server contained in that folder (tested with node.js lts/gallium (16.13.2)):
     ```sh
     npm install
    ```
-   For more information check the official repository: 
-   https://github.com/DeMaCS-UNICAL/tappy-original/tree/1b84f8f6693395dc8597a9e9f6eb7555082e4dd1
+   For more information check the submodule repository: 
+   https://github.com/DeMaCS-UNICAL/tappy-original/
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -198,36 +212,46 @@ install the server contained in that folder (tested with node.js lts/gallium (16
 ## Usage
 These are the steps to follow to use and make the project work properly:
 
-1. After connecting the arduino that controls the effector E 
-to the Linux host C through a usb port, on a first terminal
-run the server by navigating to the `tappy-original` folder 
-and running the following command:
+1. Open two terminal windows, T1 and T2.
+
+2. Ensure the robot is connected via USB to C, and on T1 navigate to the `tappy-server` folder 
+and issue the following command:
    ```sh
-    sudo node server.js
+    sudo npm start
    ```
    Write down the IP and port address of the Linux host server C.
    You can also perform PH display calibration at this point.
    For more information check the official repository for the Tappy Server Module: 
    https://github.com/DeMaCS-UNICAL/tappy-original/
 
-2. Run the ScreenshotServer application on the PH and the server 
-by clicking on the start button. Write down the IP address of 
-the PH. Note that the PH and Linux host C must both be connected 
-to the same network in order to communicate.
+3. Run the ScreenshotServer application on PH, and tap its start button. 
+Write down the IP address of PH. 
 
-3. Change the IP addresses of the ScreenshotServer and the 
-tappy-original server in the `constant.py` file contained in 
-the folder `AI/src`
+4. Change the IP addresses of the ScreenshotServer and the 
+tappy-server in the `constant.py` file contained in 
+the folder `Brain/AI/src`
 
-4. Open the Candy Crush Saga or Ball Sort Puzzle game on the PH 
+5. Open the Candy Crush Saga or Ball Sort Puzzle game on the PH 
 and start a game on a level of choice. Unlike Candy Crush Saga, 
 there are different implementations of the Ball Sort Puzzle game. 
-The one to be used for the correct functioning of the related AI
-module is the following: 
+BrainyBot is tested on 
 [Ball Sort - Color Sorting Game](https://play.google.com/store/apps/details?id=ball.sort.water.color.hoop.stack.puzzle&hl=it&gl=US)  
-Then in a second terminal, navigate to the `AI/src` folder and 
-run the python script `main.py`, specifying one of the following 
-values as an argument to the `-g/--game` option:
+
+6. In T2, navigate to the `Brain` folder.
+You can run the AI either by first activating a pipenv shell
+ ```sh
+ cd Brain
+ pipenv shell
+ ```
+and then issuing
+```sh
+python3 AI/src/main.py -g game_name
+```
+Alternatively, you can just cd to the `Brain` folder and issue
+```sh
+pipenv run play -g game_name
+```
+`-g/--game` can be followed by:
    * `ball_sort` if you want to run the AI module related to the ball sort puzzle game
    * `candy_crush` if you want to run the AI module related to the candy crush game
    
@@ -240,28 +264,15 @@ values as an argument to the `-g/--game` option:
    and decision making on it. The results of this process, 
    i.e. the coordinates (x, y) representing the moves to be 
    performed on the PH, are automatically communicated by a 
-   python client to the tappy-original server, which in turn 
+   python client to the tappy-server, which in turn 
    will command the robotic effector E who will execute
-   the moves on the PH
+   the moves on PH.
+   
+   The ball_sort AI will execute a whole level, while the candy_crush AI will decide and execute one move at a time.
 
 For more examples, please refer to the [Documentation](https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Upgrade EmbASP and all other requirements from old to new versions.
-- [ ] Modify requirements.txt
-- [ ] Upgrade python to latest version
-- [ ] Try SIFT/SURF/ORB for detection
-
-See the [open issues](https://github.com/DeMaCS-UNICAL/BrainyBot/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- CONTRIBUTING -->
@@ -283,9 +294,9 @@ The code to modify for adding a new game is roughly the following:
 and add it in the `AI/src` folder. In this main package 
 add some subpackages trying to keep the current structure 
 of the project:
-   * A package renamed `detect` for analyzing game screenshot 
+   * A package renamed `detect` for analyzing game screenshots 
    using your favorite computer vision algorithms
-   * A package with the name you prefer to translate 
+   * A package `abstract`  to translate 
    the information extrapolated from the analysis of the 
    screenshot into python objects representing the entities 
    of the game
@@ -302,7 +313,7 @@ of the project:
    your objects in the right order in order to find the solution
    to the game. Finally in this script the identified moves 
    to be performed to solve the game are communicated to 
-   the tappy-original server
+   the tappy-server
 
 2. In the `AI/src/main.py` script add an argument to be used 
 at runtime to choose the game you have added and the code to 
@@ -326,12 +337,13 @@ Distributed under the APACHE-2.0 License. See `LICENSE.txt` for more information
 
 
 <!-- CONTACT -->
-## Contact
-Giovanni Beraldi - [@linkedin](https://www.linkedin.com/in/GiovanniBeraldi/) - gvnberaldi@gmail.com
+# The team
 
-Mario Avolio - [@linkedin](https://www.linkedin.com/in/MarioAvolio/) - marioavolio@protonmail.com
+- General integration of modules, Hardware, Calibration, Actuation modules, AI Tweaking, whatever other kick is needed to keep everything alive and working: Giovambattista Ianni a.k.a. Agelin Bee ([@iannigb](https://github.com/iannigb))
+- Screenshotserver, Candy Crush Vision & Candy Crush AI : Mario Avolio ([@MarioAvolio](https://github.com/MarioAvolio)) [@linkedin](https://www.linkedin.com/in/MarioAvolio/) - marioavolio@protonmail.com
+- Ball Sort Vision & Ball Sort AI : Giovanni Beraldi - [@linkedin](https://www.linkedin.com/in/GiovanniBeraldi/) - gvnberaldi@gmail.com
+- General Maintainance & Bug fixing : Denise Angilica ([@deniseAngilica](https://github.com/deniseAngilica)) and Francesco Pacenza ([@fpacenza](https://github.com/fpacenza)) 
 
-Project Link: [https://github.com/DeMaCS-UNICAL/BrainyBot](https://github.com/DeMaCS-UNICAL/BrainyBot)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
