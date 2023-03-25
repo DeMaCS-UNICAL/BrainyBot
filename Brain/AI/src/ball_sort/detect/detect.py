@@ -22,7 +22,7 @@ class MatchingBalls:
         self.__blurred = cv.GaussianBlur(self.__image, (65, 65), 0)  # Used to find the color of the balls
         self.__tubeTemplates = {}
         for file in os.listdir(SPRITE_PATH):
-            if file.endswith('.png'):
+            if file.endswith('.png') or file.endswith('.jpg'):
                 fullname = os.path.join(SPRITE_PATH,file)
                 print(f"Found Tube sprite {fullname}")
                 img = getImg(fullname,0)
@@ -49,7 +49,7 @@ class MatchingBalls:
             for (x, y, r) in circles:
                 # get the color of pixel (x, y) form the blurred image
                 color = np.array(self.__blurred[y, x])
-                # print(f"({x}, {y}): {color}")
+                print(f"Found ball:({x}, {y}): {color}")
                 # draw the circle
                 cv.circle(self.__output, (x, y), r, (0, 255, 0), 2)
                 cv.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
@@ -64,7 +64,8 @@ class MatchingBalls:
         for name in self.__tubeTemplates:
             print(f"Trying to detect empty tube {name}")
             match = self.__empty_tube(self.__tubeTemplates[name])
-            if match != None:
+            print(f"Matches:{len(match)}")
+            if len(match) > 0:
                 break
 
         self.__show_result()
@@ -75,7 +76,7 @@ class MatchingBalls:
 
         image_gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)
         print(f"Template size: {template.shape}")
-        w, h = template.shape[:2]
+        w, h = template.shape[::-1]
         res = cv.matchTemplate(image_gray, template, cv.TM_CCOEFF_NORMED)
         threshold = 0.8
         loc = np.where(res >= threshold)
