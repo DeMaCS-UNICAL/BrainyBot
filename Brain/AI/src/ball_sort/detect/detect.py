@@ -25,7 +25,7 @@ class MatchingBalls:
             if file.endswith('.png'):
                 fullname = os.path.join(SPRITE_PATH,file)
                 print(f"Found Tube sprite {fullname}")
-                img = getImg(fullname)
+                img = getImg(fullname,0)
                 self.__tubeTemplates[fullname]  = img
         self.__hough_circles_method_name = 'cv.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
