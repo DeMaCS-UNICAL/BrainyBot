@@ -220,10 +220,14 @@ tappy-original server in the `constant.py` file contained in
 the folder `AI/src`
 
 4. Open the Candy Crush Saga or Ball Sort Puzzle game on the PH 
-and start a game on a level of choice. Then in a second terminal, 
-navigate to the `AI/src` folder and run the python script `main.py`,
-specifying one of the following values as an argument to
-the `-g/--game` option:
+and start a game on a level of choice. Unlike Candy Crush Saga, 
+there are different implementations of the Ball Sort Puzzle game. 
+The one to be used for the correct functioning of the related AI
+module is the following: 
+[Ball Sort - Color Sorting Game](https://play.google.com/store/apps/details?id=ball.sort.water.color.hoop.stack.puzzle&hl=it&gl=US)  
+Then in a second terminal, navigate to the `AI/src` folder and 
+run the python script `main.py`, specifying one of the following 
+values as an argument to the `-g/--game` option:
    * `ball_sort` if you want to run the AI module related to the ball sort puzzle game
    * `candy_crush` if you want to run the AI module related to the candy crush game
    
