@@ -147,6 +147,7 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 
 You will need to set up some modules which are briefly described next:
 
+
 ## ScreenshotServer
 
 The ScreenshotServer is an Android application which opens an HTTP server on PH. You can manually HTTP GET screenshots on demand from the Screenshotserver this way:
@@ -171,6 +172,7 @@ Recall you can use `nvm` for managing the required node.js version, (currently i
 If your current user has no access rights to serial ports, recall to use `sudo npm start` when starting the tappy server instead of a plain `npm start`, and ensure the correct version of node is available also under sudo privileges (the default node might differ when sudo-ing).
 
 ## Python client
+
 
 This python client for controlling tappy server from a client is located under the `tappy-client/clients/python` folder. You will possibly need to tweak IP and listening port of the Tappy server and other stuff in the `config3.py` file. Example usage:
 
