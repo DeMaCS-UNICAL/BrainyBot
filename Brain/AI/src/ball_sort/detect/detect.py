@@ -20,11 +20,13 @@ class MatchingBalls:
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, 'screenshot.png'))
         self.__output = self.__image.copy()  # Used to display the result
         self.__blurred = cv.GaussianBlur(self.__image, (65, 65), 0)  # Used to find the color of the balls
-        self.__tubeTemplates = []
+        self.__tubeTemplates = {}
         for file in os.listdir(SPRITE_PATH):
             if file.endswith('.png'):
-                img = getImg(os.path.join(SPRITE_PATH, file))
-                self.__tubeTemplates.append(img)
+                fullname = os.path.join(SPRITE_PATH,file)
+                print(f"Found Tube sprite {fullname}")
+                img = getImg(fullname)
+                self.__tubeTemplates[fullname]  = img
         self.__hough_circles_method_name = 'cv.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.__match_template_method_name = 'cv.TM_CCOEFF_NORMED'
@@ -59,9 +61,10 @@ class MatchingBalls:
             self.__ball_chart.setup_full_tubes(balls)
 
     def detect_empty_tube(self):
-        for template in self.__tubeTemplates:
-            match = self.__empty_tube(template)
-            if match:
+        for image in self.__tubeTemplates:
+            print(f"Trying to detect empty tube {image}")
+            match = self.__empty_tube(self.__tubeTemplates[image])
+            if match != None:
                 break
 
         self.__show_result()
