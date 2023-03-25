@@ -256,6 +256,7 @@ For more examples, please refer to the [Documentation](https://github.com/DeMaCS
 - [ ] Upgrade EmbASP and all other requirements from old to new versions.
 - [ ] Modify requirements.txt
 - [ ] Upgrade python to latest version
+- [ ] Try SIFT/SURF/ORB for detection
 
 See the [open issues](https://github.com/DeMaCS-UNICAL/BrainyBot/issues) for a full list of proposed features (and known issues).
 
