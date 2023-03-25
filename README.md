@@ -42,8 +42,10 @@
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
-    <a href="https://www.youtube.com/watch?v=pgNjBhVs7_4">View Demo</a>
+    <a href="https://www.youtube.com/watch?v=pgNjBhVs7_4">Video Demo 1 (Italian captions)</a>
     ·
+    <a href="http://bit.ly/3LQzUOw">Video Demo 2</a>
+    .
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Report Bug</a>
     ·
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/issues">Request Feature</a>
