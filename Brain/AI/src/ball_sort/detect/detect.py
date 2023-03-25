@@ -25,8 +25,6 @@ class MatchingBalls:
             if file.endswith('.png'):
                 img = getImg(os.path.join(SPRITE_PATH, file))
                 self.__tubeTemplates.append(img)
-        #self.__first_template = getImg(os.path.join(SPRITE_PATH, 'tube.png'), 0)
-        #self.__second_template = getImg(os.path.join(SPRITE_PATH, 'tall_tube.png'), 0)
         self.__hough_circles_method_name = 'cv.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.__match_template_method_name = 'cv.TM_CCOEFF_NORMED'
@@ -65,9 +63,6 @@ class MatchingBalls:
             match = self.__empty_tube(template)
             if match:
                 break
-        #match = self.__empty_tube(self.__first_template)
-        #if not match:
-        #    match = self.__empty_tube(self.__second_template)
 
         self.__show_result()
         self.__ball_chart.setup_empty_tubes(match)
