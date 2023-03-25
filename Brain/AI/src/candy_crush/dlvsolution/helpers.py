@@ -90,7 +90,7 @@ class InputNode(Predicate, Node):
     predicate_name = "node"
 
     def __init__(self, nodeID=None, candyType=None):
-        Predicate.__init__(self, [("idx", int), ("type", int)])
+        Predicate.__init__(self, [("id", int), ("type", int)])
         Node.__init__(self, nodeID, candyType)
 
 
@@ -98,7 +98,7 @@ class InputBomb(Predicate, InformationID):
     predicate_name = "bomb"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("idx", int)])
+        Predicate.__init__(self, [("id", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
@@ -109,7 +109,7 @@ class InputVertical(Predicate, InformationID):
     predicate_name = "vertical"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("idx", int)])
+        Predicate.__init__(self, [("id", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
@@ -120,7 +120,7 @@ class InputHorizontal(Predicate, InformationID):
     predicate_name = "horizontal"
 
     def __init__(self, nodeID=None):
-        Predicate.__init__(self, [("idx", int)])
+        Predicate.__init__(self, [("id", int)])
         InformationID.__init__(self, nodeID)
 
     def __str__(self) -> str:
