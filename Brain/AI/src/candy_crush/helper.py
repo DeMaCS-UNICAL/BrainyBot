@@ -78,6 +78,6 @@ def candy_crush():
         plt.show()
 
         os.chdir(CLIENT_PATH)
-        os.system(f"python2 client.py --url http://"+ TAPPY_ORIGINAL_SERVER_IP +":8000 --light 'swipe {node1[PX]} {node1[PY]} {node2[PX]} {node2[PY]}'")
+        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {node1[PX]} {node1[PY]} {node2[PX]} {node2[PY]}'")
     
     
