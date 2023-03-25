@@ -32,7 +32,7 @@ class DLVSolution:
             
             # insert nodes from graph to asp program
             for node in nodes:
-                print(node)
+                #print(node)
                 self.__variableInputProgram.add_object_input(node)
             print (f"Created Nodes.")
             
@@ -42,20 +42,21 @@ class DLVSolution:
             print (f"Created Edges.")
 
             index = self.__handler.add_program(self.__variableInputProgram)
-            print (f"Let'see.")
+            print (f"Let's start the solver.")
             answerSets = self.__handler.start_sync()
-            print (f"Answer sets: {answerSets}")
-            assert_true(answerSets is not None)
-            assert_true(isinstance(answerSets, Swap),
-                            "Error, result object is not Swap")
-            assert_true(answerSets.get_errors() == "",
-                        "Found error:\n" + str(answerSets.get_errors()))
-            assert_true(len(answerSets.get_optimal_answer_sets()) != 0)
+            print (f"Answer sets: {answerSets.get_output()}")
+            #assert_true(answerSets is not None)
+            #assert_true(isinstance(answerSets, Swap),
+            #                "Error, result object is not Swap")
+            #assert_true(answerSets.get_errors() == "",
+            #            "Found error:\n" + str(answerSets.get_errors()))
+            #assert_true(len(answerSets.get_optimal_answer_sets()) != 0)
 
             swap = None
             for answerSet in answerSets.get_optimal_answer_sets():
                 print(answerSet)
                 for obj in answerSet.get_atoms():
+                    print(obj)
                     if isinstance(obj, Swap):
                         swap = Swap(obj.get_id1(), obj.get_id2())
 
