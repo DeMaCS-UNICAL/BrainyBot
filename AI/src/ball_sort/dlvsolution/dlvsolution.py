@@ -5,7 +5,7 @@ from languages.asp.asp_input_program import ASPInputProgram
 from languages.asp.asp_mapper import ASPMapper
 
 from AI.src.ball_sort.constants import RESOURCES_PATH
-from AI.src.ball_sort.dlvsolution.helpers import choose_dlv_system, Color, Ball, Tube, Move, On, GameOver
+from AI.src.ball_sort.dlvsolution.helpers import choose_dlv_system, Color, Ball, Tube, Move, On, GameOver, assert_true
 
 
 class DLVSolution:
@@ -77,6 +77,14 @@ class DLVSolution:
             answer_sets = self.__handler.start_sync()
 
             self.__dinamic_facts.clear_all()
+
+            print (f"Answer sets: {answer_sets}")
+            assert_true(answer_sets is not None)
+            assert_true(isinstance(answer_sets, Swap),
+                            "Error, result object is not Swap")
+            assert_true(answer_sets.get_errors() == "",
+                        "Found error:\n" + str(answer_sets.get_errors()))
+            assert_true(len(answer_sets.get_optimal_answer_sets()) != 0)
 
             for answer_set in answer_sets.get_optimal_answer_sets():
                 for obj in answer_set.get_atoms():
