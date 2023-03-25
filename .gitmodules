@@ -1,8 +1,8 @@
 [submodule "tappy-original"]
-	path = tappy-original
+	path = tappy-server
 	url = git@github.com:DeMaCS-UNICAL/tappy-original.git
 [submodule "tapsterbot-original"]
-	path = tapsterbot-original
+	path = tappy-client
 	url = git@github.com:DeMaCS-UNICAL/tapsterbot-original.git
 [submodule "tapster-3-original"]
 	path = tapster-3-original
