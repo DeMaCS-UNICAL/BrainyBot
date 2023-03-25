@@ -1,8 +1,0 @@
-include setup.py
-include MANIFEST.in
-include README.md
-
-graft tests
-graft examples
-graft docs
-graft src

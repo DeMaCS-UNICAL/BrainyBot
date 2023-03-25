@@ -1,2 +1,0 @@
-#! /bin/bash
-tee input.txt | /home/ianni/TappingBot/AI/src/resources/dlv/dlv2-linux-64_6-elf $@ | tee output.txt
