@@ -13,9 +13,9 @@ def __get_ball_tube(ball, ons, step):
             return on.get_tube()
 
 
-def ball_sort():
+def ball_sort(debug = False):
 
-    matching_tubes = MatchingBalls()
+    matching_tubes = MatchingBalls(debug)
     matching_tubes.detect_balls()
     matching_tubes.detect_empty_tube()
 
