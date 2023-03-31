@@ -20,6 +20,7 @@ class MatchingBalls:
         if not debug:
             screenshot = 'screenshot.png'
         else:
+            print("Debug mode: using test screenshot")
             screenshot = 'testScreenshotBS.jpg'
 
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, screenshot))

@@ -16,13 +16,15 @@ if __name__ == '__main__':
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
-    server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
-    try:
-        require_image_from_url(server_ip, port)
-        print("SCREENSHOT TAKEN.")
-    except Exception as e:
-        print(e)
-        
+    if not args.debug:
+        server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
+        try:
+            require_image_from_url(server_ip, port)
+            print("SCREENSHOT TAKEN.")
+        except Exception as e:
+            print(e)
+    else:
+        print("DEBUG MODE ON")   
     if args.games == "ball_sort":
         ball_sort(args.debug)
     elif args.games == "candy_crush":
