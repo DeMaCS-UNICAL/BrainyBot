@@ -15,7 +15,7 @@ class MatchingCandy:
         #
         # Use Matrix2.png for testing
         #
-        #self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'Matrix2.png')) # TODO: modify name
+        #self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'testScreenshotCCS.png')) # TODO: modify name
         self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'screenshot.png')) # TODO: modify name        
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
