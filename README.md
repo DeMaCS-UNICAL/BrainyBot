@@ -245,6 +245,7 @@ BrainyBot is tested on
 You can run the AI either by first activating a pipenv shell
  ```sh
  cd Brain
+ export PYTHONPATH=.
  pipenv shell
  ```
 and then issuing
