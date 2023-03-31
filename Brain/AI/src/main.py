@@ -28,5 +28,5 @@ if __name__ == '__main__':
     if args.games == "ball_sort":
         ball_sort(args.debug)
     elif args.games == "candy_crush":
-        candy_crush()
+        candy_crush(args.debug)
         

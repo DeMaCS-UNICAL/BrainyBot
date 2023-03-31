@@ -33,10 +33,10 @@ def get_color(strg) -> ():
     return nameColor[RED]
 
 
-def candy_crush():
+def candy_crush(debug = False):
     # execute template matching
     spriteSize = (110, 110)
-    matchingCandy = MatchingCandy(spriteSize)
+    matchingCandy = MatchingCandy(spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
