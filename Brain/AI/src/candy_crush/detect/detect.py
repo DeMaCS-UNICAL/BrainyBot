@@ -11,12 +11,15 @@ from AI.src.constants import SCREENSHOT_PATH
 
 
 class MatchingCandy:
-    def __init__(self, difference: ()):
+    def __init__(self, difference:(), debug=False):
         #
         # Use Matrix2.png for testing
         #
-        #self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'Matrix2.png')) # TODO: modify name
-        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, 'screenshot.png')) # TODO: modify name        
+        if debug:
+            screenshot = 'testScreenshotCCS.png'
+        else:
+            screenshot = 'screenshot.png'
+        self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, screenshot)) 
         self.__methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__method = eval(self.__methodName)
         self.__graph = CandyGraph(difference)
@@ -34,7 +37,7 @@ class MatchingCandy:
         regMax = mahotas.regmax(res)
 
         # modify this to change the algorithm precision
-        threshold = 0.85
+        threshold = 0.8
         loc = np.where((res * regMax) >= threshold)
 
         # take candy sprites value

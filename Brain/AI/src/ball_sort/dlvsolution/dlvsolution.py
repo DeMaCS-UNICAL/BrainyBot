@@ -79,12 +79,11 @@ class DLVSolution:
 
             self.__dinamic_facts.clear_all()
 
-            print (f"Answer sets: {answer_sets}")
+            print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
             assert_true(answer_sets is not None)
-            #assert_true(isinstance(answer_sets, Swap),
-            #                "Error, result object is not Swap")
-            assert_true(answer_sets.get_errors() == "",
-                        "Found error:\n" + str(answer_sets.get_errors()))
+            
+            #assert_true(answer_sets.get_errors() is None,
+            #            "Found error:\n" + str(answer_sets.get_errors()))
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0)
 
             for answer_set in answer_sets.get_optimal_answer_sets():

@@ -16,8 +16,16 @@ class MatchingBalls:
     TUBES_DISTANCE_RATIO = 8
     RADIUS_RATIO = 50
 
-    def __init__(self):
-        self.__image = getImg(os.path.join(SCREENSHOT_PATH, 'screenshot.png'))
+    def __init__(self, debug = False):
+        if not debug:
+            screenshot = 'screenshot.png'
+        else:
+            print("Debug mode: using test screenshot")
+            screenshot = 'testScreenshotBS.jpg'
+
+        self.__image = getImg(os.path.join(SCREENSHOT_PATH, screenshot))
+        
+
         self.__output = self.__image.copy()  # Used to display the result
         self.__blurred = cv.GaussianBlur(self.__image, (65, 65), 0)  # Used to find the color of the balls
         self.__tubeTemplates = {}

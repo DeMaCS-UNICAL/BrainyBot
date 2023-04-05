@@ -199,7 +199,7 @@ Detailed documentation for the python client can be found in the README of the h
     cd BrainyBot/Brain
     pipenv install
    ```
-   We assume you have either Python 3.9 or 3.10 on C (Python 3.8 and 3.7 should work too).
+   We assume you have Python 3.10 on computer C (Python 3.9 should work too by modifying the internal Pipfile).
    
 8. Move to the `BrainyBot/tappy-server` folder and 
 install the server contained in that folder (tested with node.js lts/gallium (16.13.2)):
@@ -245,6 +245,7 @@ BrainyBot is tested on
 You can run the AI either by first activating a pipenv shell
  ```sh
  cd Brain
+ export PYTHONPATH=.
  pipenv shell
  ```
 and then issuing
