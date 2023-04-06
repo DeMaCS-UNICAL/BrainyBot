@@ -223,8 +223,8 @@ and issue the following command:
    ```sh
     sudo npm start
    ```
-   Write down the IP and port address of the Linux host server C.
-   You can also perform PH display calibration at this point.
+   Write down the IP and port address of the Linux host server C. 
+   You can also perform PH display calibration at this point. Depending on the size of your PH, it could be necessary to adjust the min z value in config.js. Remember to refresh the calibration page in your browser whenever restarting the server.
    For more information check the official repository for the Tappy Server Module: 
    https://github.com/DeMaCS-UNICAL/tappy-original/
 
