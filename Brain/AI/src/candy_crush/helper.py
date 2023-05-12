@@ -58,7 +58,8 @@ def candy_crush(debug = False):
 
     #print(f"EDGES --> {edges}")
     #print(f"NODES --> {nodesAndInformation}")
-
+    if(debug):
+        return
     # recall ASP program
     solution = DLVSolution()
     swap: Swap = solution.recall_asp(edges, nodesAndInformation)

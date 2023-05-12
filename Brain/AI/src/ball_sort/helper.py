@@ -23,7 +23,8 @@ def ball_sort(debug = False):
     colors = get_colors(ball_chart.get_tubes())
     tubes, balls = get_balls_and_tubes(ball_chart.get_tubes())
     on = get_balls_position(tubes)
-
+    if(debug):
+        return
     solution = DLVSolution()
     moves, ons = solution.call_asp(colors, balls, tubes, on)
 

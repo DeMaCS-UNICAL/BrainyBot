@@ -8,13 +8,11 @@ from AI.src.ball_sort.constants import SPRITE_PATH
 from AI.src.ball_sort.detect.helpers import getImg
 from AI.src.ball_sort.ballschart.ballschart import BallsChart
 from AI.src.constants import SCREENSHOT_PATH
-from AI.common_facilities.templateMatching import TemplateMatching
-
+from AI.common_facilities.template_matching import TemplateMatching
+from AI.common_facilities.balls_detection import BallsDetection
 class MatchingBalls:
 
-    BALLS_DISTANCE_RATIO = 30
     TUBES_DISTANCE_RATIO = 8
-    RADIUS_RATIO = 50
 
     def __init__(self, debug = False):
         if not debug:
@@ -24,10 +22,7 @@ class MatchingBalls:
             screenshot = 'testScreenshotBS.jpg'
 
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, screenshot))
-        
-
         self.__output = self.__image.copy()  # Used to display the result
-        self.__blurred = cv.GaussianBlur(self.__image, (65, 65), 0)  # Used to find the color of the balls
         self.__tubeTemplates = {}
         for file in os.listdir(SPRITE_PATH):
             if file.endswith('.png') or file.endswith('.jpg'):
@@ -35,35 +30,24 @@ class MatchingBalls:
                 print(f"Found Tube sprite {fullname}")
                 img = getImg(fullname,0)
                 self.__tubeTemplates[fullname]  = img
-        self.__hough_circles_method_name = 'cv.HOUGH_GRADIENT'
-        self.__hough_circles_method = eval(self.__hough_circles_method_name)
+        self.balls_detector = BallsDetection(self.__image)
         self.template_matcher = TemplateMatching(self.__image, 0.8, True)
         self.__ball_chart = BallsChart()
 
     def detect_balls(self):
-        height = self.__image.shape[0]
-        gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)  # Used to find the balls
-
-        circles = cv.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=int(height / MatchingBalls.BALLS_DISTANCE_RATIO),
-                                  param1= 100, param2=15, minRadius=int(height / MatchingBalls.RADIUS_RATIO),
-                                  maxRadius=int(height / MatchingBalls.RADIUS_RATIO + 10))
-
+        circles = self.balls_detector.detect_balls()
         # ensure at least some circles were found
         if circles is not None:
-            circles = np.round(circles[0, :]).astype("int")
             balls = []
             # loop over the (x, y) coordinates and radius of the circles
-            for (x, y, r) in circles:
+            for (x, y, r, color) in circles:
                 # get the color of pixel (x, y) form the blurred image
-                color = np.array(self.__blurred[y, x])
                 print(f"Found ball:({x}, {y}): {color}")
                 # draw the circle
-                cv.circle(self.__output, (x, y), r, (0, 255, 0), 2)
+                cv.circle(self.__output, (x, y), r,(0,255,0), 2)
                 cv.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                cv.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                cv.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
                 cv.putText(self.__output, f"({x}, {y})", (x + 10, y), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                balls.append([x, y, color.tolist()])
+                balls.append([x, y, color])
 
             self.__ball_chart.setup_full_tubes(balls)
 
@@ -80,13 +64,8 @@ class MatchingBalls:
 
     def __empty_tube(self, template):
         width = self.__image.shape[1]
-
-        ######image_gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)
         print(f"Template size: {template.shape}")
         w, h = template.shape[::-1]
-        ######res = cv.matchTemplate(image_gray, template, cv.TM_CCOEFF_NORMED)
-        ######threshold = 0.8
-        ######loc = np.where(res >= threshold)
         loc = self.template_matcher.match(template)
         match = []
         for p in zip(*loc[::-1]):
@@ -116,8 +95,9 @@ class MatchingBalls:
         resized_input = cv.cvtColor(cv.resize(self.__image, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
         resized_edges = cv.cvtColor(cv.resize(edges, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
         resized_output = cv.cvtColor(cv.resize(self.__output, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
-        resized_blurred = cv.cvtColor(cv.resize(self.__blurred, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
-        result = np.concatenate((resized_input, resized_edges, resized_output, resized_blurred), axis=1)
+        #####resized_blurred = cv.cvtColor(cv.resize(self.__blurred, dim, interpolation=cv.INTER_AREA), cv.COLOR_BGR2RGB)
+        #####result = np.concatenate((resized_input, resized_edges, resized_output, resized_blurred), axis=1)
+        result = np.concatenate((resized_input, resized_edges, resized_output), axis=1)
         plt.figure(dpi=300)
         plt.imshow(result)
         plt.show()

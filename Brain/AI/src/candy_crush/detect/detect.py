@@ -8,7 +8,7 @@ from AI.src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
 from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.candy_crush.detect.helpers import get_img
 from AI.src.constants import SCREENSHOT_PATH
-from AI.common_facilities.templateMatching import TemplateMatching
+from AI.common_facilities.template_matching import TemplateMatching
 
 class MatchingCandy:
     def __init__(self, difference:(), debug=False):
@@ -19,6 +19,8 @@ class MatchingCandy:
             screenshot = 'testScreenshotCCS.png'
         else:
             screenshot = 'screenshot.png'
+        #####self.__match_template_method_name = 'cv.TM_CCOEFF_NORMED'
+        #####self.__match_template_method = eval(self.__match_template_method_name)
         self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, screenshot)) 
         self.templateMatcher = TemplateMatching(self.__matrix, 0.8, False, True)
         self.__graph = CandyGraph(difference)
