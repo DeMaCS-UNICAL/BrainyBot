@@ -8,7 +8,7 @@ from AI.src.ball_sort.constants import SPRITE_PATH
 from AI.src.ball_sort.detect.helpers import getImg
 from AI.src.ball_sort.ballschart.ballschart import BallsChart
 from AI.src.constants import SCREENSHOT_PATH
-
+from AI.common_facilities.templateMatching import TemplateMatching
 
 class MatchingBalls:
 
@@ -37,8 +37,7 @@ class MatchingBalls:
                 self.__tubeTemplates[fullname]  = img
         self.__hough_circles_method_name = 'cv.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
-        self.__match_template_method_name = 'cv.TM_CCOEFF_NORMED'
-        self.__match_template_method = eval(self.__match_template_method_name)
+        self.template_matcher = TemplateMatching(self.__image, 0.8, True)
         self.__ball_chart = BallsChart()
 
     def detect_balls(self):
@@ -82,12 +81,13 @@ class MatchingBalls:
     def __empty_tube(self, template):
         width = self.__image.shape[1]
 
-        image_gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)
+        ######image_gray = cv.cvtColor(self.__image, cv.COLOR_BGR2GRAY)
         print(f"Template size: {template.shape}")
         w, h = template.shape[::-1]
-        res = cv.matchTemplate(image_gray, template, cv.TM_CCOEFF_NORMED)
-        threshold = 0.8
-        loc = np.where(res >= threshold)
+        ######res = cv.matchTemplate(image_gray, template, cv.TM_CCOEFF_NORMED)
+        ######threshold = 0.8
+        ######loc = np.where(res >= threshold)
+        loc = self.template_matcher.match(template)
         match = []
         for p in zip(*loc[::-1]):
             if all(abs(p[0] - m[0]) > (width/MatchingBalls.TUBES_DISTANCE_RATIO) for m in match):

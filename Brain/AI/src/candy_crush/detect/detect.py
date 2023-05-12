@@ -8,7 +8,7 @@ from AI.src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
 from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.candy_crush.detect.helpers import get_img
 from AI.src.constants import SCREENSHOT_PATH
-
+from AI.common_facilities.templateMatching import TemplateMatching
 
 class MatchingCandy:
     def __init__(self, difference:(), debug=False):
@@ -20,8 +20,7 @@ class MatchingCandy:
         else:
             screenshot = 'screenshot.png'
         self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, screenshot)) 
-        self.__methodName = 'cv2.TM_CCOEFF_NORMED'
-        self.__method = eval(self.__methodName)
+        self.templateMatcher = TemplateMatching(self.__matrix, 0.8, False, True)
         self.__graph = CandyGraph(difference)
 
     def __search_by_name(self, typeCandy) -> None:
@@ -29,16 +28,17 @@ class MatchingCandy:
         # print("Matching %s" % typeCandy)
 
         # execute template match
-        res = cv2.matchTemplate(self.__matrix, SPRITES[typeCandy], self.__method)
+        ######res = cv2.matchTemplate(self.__matrix, SPRITES[typeCandy], self.__method)
 
         #        print ("Found %d matches." % len(res))
 
         # find regional maxElem
-        regMax = mahotas.regmax(res)
+        ######regMax = mahotas.regmax(res)
 
         # modify this to change the algorithm precision
-        threshold = 0.8
-        loc = np.where((res * regMax) >= threshold)
+        ######threshold = 0.8
+        ######loc = np.where((res * regMax) >= threshold)
+        loc = self.templateMatcher.match(SPRITES[typeCandy])
 
         # take candy sprites value
         height, width, _ = SPRITES[typeCandy].shape
