@@ -345,9 +345,9 @@ Distributed under the APACHE-2.0 License. See `LICENSE.txt` for more information
 # The team
 
 - General integration of modules, Hardware, Calibration, Actuation modules, AI Tweaking, whatever other kick is needed to keep everything alive and working: Giovambattista Ianni a.k.a. Agelin Bee ([@iannigb](https://github.com/iannigb))
+- General Maintainance & Bug fixing : Denise Angilica ([@deniseAngilica](https://github.com/deniseAngilica)) and Francesco Pacenza ([@fpacenza](https://github.com/fpacenza)) 
 - Screenshotserver, Candy Crush Vision & Candy Crush AI : Mario Avolio ([@MarioAvolio](https://github.com/MarioAvolio)) [@linkedin](https://www.linkedin.com/in/MarioAvolio/) - marioavolio@protonmail.com
 - Ball Sort Vision & Ball Sort AI : Giovanni Beraldi - [@linkedin](https://www.linkedin.com/in/GiovanniBeraldi/) - gvnberaldi@gmail.com
-- General Maintainance & Bug fixing : Denise Angilica ([@deniseAngilica](https://github.com/deniseAngilica)) and Francesco Pacenza ([@fpacenza](https://github.com/fpacenza)) 
 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
