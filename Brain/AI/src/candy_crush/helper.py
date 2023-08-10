@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 from AI.src.candy_crush.candygraph.candygraph import CandyGraph
 from AI.src.candy_crush.candygraph.constants import PX, PY, TYPE
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
-from AI.src.candy_crush.detect.detect import MatchingCandy
+from AI.src.candy_crush.detect.new_detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
