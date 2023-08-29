@@ -5,7 +5,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 from AI.src.ball_sort.constants import SPRITE_PATH
-from AI.src.ball_sort.detect.helpers import getImg
+from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction

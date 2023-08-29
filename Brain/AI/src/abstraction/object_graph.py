@@ -1,7 +1,7 @@
 import networkx as nx
 
 from AI.src.candy_crush.object_graph.constants import PX, PY, ID, VERTICAL, HORIZONTAL
-from AI.src.candy_crush.object_graph.helpers import check_in_range
+from AI.src.abstraction.helpers import check_in_range
 
 
 class ObjectGraph(nx.Graph):

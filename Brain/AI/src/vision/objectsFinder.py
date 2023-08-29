@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import mahotas
 
-from AI.src.ball_sort.detect.helpers import getImg
+from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 class ObjectsFinder:
 
@@ -64,7 +64,6 @@ class ObjectsFinder:
         return objects_found
 
     def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:  
-        print("HELLOOOOOOOOOOOOOOOOOOOOOOOOOOOO")
         gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)  # Used to find the balls
         circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,
                                   param1= 100, param2=15, minRadius=balls_min_radius,

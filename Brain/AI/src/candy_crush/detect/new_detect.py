@@ -4,7 +4,7 @@ import cv2
 from AI.src.abstraction.object_graph import ObjectGraph, PX, PY
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.candy_crush.detect.constants import SPRITES
-from AI.src.ball_sort.detect.helpers import getImg
+from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.objectsFinder import ObjectsFinder
 
