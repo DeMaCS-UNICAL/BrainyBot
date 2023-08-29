@@ -10,14 +10,14 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description=msg)
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
-    parser.add_argument("-d", "--debug", action="store_true", help="Debug screenshot")
+    parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
     parser.add_argument("-s", "--screenshot", type=str, help="specific screenshot path")
     
     args = parser.parse_args()
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
-    if not args.debug:
+    if not args.debugVision:
         server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
         try:
             require_image_from_url(server_ip, port)
