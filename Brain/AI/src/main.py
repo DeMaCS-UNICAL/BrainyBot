@@ -11,6 +11,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=msg)
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
     parser.add_argument("-d", "--debug", action="store_true", help="Debug screenshot")
+    parser.add_argument("-s", "--screenshot", type=str, help="specific screenshot path")
     
     args = parser.parse_args()
     #game = parser.parse_args()
@@ -24,9 +25,15 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
     else:
+        screenshot=""
+        if args.screenshot == None:
+            screenshot = args.games+"Test.jpg"
+        else:
+            screenshot = args.screenshot
         print("DEBUG MODE ON")   
+        print(screenshot)
     if args.games == "ball_sort":
-        ball_sort(args.debug)
+        ball_sort( screenshot,args.debug)
     elif args.games == "candy_crush":
-        candy_crush(args.debug)
+        candy_crush(screenshot,args.debug)
         

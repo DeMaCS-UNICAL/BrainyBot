@@ -1,10 +1,10 @@
 import networkx as nx
 
-from AI.src.candy_crush.candygraph.constants import PX, PY, ID, VERTICAL, HORIZONTAL
-from AI.src.candy_crush.candygraph.helpers import check_in_range
+from AI.src.candy_crush.object_graph.constants import PX, PY, ID, VERTICAL, HORIZONTAL
+from AI.src.candy_crush.object_graph.helpers import check_in_range
 
 
-class CandyGraph(nx.Graph):
+class ObjectGraph(nx.Graph):
 
     def __init__(self, difference: (), **attr):
         super().__init__(**attr)
@@ -40,8 +40,8 @@ class CandyGraph(nx.Graph):
         self.__difference = difference
         self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2
 
-    def add_another_node(self, px, py, t) -> None:  # TODO: we can override this
-        node = (px, py, t, self.__idNumber)
+    def add_another_node(self, px, py, label) -> None:  # TODO: we can override this
+        node = (px, py, label, self.__idNumber)
         self.__idNumber += 1
 
         if self.__exist_neighbours_too_close(node) is False:  # check if there are some false matching

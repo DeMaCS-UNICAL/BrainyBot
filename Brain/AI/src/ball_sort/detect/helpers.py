@@ -11,6 +11,6 @@ def getImg(file, channel=None,color_conversion=None):
         if color_conversion is None:
             return im
         else:
-            return cv2.cvtColor(im, channel)
+            return cv2.cvtColor(im, color_conversion)
     except:
         raise Exception(f"NO {file} FOUND. \n")

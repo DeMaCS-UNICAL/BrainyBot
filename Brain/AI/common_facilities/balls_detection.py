@@ -7,7 +7,7 @@ import numpy as np
 
 class BallsDetection:
 
-    def __init__(self, targetImage, BALLS_DISTANCE_RATIO=30,TUBES_DISTANCE_RATIO=8,RADIUS_RATIO=50):
+    def __init__(self, targetImage, BALLS_DISTANCE_RATIO=30,RADIUS_RATIO=50):
         self.BALLS_DISTANCE_RATIO =BALLS_DISTANCE_RATIO
         self.TUBES_DISTANCE_RATIO = TUBES_DISTANCE_RATIO
         self.RADIUS_RATIO = RADIUS_RATIO

@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from AI.src.ball_sort.constants import SPRITE_PATH
 from AI.src.ball_sort.detect.helpers import getImg
-from AI.src.ball_sort.ballschart.ballschart import BallsChart
+from AI.src.ball_sort.ballschart.elementStack import ElementsStacks
 from AI.src.constants import SCREENSHOT_PATH
 from AI.common_facilities.template_matching import TemplateMatching
 from AI.common_facilities.balls_detection import BallsDetection
@@ -32,7 +32,7 @@ class MatchingBalls:
                 self.__tubeTemplates[fullname]  = img
         self.balls_detector = BallsDetection(self.__image)
         self.template_matcher = TemplateMatching(self.__image, 0.8, True)
-        self.__ball_chart = BallsChart()
+        self.__ball_chart = ElementsStacks()
 
     def detect_balls(self):
         circles = self.balls_detector.detect_balls()
@@ -49,7 +49,7 @@ class MatchingBalls:
                 cv.putText(self.__output, f"({x}, {y})", (x + 10, y), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 balls.append([x, y, color])
 
-            self.__ball_chart.setup_full_tubes(balls)
+            self.__ball_chart.setup_non_empty_stack(balls)
 
     def detect_empty_tube(self):
         for name in self.__tubeTemplates:
@@ -60,7 +60,7 @@ class MatchingBalls:
                 break
 
         self.__show_result()
-        self.__ball_chart.setup_empty_tubes(match)
+        self.__ball_chart.setup_empty_stack(match)
 
     def __empty_tube(self, template):
         width = self.__image.shape[1]

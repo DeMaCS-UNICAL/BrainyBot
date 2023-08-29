@@ -3,8 +3,8 @@ import os
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-from AI.src.candy_crush.candygraph.candygraph import CandyGraph
-from AI.src.candy_crush.candygraph.constants import PX, PY, TYPE
+from AI.src.abstraction.object_graph import ObjectGraph
+from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 from AI.src.candy_crush.detect.new_detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
@@ -33,17 +33,17 @@ def get_color(strg) -> ():
     return nameColor[RED]
 
 
-def candy_crush(debug = False):
+def candy_crush(screenshot,debug = False):
     # execute template matching
     spriteSize = (110, 110)
-    matchingCandy = MatchingCandy(spriteSize,debug)
+    matchingCandy = MatchingCandy(screenshot,spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
     plt.show()
 
     # take graph
-    candyGraph: CandyGraph = matchingCandy.search()
+    candyGraph: ObjectGraph = matchingCandy.search()
     for node in candyGraph.get_nodes():
         color = get_color(node[TYPE])
         draw(matrixCopy, node, color)
@@ -57,6 +57,7 @@ def candy_crush(debug = False):
     edges = get_edges(candyGraph)
 
     #print(f"EDGES --> {edges}")
+    #print()
     #print(f"NODES --> {nodesAndInformation}")
     if(debug):
         return

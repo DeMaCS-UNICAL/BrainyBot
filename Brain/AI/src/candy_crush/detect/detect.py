@@ -4,7 +4,7 @@ import mahotas
 import numpy as np
 import cv2
 
-from AI.src.candy_crush.candygraph.candygraph import CandyGraph, PX, PY
+from AI.src.abstraction.object_graph import ObjectGraph, PX, PY
 from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.candy_crush.detect.helpers import get_img
 from AI.src.constants import SCREENSHOT_PATH
@@ -23,7 +23,7 @@ class MatchingCandy:
         #####self.__match_template_method = eval(self.__match_template_method_name)
         self.__matrix = get_img(os.path.join(SCREENSHOT_PATH, screenshot)) 
         self.templateMatcher = TemplateMatching(self.__matrix, 0.8, False, True)
-        self.__graph = CandyGraph(difference)
+        self.__graph = ObjectGraph(difference)
 
     def __search_by_name(self, typeCandy) -> None:
 
@@ -53,7 +53,7 @@ class MatchingCandy:
             count += 1
         print ("Found %d matches for %s" % (count,typeCandy))
 
-    def search(self) -> CandyGraph:
+    def search(self) -> ObjectGraph:
         for typeCandy in SPRITES.keys():
             self.__search_by_name(typeCandy)
 

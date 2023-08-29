@@ -1,10 +1,9 @@
 import os
-
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
-from AI.src.ball_sort.detect.detect import MatchingBalls
+from AI.src.ball_sort.detect.new_detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
-from AI.src.ball_sort.ballschart.ballschart import BallsChart
+from AI.src.abstraction.elementsStack import ElementsStacks
 
 
 def __get_ball_tube(ball, ons, step):
@@ -13,15 +12,12 @@ def __get_ball_tube(ball, ons, step):
             return on.get_tube()
 
 
-def ball_sort(debug = False):
+def ball_sort(screenshot, debug = False):
 
-    matching_tubes = MatchingBalls(debug)
-    matching_tubes.detect_balls()
-    matching_tubes.detect_empty_tube()
-
-    ball_chart = BallsChart()
-    colors = get_colors(ball_chart.get_tubes())
-    tubes, balls = get_balls_and_tubes(ball_chart.get_tubes())
+    matcher = MatchingBalls(screenshot,debug)
+    balls = matcher.get_balls_chart()
+    colors = get_colors(balls.get_stacks())
+    tubes, balls = get_balls_and_tubes(balls.get_stacks())
     on = get_balls_position(tubes)
     if(debug):
         return
