@@ -87,12 +87,12 @@ class MatchingBalls:
         edges = cv2.Canny(self.__image, 300, 600)
         edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
         #cv.imwrite(os.path.join(SCREENSHOT_PATH, 'edges.png'), edges)
-        
-        for (x, y, r,c) in self.balls:
-                # draw the circle
-                cv2.circle(self.__output, (x, y), r, (c[0],c[1], c[2]), 10)
-                cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                cv2.putText(self.__output, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        for tube in self.__ball_chart.get_stacks():
+            for (x, y, r,c) in tube.get_elements():
+                    # draw the circle
+                    cv2.circle(self.__output, (x, y), r, (c[0],c[1], c[2]), 10)
+                    cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                    cv2.putText(self.__output, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         resized_input = cv2.cvtColor(cv2.resize(self.__image, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         #resized_edges = cv2.cvtColor(cv2.resize(edges, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         resized_output = cv2.cvtColor(cv2.resize(self.__output, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)

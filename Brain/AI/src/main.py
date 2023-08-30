@@ -33,7 +33,7 @@ if __name__ == '__main__':
         print("DEBUG MODE ON")   
         print(screenshot)
     if args.games == "ball_sort":
-        ball_sort( screenshot,args.debug)
+        ball_sort( screenshot,args.debugVision)
     elif args.games == "candy_crush":
-        candy_crush(screenshot,args.debug)
+        candy_crush(screenshot,args.debugVision)
         
