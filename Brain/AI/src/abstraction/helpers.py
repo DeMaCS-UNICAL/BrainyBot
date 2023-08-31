@@ -1,13 +1,13 @@
 import cv2
 
 
-def getImg(file, channel=None,color_conversion=None):
+def getImg(file, gray=False,color_conversion=None):
     try:
         
-        if channel is None:
+        if not gray:
             im = cv2.imread(file)
         else:
-            im = cv2.imread(file,channel)
+            im = cv2.imread(file,cv2.IMREAD_GRAYSCALE)
         if color_conversion is None:
             return im
         else:

@@ -1,4 +1,5 @@
 import os
+import sys
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
@@ -12,14 +13,17 @@ def __get_ball_tube(ball, ons, step):
             return on.get_tube()
 
 
-def ball_sort(screenshot, debug = False):
+def ball_sort(screenshot:str, debug = False):
 
     matcher = MatchingBalls(screenshot,debug)
-    balls = matcher.get_balls_chart()
-    colors = get_colors(balls.get_stacks())
-    tubes, balls = get_balls_and_tubes(balls.get_stacks())
+    balls_chart = matcher.get_balls_chart()
+    colors = get_colors(balls_chart.get_stacks())
+    tubes, balls = get_balls_and_tubes(balls_chart.get_stacks())
+    empty_stacks = balls_chart.get_empty_stack()
+    print(f"{screenshot.split('.')[1]}\t{len(tubes)-len(empty_stacks)}\t{len(empty_stacks)}\t{len(balls)}\t{len(colors)}",file=sys.stderr)
     on = get_balls_position(tubes)
     if(debug):
+        balls_chart.Clean()
         return
     solution = DLVSolution()
     moves, ons = solution.call_asp(colors, balls, tubes, on)

@@ -2,6 +2,10 @@ class ElementsStacks:
     __instance = None
     __inited = False
 
+    def Clean(self):
+        ElementsStacks.__instance=None
+        ElementsStacks.__inited=False
+
 
     def __new__(cls):
         if cls.__instance is None:
@@ -55,3 +59,10 @@ class ElementsStacks:
         
     def get_stacks(self):
         return self.__stacks
+    
+    def get_empty_stack(self)->list:
+        to_return=[]
+        for stack in self.__stacks:
+            if len(stack.get_elements())==0:
+                to_return.append(stack)
+        return to_return

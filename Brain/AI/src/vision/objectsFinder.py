@@ -8,7 +8,7 @@ from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 class ObjectsFinder:
 
-    def __init__(self, screenshot, color=None, debug=False ):
+    def __init__(self, screenshot, color=None, debug=False, threshold=0.8 ):
         #
         # Use Matrix2.png for testing
         #
@@ -18,6 +18,7 @@ class ObjectsFinder:
         self.__gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
+        self.__threshold=threshold
         #self.__graph = CandyGraph(difference)
         
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
@@ -57,8 +58,7 @@ class ObjectsFinder:
             regMax = mahotas.regmax(res)
             res = res * regMax
         # modify this to change the algorithm precision
-        threshold = 0.8
-        loc = np.where(res >= threshold)
+        loc = np.where(res >= self.__threshold)
         objects_found = list(zip(*loc[::-1]))
         print(f"Found {len(objects_found)} matches")
         return objects_found
