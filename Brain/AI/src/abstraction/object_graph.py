@@ -44,7 +44,7 @@ class ObjectGraph(nx.Graph):
         node = (px, py, label, self.__idNumber)
         self.__idNumber += 1
 
-        if self.__exist_neighbours_too_close(node) is False:  # check if there are some false matching
+        if not self.__exist_neighbours_too_close(node):  # check if there are some false matching
             super().add_node(node)
             self.__insert_edge(node)
 

@@ -20,7 +20,7 @@ def ball_sort(screenshot:str, debug = False):
     colors = get_colors(balls_chart.get_stacks())
     tubes, balls = get_balls_and_tubes(balls_chart.get_stacks())
     empty_stacks = balls_chart.get_empty_stack()
-    print(f"{screenshot.split('.')[1]}\t{len(tubes)-len(empty_stacks)}\t{len(empty_stacks)}\t{len(balls)}\t{len(colors)}",file=sys.stderr)
+    print(f"{len(tubes)-len(empty_stacks)}\t{len(empty_stacks)}\t{len(balls)}\t{len(colors)}",file=sys.stderr)
     on = get_balls_position(tubes)
     if(debug):
         balls_chart.Clean()

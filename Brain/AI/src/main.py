@@ -45,11 +45,13 @@ if __name__ == '__main__':
             print(screenshot)
             Start()
     else:
-        print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
+        if args.games == "balls_sort":
+            print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
         for filename in os.listdir(constants.SCREENSHOT_PATH):
             if filename.startswith(args.test):
                 screenshot = filename
                 print(f"{screenshot}")
+                print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
                 Start()
     
     

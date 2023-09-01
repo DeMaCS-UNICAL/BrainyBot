@@ -14,7 +14,7 @@ class MatchingCandy:
         #
         # Use Matrix2.png for testing
         #
-        self.finder = ObjectsFinder(screenshot,cv2.COLOR_BGR2RGB)
+        self.finder = ObjectsFinder(screenshot,cv2.COLOR_BGR2RGB, threshold=0.78)
         
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2RGB)
         self.__difference = difference

@@ -38,9 +38,9 @@ def candy_crush(screenshot,debug = False):
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(screenshot,spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
-    plt.imshow(matrixCopy)
-    plt.title(f"Screenshot")
-    plt.show()
+    #plt.imshow(matrixCopy)
+    #plt.title(f"Screenshot")
+    #plt.show()
 
     # take graph
     candyGraph: ObjectGraph = matchingCandy.search()
@@ -48,9 +48,9 @@ def candy_crush(screenshot,debug = False):
         color = get_color(node[TYPE])
         draw(matrixCopy, node, color)
 
-    plt.imshow(matrixCopy)
-    plt.title(f"Matching")
-    plt.show()
+    #plt.imshow(matrixCopy)
+    #plt.title(f"Matching")
+    #plt.show()
 
     # get nodes and edges of graph for DLV
     nodesAndInformation = get_input_dlv_nodes(candyGraph)
