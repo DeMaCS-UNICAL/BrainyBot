@@ -11,5 +11,3 @@ for file in os.listdir(SPRITE_PATH):
     img = getImg(os.path.join(SPRITE_PATH, file),color_conversion=cv2.COLOR_BGR2RGB)
     typeCandy = os.path.basename(file)
     SPRITES[typeCandy] = img
-    print(typeCandy[0:-4],file=sys.stderr,end='\t')
-print("",file=sys.stderr)

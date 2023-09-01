@@ -1,4 +1,5 @@
 import os
+import sys
 
 import cv2 as cv
 from matplotlib import pyplot as plt
@@ -44,13 +45,19 @@ def candy_crush(screenshot,debug = False):
 
     # take graph
     candyGraph: ObjectGraph = matchingCandy.search()
+    number_per_type={}
     for node in candyGraph.get_nodes():
         color = get_color(node[TYPE])
         draw(matrixCopy, node, color)
-
-    #plt.imshow(matrixCopy)
-    #plt.title(f"Matching")
-    #plt.show()
+        if not node[TYPE] in number_per_type.keys():
+            number_per_type[node[TYPE]] = 0
+        number_per_type[node[TYPE]] = number_per_type[node[TYPE]]+1
+    for type in number_per_type.keys():
+        print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
+    print("",file=sys.stderr)
+    plt.imshow(matrixCopy)
+    plt.title(f"Matching")
+    plt.show()
 
     # get nodes and edges of graph for DLV
     nodesAndInformation = get_input_dlv_nodes(candyGraph)

@@ -39,15 +39,9 @@ class ObjectsFinder:
 
     def find_all(self, elements_to_find:{}, request_regmax=True) -> dict:
         objects_found={}
-        check_order=""
-        results=""
         for element in elements_to_find.keys():
-            check_order += element + "\t"
-            print(f"{element}",end='')
+            print(f"{element} ")
             objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
-            results+=f"{len(objects_found[element])}\t"
-        #print(check_order, file=sys.stderr)
-        print(results, file=sys.stderr)
         return objects_found
 
     def find_all_gray_scale(self, elements_to_find:{}, request_regmax:True)->dict:
