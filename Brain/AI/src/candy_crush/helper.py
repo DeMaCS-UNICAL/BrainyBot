@@ -40,7 +40,7 @@ def candy_crush(debug = False):
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
-    plt.show()
+    plt.show(block=debug)
 
     # take graph
     candyGraph: CandyGraph = matchingCandy.search()
@@ -50,14 +50,14 @@ def candy_crush(debug = False):
 
     plt.imshow(matrixCopy)
     plt.title(f"Matching")
-    plt.show()
+    plt.show(block=debug)
 
     # get nodes and edges of graph for DLV
     nodesAndInformation = get_input_dlv_nodes(candyGraph)
     edges = get_edges(candyGraph)
 
-    #print(f"EDGES --> {edges}")
-    #print(f"NODES --> {nodesAndInformation}")
+    print(f"EDGES --> {edges}")
+    print(f"NODES --> {nodesAndInformation}")
 
     # recall ASP program
     solution = DLVSolution()
@@ -77,7 +77,28 @@ def candy_crush(debug = False):
         plt.title(f"OPTIMUM {node1} --> {node2}.")
         plt.show()
 
+        #
+        # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
+        #
+        width, height = 110, 110
+        x1,y1,x2,y2 = node1[PX], node1[PY], node2[PX], node2[PY]
+        EL = 20  #pixels of swipe offset
+        
+        if (abs(x1-x2) < 10):
+	    #swipe vertical
+            SX1 = int( (x1+x2)/2+width/2 )
+            SX2 = SX1
+            SY1 = int(min(y1,y2)+EL) 
+            SY2 = int(max(y1,y2) + height+EL) 
+        else:
+        # assumiamo swipe orizzontale
+            SY1 = int((y1+y2)/2+height/2)
+            SY2 = int(SY1)
+            SX1 = int(min(x1,x2)+EL) 
+            SX2 = int(max(x1,x2) + width + EL)  
+
+
         os.chdir(CLIENT_PATH)
-        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {node1[PX]} {node1[PY]} {node2[PX]} {node2[PY]}'")
+        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
     
     
