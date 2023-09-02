@@ -13,7 +13,7 @@ for line in sys.stdin:
 
     if len(parts) < 3:
         continue
-
+    print (parts)
     event_type = parts[0]
     event_code = parts[1]
     event_value = int(parts[2], 16)
