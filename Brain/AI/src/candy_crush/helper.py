@@ -1,4 +1,5 @@
 import os
+import time
 
 import cv2 as cv
 from matplotlib import pyplot as plt
@@ -38,9 +39,14 @@ def candy_crush(debug = False):
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
+
+    plt.ion()
+
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
-    plt.show(block=debug)
+    plt.show()
+    if not debug:
+        plt.pause(0.1)
 
     # take graph
     candyGraph: CandyGraph = matchingCandy.search()
@@ -50,7 +56,10 @@ def candy_crush(debug = False):
 
     plt.imshow(matrixCopy)
     plt.title(f"Matching")
-    plt.show(block=debug)
+    plt.show()
+    if not debug: 
+        plt.pause(0.5)
+
 
     # get nodes and edges of graph for DLV
     nodesAndInformation = get_input_dlv_nodes(candyGraph)
@@ -76,6 +85,9 @@ def candy_crush(debug = False):
         plt.imshow(tmp)
         plt.title(f"OPTIMUM {node1} --> {node2}.")
         plt.show()
+        if not debug:
+            plt.pause(0.5)
+
 
         #
         # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
