@@ -1,4 +1,5 @@
 import os
+import time
 
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.detect import MatchingBalls
@@ -46,5 +47,6 @@ def ball_sort(debug = False):
                 y2 = tube.get_y()
         coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
+        time.sleep(0.25)
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
         

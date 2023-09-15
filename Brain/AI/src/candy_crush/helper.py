@@ -39,8 +39,8 @@ def candy_crush(debug = False):
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
-
-    plt.ion()
+    if not debug:
+        plt.ion()
 
     plt.imshow(matrixCopy)
     plt.title(f"Screenshot")
