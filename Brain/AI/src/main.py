@@ -6,11 +6,17 @@ from AI.src.webservices.helpers import require_image_from_url
 import constants
 import sys
 
+gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
+
+def Start(screenshot,args):
+    print(f"Starting AI for game {args.games}")
+    gameDictionary[args.games](screenshot,args.debugVision)
+
 if __name__ == '__main__':
     msg = "Description"
     
     parser = argparse.ArgumentParser(description=msg)
-    parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
+    parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = gameDictionary.keys(), required=True)
     parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
     parser.add_argument("-t", "--test", type=str, help="screenshots to test prefix")
     parser.add_argument("-s", "--screenshot", type=str, help="specific screenshot path")
@@ -18,11 +24,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     
-    def Start():
-        if args.games == "ball_sort":
-            ball_sort( screenshot,args.debugVision)
-        elif args.games == "candy_crush":
-            candy_crush(screenshot,args.debugVision)
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
@@ -43,16 +44,16 @@ if __name__ == '__main__':
                 screenshot = args.screenshot
             print("DEBUG MODE ON")   
             print(screenshot)
-            Start()
+        Start(screenshot,args)
     else:
-        if args.games == "balls_sort":
+        if args.games == "ball_sort":
             print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
         for filename in os.listdir(constants.SCREENSHOT_PATH):
             if filename.startswith(args.test):
                 screenshot = filename
                 print(f"{screenshot}")
                 print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
-                Start()
+                Start(screenshot,args)
     
     
         
