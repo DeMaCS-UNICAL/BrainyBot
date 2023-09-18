@@ -36,8 +36,8 @@
 <h3 align="center">BrainyBot</h3>
 
   <p align="center">
-    BrainyBot is a robot capable of solving the Candy Crush Saga and Ball Sort Puzzle video games using touching a phone screen. 
-    Based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
+    BrainyBot is a robot capable of solving games of the types Match-3 (like Candy Crush Saga) or Ball Sort Puzzles over a phone touchscreen. 
+    BrainyBit is based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
     <br />
     <a href="https://github.com/DeMaCS-UNICAL/BrainyBot/tree/main/docs/index.md"><strong>Explore the docs »</strong></a>
     <br />
@@ -92,9 +92,9 @@
 BrainyBot is a delta robot capable of
 playing match-3 games and ball-sorting puzzles by acting on
 mobile phones. The robot recognizes objects of different colors
-and shapes through a vision module, is capable of making
+and shapes through a vision module; it is capable of making
 strategic decisions based on declarative models of the game’s
-rules and of the game playing strategy, and features an effector
+rules and of the game playing strategy, and features a delta-style effector
 that execute moves on physical devices.
 Our solution integrates multiple AI methods, including vision
 processing and answer set programming. Helpful and
@@ -121,7 +121,7 @@ Sense-Think-Act workflow is executed.
 ### Built With
 
 - Python3
-- Javascript (Node.js)
+- Javascript (Node.js v18)
 - Answer Set Programming
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -134,8 +134,9 @@ To get a local copy up and running follow these simple example steps.
 ### Required hardware and software
 
 This is a list of prerequisites for using the project:
-* **PH**: an Android mobile phone. This is the device where the ScreenshotServer application is installed and where the game will be played on.
-You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PH IP address.
+* **PH**: an Android mobile phone. This is the device where the game will be physically played on. In order to take screenshots from PH, there are two alternatives:
+  * Install our ScreenshotServer application. You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PH IP address.
+  * Put PH in developer mode and connect it to the Linux host C. Screenshots will be taken via ADB commands.
 * **TP**: an assembled Tapsterbot. This robotic arm can programmatically perform actions on a given touch screen (taps, swipes, etc.)
 * **C**: a Linux host. The Linux host will host the Tapsterbot server commanding the robot, will collect screenshots from PH and run the AI module.
 
@@ -147,14 +148,19 @@ You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer fo
 
 You will need to set up some modules which are briefly described next:
 
-
-## ScreenshotServer
+## ScreenshotServer or ADB
 
 The ScreenshotServer is an Android application which opens an HTTP server on PH. You can manually HTTP GET screenshots on demand from the Screenshotserver this way:
 
     curl http://<PHone-IP>:5432/?name=requestimage --output screen.png
 
 You can find a pre-built apk for the ScreenshotServer in the ScreenshotServer folder. Just push it to PH, install it and start the server. Take note of the value of PHone-IP.
+
+Alternatively, you can put PH in developer mode and connect it to the Linux host. Screenshots will be obtained via the shell command:
+
+    adb exec-out screencap -p > screenshot.png
+
+The two ways of getting screenshots can be selected by changing the USE_ADB variable in the Brain/AI/src/constants.py file (default: USE_ADB=True). 
 
 ## Tapsterbot
 
@@ -168,11 +174,10 @@ Calibration and testing of the robot can be done by following the installation g
 ## Tappy server 
 
 You find a fork of the tappy project under the tappy-server submodule. The Tappy server is expected to run on some system on port 80. The `config.js` file under the `tappy-server` folder allows to customize the listening port and other physical parameters of the robot.
-Recall you can use `nvm` for managing the required node.js version, (currently it is needed node 16.*).
+Recall you can use `nvm` for managing the required node.js version, (currently it is needed node v18.*).
 If your current user has no access rights to serial ports, recall to use `sudo npm start` when starting the tappy server instead of a plain `npm start`, and ensure the correct version of node is available also under sudo privileges (the default node might differ when sudo-ing).
 
 ## Python client
-
 
 This python client for controlling tappy server from a client is located under the `tappy-client/clients/python` folder. You will possibly need to tweak IP and listening port of the Tappy server and other stuff in the `config3.py` file. Example usage:
 
@@ -228,7 +233,7 @@ and issue the following command:
    For more information check the official repository for the Tappy Server Module: 
    https://github.com/DeMaCS-UNICAL/tappy-original/
 
-3. Run the ScreenshotServer application on PH, and tap its start button. 
+3. If you don't want to/can't connect PH to C via ADB, run the ScreenshotServer application on PH, and tap its start button. 
 Write down the IP address of PH. 
 
 4. Change the IP addresses of the ScreenshotServer and the 
