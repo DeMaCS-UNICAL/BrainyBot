@@ -1,7 +1,7 @@
 import argparse
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
-from AI.src.webservices.helpers import require_image_from_url,require_image_from_adb
+from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH
 import constants
 
@@ -20,13 +20,12 @@ if __name__ == '__main__':
     if not args.debug:
         server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
         try:
-            #require_image_from_url(server_ip, port)
-            require_image_from_adb()
+            getScreenshot(server_ip, port)
             print("SCREENSHOT TAKEN.")
         except Exception as e:
             print(e)
     else:
-        print("DEBUG MODE ON")   
+        print("DEBUG MODE ON")   # Will not take a screenshot from the phone, but will use the screenshot in the resources folder.
     if args.games == "ball_sort":
         ball_sort(args.debug)
     elif args.games == "candy_crush":

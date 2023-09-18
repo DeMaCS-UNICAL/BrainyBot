@@ -2,7 +2,14 @@ import os
 import requests
 import subprocess
 
-from AI.src.constants import SCREENSHOT_PATH
+from AI.src.constants import SCREENSHOT_PATH, USE_ADB
+
+
+def getScreenshot(url = None, port = None) -> None:
+    if USE_ADB:
+        return require_image_from_adb()
+    else:
+        return require_image_from_url(url, port)
 
 def require_image_from_url(url, port) -> None:
     response = requests.get(f"http://{url}:{port}/?name=requestimage")
