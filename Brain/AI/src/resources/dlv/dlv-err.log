@@ -1,1 +1,1 @@
-Arguments to dlv are --filter=on/4, move/3, gameOver/1 /home/ubuntu/Scrivania/GIT/BrainyBot/Brain/AI/src/ball_sort/resources/ballSort.txt --stdin
+Arguments to dlv are /home/ianni/BrainyBot/Brain/AI/src/candy_crush/resources/rules.dlv2 --stdin

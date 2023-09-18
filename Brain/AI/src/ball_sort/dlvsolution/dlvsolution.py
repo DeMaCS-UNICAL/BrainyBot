@@ -4,7 +4,7 @@ from base.option_descriptor import OptionDescriptor
 from languages.asp.asp_input_program import ASPInputProgram
 from languages.asp.asp_mapper import ASPMapper
 
-from AI.src.ball_sort.constants import RESOURCES_PATH
+from AI.src.ball_sort.constants import RESOURCES_PATH, MAX_STEPS, LOOK_AHEAD
 from AI.src.ball_sort.dlvsolution.helpers import choose_dlv_system, Color, Ball, Tube, Move, On, GameOver
 from AI.src.candy_crush.dlvsolution.helpers import assert_true
 
@@ -72,8 +72,10 @@ class DLVSolution:
         game_over = False
 
         step = 1
-        while not game_over:
-            self.__dinamic_facts.add_program("step(" + str(step) + ").")
+        while not game_over and step <= MAX_STEPS:
+            # for a in range(0,LOOK_AHEAD):
+            self.__dinamic_facts.add_program(f"step({str(step)}).")
+
 
             answer_sets = self.__handler.start_sync()
 
@@ -90,19 +92,23 @@ class DLVSolution:
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, Move):
                         if obj.get_step() == step:
+                        #if step <= obj.get_step() < step+LOOK_AHEAD:
                             self.__dinamic_facts.add_object_input(obj)
                             moves.append(obj)
 
                     if isinstance(obj, On):
                         if obj.get_step() == 1:
+                        #if 1 <= obj.get_step() < step+LOOK_AHEAD:
                             ons.append(obj)
                         if obj.get_step() == step + 1:
+                        #if step + 1 <= obj.get_step() < step+LOOK_AHEAD:
                             self.__dinamic_facts.add_object_input(obj)
                             ons.append(obj)
 
                     if isinstance(obj, GameOver):
                         game_over = True
-
-            step += 1
+                break # GB: 16 9 2023. Will not look a more than one optimal answer set
+            #step += LOOK_AHEAD
+            step+=1
 
         return moves, ons

@@ -2,7 +2,8 @@ import argparse
 import os
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
-from AI.src.webservices.helpers import require_image_from_url
+from AI.src.webservices.helpers import getScreenshot
+from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
 import constants
 import sys
 
@@ -19,7 +20,7 @@ if __name__ == '__main__':
     parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = gameDictionary.keys(), required=True)
     parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
     parser.add_argument("-t", "--test", type=str, help="screenshots to test prefix")
-    parser.add_argument("-s", "--screenshot", type=str, help="specific screenshot path")
+    parser.add_argument("-s", "--screenshot", type=str, help=f"specific screenshot filename (looks up in {constants.SCREENSHOT_PATH}))")
     
     args = parser.parse_args()
     
@@ -27,12 +28,13 @@ if __name__ == '__main__':
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
-    
+
     if args.test == None:
+        screenshot = constants.SCREENSHOT_FILENAME
         if not args.debugVision:
             server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
             try:
-                require_image_from_url(server_ip, port)
+                getScreenshot(server_ip, port)
                 print("SCREENSHOT TAKEN.")
             except Exception as e:
                 print(e)
@@ -56,4 +58,5 @@ if __name__ == '__main__':
                 Start(screenshot,args)
     
     
+
         
