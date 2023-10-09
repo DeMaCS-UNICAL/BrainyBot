@@ -2,10 +2,10 @@ import os
 import re
 
 from languages.predicate import Predicate
-from AI.src.candy_crush.candygraph.candygraph import CandyGraph
+from AI.src.abstraction.object_graph import ObjectGraph
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
-from AI.src.candy_crush.candygraph.constants import TYPE, ID
+from AI.src.candy_crush.object_graph.constants import TYPE, ID
 from AI.src.constants import DLV_PATH
 
 
@@ -173,7 +173,7 @@ def chooseDLVSystem() -> DesktopHandler:
         print(e)
 
 
-def get_input_dlv_nodes(graph: CandyGraph) -> []:
+def get_input_dlv_nodes(graph: ObjectGraph) -> []:
     nodesAndInformation = []
     for node in graph.get_nodes():
 
@@ -204,7 +204,7 @@ def get_input_dlv_nodes(graph: CandyGraph) -> []:
     return nodesAndInformation
 
 
-def get_edges(graph: CandyGraph) -> [Edge]:
+def get_edges(graph: ObjectGraph) -> [Edge]:
     edges = []
     for n, nbrs in graph.get_graph():
         for nbr, eattr in nbrs.items():

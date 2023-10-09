@@ -205,8 +205,8 @@ def choose_dlv_system() -> DesktopHandler:
 def get_colors(tubes: []):
     colors = set()
     for tube in tubes:
-        for ball in tube.get_balls():
-            colors.add(Color.get_color(ball[2]))
+        for ball in tube.get_elements():
+            colors.add(Color.get_color(ball[3]))
     return colors
 
 
@@ -217,8 +217,8 @@ def get_balls_and_tubes(tubes: []):
         tube = Tube()
         tube.set_x(t.get_x())
         tube.set_y(t.get_y())
-        for ball in t.get_balls():
-            b = Ball(Color.get_color(ball[2]).get_id())
+        for ball in t.get_elements():
+            b = Ball(Color.get_color(ball[3]).get_id())
             balls.append(b)
             tube.add_ball(b)
         tube_list.append(tube)

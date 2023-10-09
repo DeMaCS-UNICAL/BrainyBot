@@ -1,13 +1,14 @@
 import os
+import sys
 import time
 
 import cv2 as cv
 from matplotlib import pyplot as plt
 
-from AI.src.candy_crush.candygraph.candygraph import CandyGraph
-from AI.src.candy_crush.candygraph.constants import PX, PY, TYPE
+from AI.src.abstraction.object_graph import ObjectGraph
+from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
-from AI.src.candy_crush.detect.detect import MatchingCandy
+from AI.src.candy_crush.detect.new_detect import MatchingCandy
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
@@ -34,11 +35,12 @@ def get_color(strg) -> ():
     return nameColor[RED]
 
 
-def candy_crush(debug = False):
+def candy_crush(screenshot,debug = False):
     # execute template matching
     spriteSize = (110, 110)
-    matchingCandy = MatchingCandy(spriteSize,debug)
+    matchingCandy = MatchingCandy(screenshot,spriteSize,debug)
     matrixCopy = matchingCandy.get_matrix().copy()  # copy img
+
     if not debug:
         plt.ion()
 
@@ -48,12 +50,19 @@ def candy_crush(debug = False):
     if not debug:
         plt.pause(0.1)
 
+
     # take graph
-    candyGraph: CandyGraph = matchingCandy.search()
+    candyGraph: ObjectGraph = matchingCandy.search()
+    number_per_type={}
     for node in candyGraph.get_nodes():
         color = get_color(node[TYPE])
         draw(matrixCopy, node, color)
-
+        if not node[TYPE] in number_per_type.keys():
+            number_per_type[node[TYPE]] = 0
+        number_per_type[node[TYPE]] = number_per_type[node[TYPE]]+1
+    for type in number_per_type.keys():
+        print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
+    print("",file=sys.stderr)
     plt.imshow(matrixCopy)
     plt.title(f"Matching")
     plt.show()
@@ -65,8 +74,12 @@ def candy_crush(debug = False):
     nodesAndInformation = get_input_dlv_nodes(candyGraph)
     edges = get_edges(candyGraph)
 
-    print(f"EDGES --> {edges}")
-    print(f"NODES --> {nodesAndInformation}")
+
+    #print(f"EDGES --> {edges}")
+    #print()
+    #print(f"NODES --> {nodesAndInformation}")
+    if(debug):
+        return
 
     # recall ASP program
     solution = DLVSolution()

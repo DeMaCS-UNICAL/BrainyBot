@@ -1,33 +1,62 @@
 import argparse
+import os
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
 from AI.src.webservices.helpers import getScreenshot
-from AI.src.constants import SCREENSHOT_PATH
+from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
 import constants
+import sys
+
+gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
+
+def Start(screenshot,args):
+    print(f"Starting AI for game {args.games}")
+    gameDictionary[args.games](screenshot,args.debugVision)
 
 if __name__ == '__main__':
-
     msg = "Description"
     
     parser = argparse.ArgumentParser(description=msg)
-    parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = ["ball_sort", "candy_crush"], required=True)
-    parser.add_argument("-d", "--debug", action="store_true", help="Debug screenshot")
+    parser.add_argument("-g", "--games", type=str, help="Name of the games", choices = gameDictionary.keys(), required=True)
+    parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
+    parser.add_argument("-t", "--test", type=str, help="screenshots to test prefix")
+    parser.add_argument("-s", "--screenshot", type=str, help=f"specific screenshot filename (looks up in {constants.SCREENSHOT_PATH}))")
     
     args = parser.parse_args()
+    
+    
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
-    if not args.debug:
-        server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
-        try:
-            getScreenshot(server_ip, port)
-            print("SCREENSHOT TAKEN.")
-        except Exception as e:
-            print(e)
+
+    if args.test == None:
+        screenshot = constants.SCREENSHOT_FILENAME
+        if not args.debugVision:
+            server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
+            try:
+                getScreenshot(server_ip, port)
+                print("SCREENSHOT TAKEN.")
+            except Exception as e:
+                print(e)
+        else:
+            screenshot=""
+            if args.screenshot == None:
+                screenshot = args.games+"Test.jpg"
+            else:
+                screenshot = args.screenshot
+            print("DEBUG MODE ON")   
+            print(screenshot)
+        Start(screenshot,args)
     else:
-        print("DEBUG MODE ON")   # Will not take a screenshot from the phone, but will use the screenshot in the resources folder.
-    if args.games == "ball_sort":
-        ball_sort(args.debug)
-    elif args.games == "candy_crush":
-        candy_crush(args.debug)
+        if args.games == "ball_sort":
+            print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
+        for filename in os.listdir(constants.SCREENSHOT_PATH):
+            if filename.startswith(args.test):
+                screenshot = filename
+                print(f"{screenshot}")
+                print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
+                Start(screenshot,args)
+    
+    
+
         
