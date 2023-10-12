@@ -82,11 +82,11 @@ class DLVSolution:
             self.__dinamic_facts.clear_all()
 
             print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
-            assert_true(answer_sets is not None)
+            assert_true(answer_sets is not None,"No solutions found for this level.")
             
             #assert_true(answer_sets.get_errors() is None,
             #            "Found error:\n" + str(answer_sets.get_errors()))
-            assert_true(len(answer_sets.get_optimal_answer_sets()) != 0)
+            assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this level.")
 
             for answer_set in answer_sets.get_optimal_answer_sets():
                 for obj in answer_set.get_atoms():
