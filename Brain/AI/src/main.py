@@ -34,8 +34,10 @@ if __name__ == '__main__':
         if not args.debugVision:
             server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
             try:
-                getScreenshot(server_ip, port)
-                print("SCREENSHOT TAKEN.")
+                if getScreenshot(server_ip, port):
+                    print("SCREENSHOT TAKEN.")
+                else:
+                    exit(1)
             except Exception as e:
                 print(e)
                 exit(1)

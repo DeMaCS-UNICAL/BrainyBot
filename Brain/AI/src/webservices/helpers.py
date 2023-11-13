@@ -15,6 +15,7 @@ def require_image_from_url(url, port) -> None:
     response = requests.get(f"http://{url}:{port}/?name=requestimage")
     if response.status_code!=200:
         print("The screenshot can not be taken: is the ScreenshotServer running on the device?")
+        return False
     file = open(os.path.join(SCREENSHOT_PATH, 'screenshot.png'), "wb")
     file.write(response.content)
     file.close()

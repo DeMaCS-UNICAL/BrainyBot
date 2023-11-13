@@ -40,7 +40,7 @@ class ObjectsFinder:
     def find_all(self, elements_to_find:{}, request_regmax=True) -> dict:
         objects_found={}
         for element in elements_to_find.keys():
-            print(f"{element} ")
+            #print(f"{element} ")
             objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
         return objects_found
 
@@ -61,7 +61,7 @@ class ObjectsFinder:
         # modify this to change the algorithm precision
         loc = np.where(res >= self.__threshold)
         objects_found = list(zip(*loc[::-1]))
-        print(f"Found {len(objects_found)} matches")
+        #print(f"Found {len(objects_found)} matches")
         return objects_found
 
     def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:  
