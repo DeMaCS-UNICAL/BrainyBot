@@ -47,6 +47,7 @@ class ObjectsFinder:
     def find_all_gray_scale(self, elements_to_find:{}, request_regmax:True)->dict:
         image_gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)
         objects_found = self.find_all(image_gray,elements_to_find,request_regmax)
+        return objects_found
 
     def find_matches(self, image, element_to_find, request_regmax=True) -> list:
         
