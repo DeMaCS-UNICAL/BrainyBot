@@ -1,0 +1,1 @@
+toPrint("all","good").

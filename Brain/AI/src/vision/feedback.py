@@ -1,6 +1,4 @@
-import asyncio
-import cv2
-import os
+
 import numpy as np
 from languages.asp.asp_mapper import ASPMapper
 from languages.predicate import Predicate

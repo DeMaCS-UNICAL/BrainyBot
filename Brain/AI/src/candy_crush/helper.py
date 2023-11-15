@@ -13,6 +13,7 @@ from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.vision.feedback import Feedback
+from AI.src.validation.validation import Validation
 
 
 
@@ -21,7 +22,7 @@ def asp_input(graph):
     to_return.extend(get_edges(graph))
     return to_return
 
-def candy_crush(screenshot,debug = False):
+def candy_crush(screenshot,debug = False, validation=None):
     # execute template matching
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(screenshot,spriteSize,debug)
@@ -49,6 +50,10 @@ def candy_crush(screenshot,debug = False):
     #print(f"EDGES --> {edges}")
     #print()
     #print(f"NODES --> {nodesAndInformation}")
+    
+    if validation!=None:
+        validator = Validation(validation)
+        validator.validate(input)
     if(debug):
         return
 
