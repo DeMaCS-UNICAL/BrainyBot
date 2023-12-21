@@ -3,7 +3,7 @@ import os
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
 from AI.src.webservices.helpers import getScreenshot
-from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
+from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
 import constants
 import sys
 
@@ -11,7 +11,9 @@ gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
 
 def Start(screenshot,args):
     print(f"Starting AI for game {args.games}")
-    gameDictionary[args.games](screenshot,args.debugVision,args.validate)
+    if args.test!=None:
+        validate=os.path.join(VALIDATION_PATH,args.games,screenshot+".txt")
+    gameDictionary[args.games](screenshot,args.debugVision,validate)
 
 if __name__ == '__main__':
     msg = "Description"
@@ -21,7 +23,6 @@ if __name__ == '__main__':
     parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
     parser.add_argument("-t", "--test", type=str, help="screenshots to test prefix")
     parser.add_argument("-s", "--screenshot", type=str, help=f"specific screenshot filename (looks up in {constants.SCREENSHOT_PATH}))")
-    parser.add_argument("-v", "--validate", type=str, help=f"Validate vision and abstraction using the specific ASP program (looks up in {constants.RESOURCES_PATH})")
     
     args = parser.parse_args()
     
@@ -58,7 +59,9 @@ if __name__ == '__main__':
             if filename.startswith(args.test):
                 screenshot = filename
                 print(f"{screenshot}")
-                print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
+                #print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
+                #with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
+                  #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
                 Start(screenshot,args)
     
     

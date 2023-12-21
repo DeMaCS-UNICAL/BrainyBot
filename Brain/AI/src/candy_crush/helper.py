@@ -10,16 +10,15 @@ from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 from AI.src.candy_crush.detect.new_detect import MatchingCandy,draw
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
-from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap
+from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_matrix, get_edges, Swap
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
+from AI.src.constants import RESOURCES_PATH
 
 
-
-def asp_input(graph):
-    to_return = get_input_dlv_nodes(graph)
-    to_return.extend(get_edges(graph))
+def asp_input(matrix):
+    to_return = get_input_dlv_matrix(matrix)
     return to_return
 
 def candy_crush(screenshot,debug = False, validation=None):
@@ -39,22 +38,24 @@ def candy_crush(screenshot,debug = False, validation=None):
     '''
 
     # take graph
-    candyGraph: ObjectGraph = matchingCandy.search()
+    objects_matrix = matchingCandy.search()
    
 
 
     # get nodes and edges of graph for DLV
-    input = asp_input(candyGraph)
+    input = asp_input(objects_matrix)
 
     success = True
     #print(f"EDGES --> {edges}")
     #print()
     #print(f"NODES --> {nodesAndInformation}")
+    validator = Validation()
     
     if validation!=None:
-        validator = Validation(validation)
-        validator.validate(input)
+        validator.validate_matrix(objects_matrix,validation)
     if(debug):
+     #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
+      #      print(validator.stringfy(objects_matrix),file=f)
         return
 
     while success:
@@ -66,9 +67,11 @@ def candy_crush(screenshot,debug = False, validation=None):
             print("No moves found. Maybe there is no candy on screen?")
         else:
             # draw
-            tmp = matchingCandy.get_matrix().copy()
             node1 = candyGraph.get_node(swap.get_id1())
             node2 = candyGraph.get_node(swap.get_id2())
+            '''
+            tmp = matchingCandy.get_matrix().copy()
+            
 
             draw(tmp, node1, nameColor[WHITE])
             draw(tmp, node2, nameColor[WHITE])
@@ -78,7 +81,7 @@ def candy_crush(screenshot,debug = False, validation=None):
             if not debug:
                 plt.pause(0.5)
 
-
+            '''
             #
             # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
             #

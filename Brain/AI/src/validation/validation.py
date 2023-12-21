@@ -1,37 +1,51 @@
 import os
-
 from languages.asp.asp_input_program import ASPInputProgram
+from  numpy import array_equal
 
 from AI.src.constants import RESOURCES_PATH
 from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem
 
 class Validation:
-    def __init__(self,asp_validator):
-        try:
-            self.__handler = chooseDLVSystem()
-            self.__variableInputProgram = None
-            self.__fixedInputProgram = ASPInputProgram()
-            print (f"Looking for validator at {os.path.join(RESOURCES_PATH, asp_validator)}")
-            self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, asp_validator))
-            self.__handler.add_program(self.__fixedInputProgram)
-
-        except Exception as e:
-            print(str(e))
+    def __init__(self):
+        pass
     
-    def validate(self, abstraction_result):
-        self.__handler.remove_program_from_value(self.__variableInputProgram)
-        self.__variableInputProgram = ASPInputProgram()
-        for element in abstraction_result:
-                print(element)
-                self.__variableInputProgram.add_object_input(element)
-        index = self.__handler.add_program(self.__variableInputProgram)
-        answerSets = self.__handler.start_sync()
-        print (f"Answer sets: {answerSets.get_output()}")
-        print (f"Answer sets: {answerSets.get_errors()}")
-        if not answerSets.get_answer_sets():
-            print("Validation failed, no answer set provided")
-        else:
-            for obj in answerSets.get_answer_sets()[0].get_answer_set():
-                if(obj.startswith('toPrint(')):
-                    print(obj[8:])
+    def stringfy(self,matrix):
+        string = []
+        for i in range(len(matrix)):
+            for j in range(len(matrix[i])):
+                    if matrix[i][j]!=None:
+                        string.append(matrix[i][j])
+                    else:
+                        string.append('None')
+            string.append("||")
+        return string
+    def validate_matrix(self, abstraction_result, validation_input):
+        abstraction = self.stringfy(abstraction_result)
+        validation=[]
+        #print(abstraction)
+        #print()
+        with open(validation_input) as file:
+            for line in file:
+                line=line.strip('\n ')
+                validation.extend(line.split(" "))
+                validation.append("||")
+        #print(validation)
+       # return self.levensthein(abstraction_result,expected_result)
+        print(self.levensthein(abstraction,validation))
+    
+    def levensthein(self,first,second):
+        dist = [[0 for col in range(len(second)+1)] for row in range(len(first)+1)]
+        for i in range(1,len(first)+1):
+            dist[i][0]=i
+        for j in range(1,len(second)+1):
+            dist[0][j] = j
+            for i in range(1,len(first)+1):
+                if first[i-1]==second[j-1]:
+                    sub=0
+                else:
+                    sub=1
+                dist[i][j]=min(dist[i-1][j]+1,dist[i][j-1]+1,dist[i-1][j-1]+sub)
+        print(f"Distance {dist[-1][-1]}")
+                    
+            
             

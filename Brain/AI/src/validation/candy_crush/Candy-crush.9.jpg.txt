@@ -1,0 +1,6 @@
+None orange.png blue.png green.png orange.png blue.png None
+None purple.png green.png green.png blue.png purple.png None
+orange.png blue.png green.png orange.png orange.png blue.png purple.png
+orange.png orange.png purple.png green.png purple.png orange.png blue.png
+purple.png purple.png orange.png blue.png purple.png purple.png green.png
+None blue.png purple.png green.png green.png blue.png None

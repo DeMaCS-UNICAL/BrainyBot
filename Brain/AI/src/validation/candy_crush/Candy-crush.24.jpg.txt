@@ -1,0 +1,8 @@
+green.png orange.png orange.png blue.png orange.png blue.png
+green.png purple.png purple.png orange.png green.png blue.png
+blue.png purple.png orange.png green.png blue.png orange.png
+purple.png green.png blue.png blue.png purple.png green.png
+green.png orange.png green.png blue.png blue.png orange.png
+purple.png blue.png purple.png green.png orange.png green.png
+notTouch.png blue.png green.png blue.png orange.png blue.png
+green.png notTouch.png greenHorizontal.png blue.png purple.png green.png

@@ -7,6 +7,7 @@ from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 from AI.src.candy_crush.object_graph.constants import TYPE, ID
 from AI.src.constants import DLV_PATH
+from AI.src.abstraction import mappers
 
 
 class Connect:
@@ -172,6 +173,36 @@ def chooseDLVSystem() -> DesktopHandler:
     except Exception as e:
         print(e)
 
+def get_input_dlv_matrix(matrix:[]) -> []:
+    nodesAndInformation = []
+    for i in range(len(matrix)):
+        for j in range(len(matrix[i])):
+            if matrix[i][j]!= None:
+                result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", matrix[i][j])
+                candyType = result.groups()[0]
+                # checks if the node2 is not swappable
+                if "notTouch" in candyType:
+                    continue
+
+                if "Bomb" in candyType:
+                    result = re.search(r"^(\w+)(?:Bomb)$", candyType)
+                    candyType = result.groups()[0]
+                    nodesAndInformation.append(mappers.InputBomb(i,j,candyType))
+
+                if "Horizontal" in candyType:
+                    result = re.search(r"^(\w+)(?:Horizontal)$", candyType)
+                    candyType = result.groups()[0]
+                    nodesAndInformation.append(mappers.InputHorizontal(i,j,candyType))
+
+                if "Vertical" in candyType:
+                    result = re.search(r"^(\w+)(?:Vertical)$", candyType)
+                    candyType = result.groups()[0]
+                    nodesAndInformation.append(mappers.InputVertical(i,j,candyType))
+            else:
+                candyType = "None"
+            nodesAndInformation.append(mappers.Element(i,j,candyType))
+
+    return nodesAndInformation
 
 def get_input_dlv_nodes(graph: ObjectGraph) -> []:
     nodesAndInformation = []
