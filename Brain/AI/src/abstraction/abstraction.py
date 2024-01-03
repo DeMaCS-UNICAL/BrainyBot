@@ -14,12 +14,38 @@ class Abstraction:
         return graph
 
     def ToMatrix(self, elements:dict, distance:())->[]:
-        # Extract A and B values into NumPy array
-        # Extract A and B values into a flat NumPy array
-        #values_array = np.array([item for sublist in elements.values() for item in sublist])
+        offset, delta = self.compute_offest_delta_dict(elements, distance)
+        max=[0,0]
+        for label in elements.keys():            
+            for match in elements[label]:
+                for i in range(2):
+                    current = (match[i]-offset[i])//delta[i]
+                    if current > max[(i+1)%2]:
+                        max[(i+1)%2]=current
+        matrix=[]
+        for i in range(max[0]+1):
+            matrix.append([])
+            for j in range(max[1]+1):
+                matrix[i].append(None)
+        for label in elements.keys():
+            for match in elements[label]:
+                r=(match[1]-offset[1])//delta[1]
+                c=(match[0]-offset[0])//delta[0]
+                if matrix[r][c]!=None and matrix[r][c][1][2]>match[2]:#matrix[r][c][1][2]: matrix stores the lable and the coordinates+value of the match
+                    continue
+                matrix[r][c]=(label,match)
+        offset, delta = self.compute_offest_delta_matrix(matrix)
+        for r in range(len(matrix)):
+            for c in range(len(matrix[r])):
+                if matrix[r][c]!=None:
+                    matrix[r][c]=matrix[r][c][0]
+        print(matrix)
+        return matrix,offset,delta
+
+    def compute_offest_delta_dict(self, elements, distance):
         offset=[10000,10000]
         delta=[distance[0]*10,distance[1]*10]
-        all_matches=[[],[]]
+        all_matches=[[],[],]
         for match_list in elements.values():
             for match in match_list:
                 all_matches[0].append(match[0])
@@ -33,39 +59,30 @@ class Abstraction:
                     current_delta=all_matches[i][match_index+1]-all_matches[i][match_index]
                     if current_delta>=distance[i] and current_delta<delta[i]:
                         delta[i]=current_delta
-        # Reshape the array to have two columns (A and B)
-        #values_array = values_array.reshape(-1, 2)
-        # Use numpy.min once to find minimum values along both axes
-        #min= np.min(values_array, axis=0)
-        max=[0,0]
-        #print(offset)
-        #print(delta)
-        for label in elements.keys():            
-            for match in elements[label]:
-                for i in range(2):
-                    current = (match[i]-offset[i])//delta[i]
-                    if current > max[(i+1)%2]:
-                        max[(i+1)%2]=current
-        matrix=[]
-        #print(max)
-        for i in range(max[0]+1):
-            matrix.append([])
-            for j in range(max[1]+1):
-                matrix[i].append(None)
-        #print("rows :",max[0]-min[0])
-        #print("cloumns :",max[1]-min[1])
-        #print("sizes: ",len(matrix),len(matrix[0]))
-        for label in elements.keys():
-            for match in elements[label]:
-                #print(match[0],offset[0],delta[0])
-                #print(match[1],offset[1],delta[1])
-                r=(match[1]-offset[1])//delta[1]
-                c=(match[0]-offset[0])//delta[0]
-                #print(r,c)
-                #print(label)
-                matrix[r][c]=label
-                #print(matrix)
-        return matrix,offset,delta
+        return offset,delta
+    
+    def compute_offest_delta_matrix(self, matrix):
+        offset=[0,0]
+        for i in range(len(matrix)):
+            if matrix[i][0]!=None:
+                offset[0]=matrix[i][0][1][0]
+        for i in range(len(matrix[0])):
+            if matrix[0][i]!=None:
+                offset[1]=matrix[0][i][1][1]
+        delta=[0,0]
+        cont=[0,0]
+        for r in range(len(matrix)):
+            for c in range(len(matrix[r])):
+                if matrix[r][c]!=None:
+                    if c<len(matrix[r])-1 and matrix[r][c+1]!=None:
+                        delta[0]+=matrix[r][c+1][1][0]-matrix[r][c][1][0]
+                        cont[0]+=1
+                    if r<len(matrix)-1 and matrix[r+1][c]!=None:
+                        delta[1]+=matrix[r+1][c][1][1]-matrix[r][c][1][1]
+                        cont[1]+=1
+        delta[0]//=cont[0]
+        delta[1]//=cont[1]
+        return offset,delta
                 
                 
 

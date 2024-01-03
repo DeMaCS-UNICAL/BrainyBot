@@ -24,7 +24,7 @@ def asp_input(matrix):
 def candy_crush(screenshot,debug = False, validation=None):
     # execute template matching
     spriteSize = (110, 110)
-    matchingCandy = MatchingCandy(screenshot,spriteSize,debug)
+    matchingCandy = MatchingCandy(screenshot,spriteSize,debug,validation)
     if not debug:
         plt.ion()
     '''
@@ -67,21 +67,20 @@ def candy_crush(screenshot,debug = False, validation=None):
             print("No moves found. Maybe there is no candy on screen?")
         else:
             # draw
-            node1 = candyGraph.get_node(swap.get_id1())
-            node2 = candyGraph.get_node(swap.get_id2())
-            '''
-            tmp = matchingCandy.get_matrix().copy()
-            
+            if validation==None:
+                node1 = candyGraph.get_node(swap.get_id1())
+                node2 = candyGraph.get_node(swap.get_id2())
+                tmp = matchingCandy.get_matrix().copy()
+                
 
-            draw(tmp, node1, nameColor[WHITE])
-            draw(tmp, node2, nameColor[WHITE])
-            plt.imshow(tmp)
-            plt.title(f"OPTIMUM {node1} --> {node2}.")
-            plt.show()
-            if not debug:
-                plt.pause(0.5)
+                draw(tmp, node1, nameColor[WHITE])
+                draw(tmp, node2, nameColor[WHITE])
+                plt.imshow(tmp)
+                plt.title(f"OPTIMUM {node1} --> {node2}.")
+                plt.show()
+                if not debug:
+                    plt.pause(0.5)
 
-            '''
             #
             # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
             #

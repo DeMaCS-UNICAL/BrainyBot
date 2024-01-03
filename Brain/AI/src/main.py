@@ -11,6 +11,7 @@ gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
 
 def Start(screenshot,args):
     print(f"Starting AI for game {args.games}")
+    validate=None
     if args.test!=None:
         validate=os.path.join(VALIDATION_PATH,args.games,screenshot+".txt")
     gameDictionary[args.games](screenshot,args.debugVision,validate)

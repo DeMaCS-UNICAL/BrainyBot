@@ -15,16 +15,10 @@ from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE
 
 
 def draw(matrixCopy, row,column,offset,delta, color):
-    #print(nodes)
-    #print(color)
-    #width, height = 110, 110
-    #print(row,column,end=" ")
-    y_start = offset[1]+row*delta[1]
     x_start =  offset[0]+column*delta[0]
-    #print(x_start,y_start)
-    cv2.rectangle(matrixCopy, (x_start+5,y_start+5), (x_start+delta[0]-5, y_start+delta[1]-5), color, 10)
-    #cv2.putText(matrixCopy,f"({x_start},{y_start})",cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-
+    y_start = offset[1]+row*delta[1]
+    cv2.rectangle(matrixCopy, (x_start,y_start), (x_start+delta[0], y_start+delta[1]), color, 10)
+    #cv2.putText(matrixCopy,f"({x_start},{y_start})",(x_start,y_start),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
 def get_color(strg) -> ():
     # print(strg)
@@ -42,7 +36,7 @@ def get_color(strg) -> ():
     return nameColor[RED]
 
 class MatchingCandy:
-    def __init__(self, screenshot,difference:(), debug=False):
+    def __init__(self, screenshot,difference:(), debug=False,validation=None):
         #
         # Use Matrix2.png for testing
         #
@@ -52,17 +46,17 @@ class MatchingCandy:
         self.image = None
         self.__graph=None
         self.__matrix=None
+        self.validation=validation
 
     def vision(self):
         finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, threshold=0.78)
         self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
-        '''
-        plt.imshow( self.image)
-        plt.title(f"Screenshot")
-        plt.show()
-        if not self.debug:
-            plt.pause(0.1)
-            '''
+        if self.validation==None:
+            plt.imshow( self.image)
+            plt.title(f"Screenshot")
+            plt.show()
+            if not self.debug:
+                plt.pause(0.1)
         return finder.find_all(SPRITES)
     
     def abstraction(self,vision_output):
@@ -77,6 +71,8 @@ class MatchingCandy:
         '''
         number_per_type={}
         matrix_copy=self.image.copy()
+        print(offset)
+        print(delta)
         for i in range(len(matrix)):
             for j in range(len(matrix[i])):
                 #print(matrix[i][j],end=" ")
@@ -90,13 +86,12 @@ class MatchingCandy:
         for type in number_per_type.keys():
             print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
         print("",file=sys.stderr)
-        '''
-        plt.imshow(matrix_copy)
-        plt.title(f"Matching")
-        plt.show()
-        if not self.debug: 
-            plt.pause(0.5)
-            '''
+        if self.validation==None:
+            plt.imshow(matrix_copy)
+            plt.title(f"Matching")
+            plt.show()
+            if not self.debug: 
+                plt.pause(0.5)
         return matrix
     
     def old_search(self) -> ObjectGraph:

@@ -102,8 +102,13 @@ class ObjectsFinder:
             res = res * regMax
         # modify this to change the algorithm precision
         loc = np.where(res >= self.__threshold)
-        objects_found = list(zip(*loc[::-1]))
+        #objects_found = list(zip(*loc[::-1]))
         #print(f"Found {len(objects_found)} matches")
+        # Combine coordinates (x, y) with corresponding res values
+        for pt in zip(*loc[::-1]):
+            x, y = pt
+            confidence = res[y, x]  # Extract the confidence value at the corresponding position
+            objects_found.append((x, y, confidence))
         return objects_found
 
     def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:  
