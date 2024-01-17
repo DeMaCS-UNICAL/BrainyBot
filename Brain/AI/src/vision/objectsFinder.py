@@ -3,9 +3,12 @@ import sys
 import cv2
 import numpy as np
 import mahotas
+import multiprocessing
+from time import time
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
+
 class ObjectsFinder:
 
     def __init__(self, screenshot, color=None, debug=False, threshold=0.8 ):
@@ -24,6 +27,15 @@ class ObjectsFinder:
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
 
+
+    def worker_process(self,id,dictionary,elements:list,regmax):
+        for pair in elements:
+            print(f"Looking for {pair[0]}: ",end='')
+            dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
+        #print(f"I'm done {id}")
+
+        
+
     def find_one_among(self,  elements_to_find:{}, request_regmax=True) -> list:
         objects_found=[]
         for element in elements_to_find.keys():
@@ -37,12 +49,43 @@ class ObjectsFinder:
         objects_found = self.find_one_among(image_gray,elements_to_find,request_regmax)
         return objects_found
 
-    def find_all(self, elements_to_find:{}, request_regmax=True) -> dict:
-        objects_found={}
+    def find_all(self, elements_to_find:dict, request_regmax=True) -> dict:
+        template_num=len(elements_to_find.keys())
+        num_processes = min(multiprocessing.cpu_count(),template_num)
+        template_per_process = template_num//num_processes
+        count=0
+        templates_for_process=[]
         for element in elements_to_find.keys():
-            print(f"{element} ")
-            objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
-        return objects_found
+            if count<template_per_process or len(templates_for_process)==num_processes:
+                if count==0:
+                    templates_for_process.append([])
+                templates_for_process[-1].append((element,elements_to_find[element]))
+                count+=1
+                if count==template_per_process and len(templates_for_process)<num_processes:
+                    count=0
+                    
+        processes = []
+        
+        with multiprocessing.Manager() as manager:
+        # Create a shared dictionary
+            shared_dict = manager.dict()
+            for i in range(num_processes):
+                #print(f"Starting process number {i}")
+                process = multiprocessing.Process(target=self.worker_process, args=(i,shared_dict,templates_for_process[i],request_regmax))
+                processes.append(process)
+                process.start()
+
+            for process in processes:
+                process.join()
+
+            #print("All processes have finished.")
+            '''
+            objects_found={}
+            for element in elements_to_find.keys():
+                #print(f"{element} ")
+                objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
+            '''
+            return dict(shared_dict)
 
     def find_all_gray_scale(self, elements_to_find:{}, request_regmax:True)->dict:
         image_gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)
@@ -60,8 +103,14 @@ class ObjectsFinder:
             res = res * regMax
         # modify this to change the algorithm precision
         loc = np.where(res >= self.__threshold)
-        objects_found = list(zip(*loc[::-1]))
-        print(f"Found {len(objects_found)} matches")
+        #objects_found = list(zip(*loc[::-1]))
+        #print(f"Found {len(objects_found)} matches")
+        # Combine coordinates (x, y) with corresponding res values
+        for pt in zip(*loc[::-1]):
+            x, y = pt
+            confidence = res[y, x]  # Extract the confidence value at the corresponding position
+            objects_found.append((x, y, confidence))
+        print(f"found {len(objects_found)} matches")
         return objects_found
 
     def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:  
