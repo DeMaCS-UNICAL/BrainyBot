@@ -15,7 +15,7 @@ def __get_ball_tube(ball, ons, step):
             return on.get_tube()
 
 
-def ball_sort(screenshot:str, debug = False):
+def ball_sort(screenshot:str, debug = False, validation=None):
 
     matcher = MatchingBalls(screenshot,debug)
     balls_chart = matcher.get_balls_chart()

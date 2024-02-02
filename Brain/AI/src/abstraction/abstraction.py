@@ -1,6 +1,7 @@
 from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.abstraction.stack import Stack
 import numpy as np
+import opencv as cv2
 
 class Abstraction:
     
@@ -123,4 +124,33 @@ class Abstraction:
         stacks[:] = [stack for stack in stacks if len(stack.get_elements()) >= min_number_elements]
         [stack.set_y_coordinate() for stack in stacks]
         return stacks
+
+    def assign_to_container(self, contained,containers)->dict:
+        elements_per_container ={}
+        for container in containers:
+            elements_per_container[container]=[]
+        for obj in contained:
+            for container in containers:
+                if cv2.pointPolygonTest(container,(obj[0],obj[1]),True)<obj[2]:
+                    skip=False
+                    for existing in elements_per_container[container]:
+                        if (existing[0] - obj[0])**2 + (existing[1] - obj[1])**2<(existing[2]+obj[2])**2:
+                            skip=True
+                        if not skip:
+                            elements_per_container[container].append(obj)
+                    break
+        return elements_per_container
+
+    def stack_no_duplicates(self, elements:dict)->list:
+        stacks = []
+        for container in elements.keys:
+            elements[container].sort(key=lambda x: x[1])
+            stack = Stack()
+            for element in elements[container]:
+                stack.add_element(element)
+            stack.set_x_coordinates(element[0])
+            stack.set_y_coordinate(element[0])#? verifica vada bene
+            stacks.append(stack)
+        return stacks
+
         

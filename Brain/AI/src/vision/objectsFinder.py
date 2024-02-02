@@ -5,6 +5,7 @@ import numpy as np
 import mahotas
 import multiprocessing
 from time import time
+from matplotlib import pyplot as plt
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
@@ -134,3 +135,37 @@ class ObjectsFinder:
                 '''
                 balls.append([x, y, r,color.tolist()])
         return balls
+
+    
+    def detect_container(self,template):
+
+        # Convert to grayscale and apply edge detection
+        tem_gray = template.copy()
+        gray = self.__gray.copy()
+        edges = cv2.Canny(gray, 50, 150)
+        tem_edges = cv2.Canny(tem_gray, 50, 150)
+
+        # Find contours
+        tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        tem_cnt = tem_contours[0]
+        cv2.drawContours(tem_edges, [tem_cnt], -1, (0, 255, 0), 3)
+
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Filter for U-shapes
+        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,1,0.0)<0.01]
+
+        # Draw the U-shape contours
+        for contour in containers:
+            cv2.drawContours(edges, [contour], -1, (255, 0, 0), 10)
+
+        # Show the image
+        #plt.figure(dpi=300)
+        plt.imshow(cv2.cvtColor(tem_edges, cv2.COLOR_BGR2RGB))
+        plt.show()
+        cv2.waitKey(0)
+        plt.imshow(cv2.cvtColor(edges, cv2.COLOR_BGR2RGB))
+        plt.show()
+        cv2.waitKey(0)
+        return containers
+

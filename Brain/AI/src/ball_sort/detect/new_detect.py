@@ -37,23 +37,25 @@ class MatchingBalls:
         self.img_width = self.__image.shape[1]
             
     
-    def get_balls_chart(self)->ElementsStacks:      
+    def get_balls_chart(self)->ElementsStacks:
         abstraction = Abstraction()
         self.__balls = self.detect_balls()
-        stacks = abstraction.Stack(self.__balls.copy())
-        self.__ball_chart.add_stacks(stacks)
+        #stacks = abstraction.Stack(self.__balls.copy())
+        #self.__ball_chart.add_stacks(stacks)
         template,tubes = self.detect_empty_tube()
-        width = self.img_width
-        matcher_width, matcher_height = template.shape[::-1]
-        empty_stacks = abstraction.Empty_Stacks(tubes,width,matcher_width, matcher_height,MatchingBalls.TUBES_DISTANCE_RATIO)
+        all_tubes = self.finder.detect_container(template)
+        balls_in_tubes = abstraction.assign_to_container(self.__balls.copy(),all_tubes)      
+        #width = self.img_width
+        #matcher_width, matcher_height = template.shape[::-1]
+        #empty_stacks = abstraction.Empty_Stacks(tubes,width,matcher_width, matcher_height,MatchingBalls.TUBES_DISTANCE_RATIO)
         #self.Remove_False_Empty_Stack(stacks,empty_stacks,width,matcher_width)
         print(f"Matches:{len(empty_stacks)}")
         self.__ball_chart.add_stacks(empty_stacks)
         # draw the empty tubes
         print(f"full stacks: {len(stacks)}")
-        print(f"{width/MatchingBalls.TUBES_DISTANCE_RATIO}")
-        for p in empty_stacks:
-            cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
+        #print(f"{width/MatchingBalls.TUBES_DISTANCE_RATIO}")
+        #for p in empty_stacks:
+         #   cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
                           (int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
         
 
@@ -119,3 +121,5 @@ class MatchingBalls:
         plt.imshow(result)
         plt.show()
         cv2.waitKey(0)
+
+#### prendo il contorno del template che fa match, faccio i contorni dello screenshot e mi prendo solo i contorni uguali a quelli del template. Trovo le palle: per ogni palla controllo che i punti massimi lungo gli assi siano contenuti nei contorni: ogni contorno sarà un container, la palla verrà associata al container
