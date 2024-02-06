@@ -1,7 +1,7 @@
 from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.abstraction.stack import Stack
 import numpy as np
-import opencv as cv2
+import cv2
 
 class Abstraction:
     

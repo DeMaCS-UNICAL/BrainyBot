@@ -56,7 +56,7 @@ class MatchingBalls:
         #print(f"{width/MatchingBalls.TUBES_DISTANCE_RATIO}")
         #for p in empty_stacks:
          #   cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
-                          (int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
+                          #(int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
         
 
         self.__show_result()
