@@ -16,10 +16,10 @@ class ObjectsFinder:
         #
         # Use Matrix2.png for testing
         #
-        self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
+        self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color) 
         self.__output = self.__img_matrix.copy()  
-        self.__blurred = cv2.GaussianBlur(self.__img_matrix, (65, 65), 0)  # Used to find the color of the balls
-        self.__gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)  # Used to find the balls
+        self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
+        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
         self.__threshold=threshold
@@ -112,11 +112,15 @@ class ObjectsFinder:
             objects_found.append((x, y, confidence))
         return objects_found
 
-    def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:  
-        gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)  # Used to find the balls
-        circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,
-                                  param1= 100, param2=15, minRadius=balls_min_radius,
-                                  maxRadius=balls_max_radius)
+    def find_circles(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:
+        gray = self.__gray.copy()  # Used to find the balls
+        gray = cv2.medianBlur(gray, 5)
+        gray = cv2.Canny(gray,1,150)
+        #gray = cv2.dilate(gray, None, iterations=1)
+        plt.imshow(gray, cmap="gray")
+        plt.show()
+        cv2.waitKey(0)
+        circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,param1= 100, param2=15, minRadius=balls_min_radius,     maxRadius=balls_max_radius)
         balls = []
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
@@ -125,15 +129,16 @@ class ObjectsFinder:
                 # get the color of pixel (x, y) form the blurred image
                 color = np.array(self.__blurred[y, x])
                 print(f"Found ball:({x}, {y}): {color}")
-                '''
                 # draw the circle
-                cv2.circle(self.__output, (x, y), r, (0, 255, 0), 2)
-                cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
-                cv2.putText(self.__output, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                '''
+                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
+                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 balls.append([x, y, r,color.tolist()])
+            plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
+            plt.show()
+            cv2.waitKey(0)
         return balls
 
     
@@ -142,30 +147,29 @@ class ObjectsFinder:
         # Convert to grayscale and apply edge detection
         tem_gray = template.copy()
         gray = self.__gray.copy()
-        edges = cv2.Canny(gray, 50, 150)
-        tem_edges = cv2.Canny(tem_gray, 50, 150)
-
+        #edges = cv2.Canny(gray, 50, 150)
+        ret, edges = cv2.threshold(gray, 127, 255, 0)
+        #tem_edges = cv2.Canny(tem_gray, 50, 150)
+        ret, tem_edges = cv2.threshold(tem_gray, 127, 255, 0)
         # Find contours
         tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         tem_cnt = tem_contours[0]
+        tem_edges = cv2.cvtColor(tem_edges, cv2.COLOR_GRAY2RGB)
         cv2.drawContours(tem_edges, [tem_cnt], -1, (0, 255, 0), 3)
 
         contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
         # Filter for U-shapes
-        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,1,0.0)<0.01]
-
+        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,1,0.0)<0.02]
+        coordinates = []
+        for cnt in containers:
+            (x,y),r = cv2.minEnclosingCircle(cnt)
+            coordinates.append((x,y))
         # Draw the U-shape contours
-        for contour in containers:
-            cv2.drawContours(edges, [contour], -1, (255, 0, 0), 10)
+        edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+        cv2.drawContours(edges, containers, -1, (255, 0, 0), 3)
 
         # Show the image
         #plt.figure(dpi=300)
-        plt.imshow(cv2.cvtColor(tem_edges, cv2.COLOR_BGR2RGB))
-        plt.show()
-        cv2.waitKey(0)
-        plt.imshow(cv2.cvtColor(edges, cv2.COLOR_BGR2RGB))
-        plt.show()
-        cv2.waitKey(0)
-        return containers
+        return containers,coordinates
 

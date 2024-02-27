@@ -43,20 +43,22 @@ class MatchingBalls:
         #stacks = abstraction.Stack(self.__balls.copy())
         #self.__ball_chart.add_stacks(stacks)
         template,tubes = self.detect_empty_tube()
-        all_tubes = self.finder.detect_container(template)
-        balls_in_tubes = abstraction.assign_to_container(self.__balls.copy(),all_tubes)      
+        all_tubes,tubes_coordinates = self.finder.detect_container(template)
+        empty_stacks,non_empty_stacks = abstraction.assign_to_container_as_stack(self.__balls.copy(),all_tubes, tubes_coordinates)     
         #width = self.img_width
-        #matcher_width, matcher_height = template.shape[::-1]
+        matcher_width, matcher_height = template.shape[::-1]
         #empty_stacks = abstraction.Empty_Stacks(tubes,width,matcher_width, matcher_height,MatchingBalls.TUBES_DISTANCE_RATIO)
         #self.Remove_False_Empty_Stack(stacks,empty_stacks,width,matcher_width)
-        print(f"Matches:{len(empty_stacks)}")
+        #empty_stacks = list(filter(lambda x: (len(x)==0), balls_in_tubes)) 
+        print(f"Empty tubes: {len(empty_stacks)}")
         self.__ball_chart.add_stacks(empty_stacks)
         # draw the empty tubes
-        print(f"full stacks: {len(stacks)}")
+        print(f"full stacks: {len(non_empty_stacks)}")
+        self.__ball_chart.add_stacks(non_empty_stacks)
         #print(f"{width/MatchingBalls.TUBES_DISTANCE_RATIO}")
-        #for p in empty_stacks:
-         #   cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
-                          #(int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
+        for p in empty_stacks:
+            cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
+                          (int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
         
 
         self.__show_result()
@@ -66,7 +68,7 @@ class MatchingBalls:
         height = self.__image.shape[0]
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        maxRadius=int(height / MatchingBalls.RADIUS_RATIO + 10)
+        maxRadius=int(height / MatchingBalls.RADIUS_RATIO)+5
         self.balls = self.finder.find_circles(min_dist,minRadius,maxRadius)
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
@@ -74,7 +76,7 @@ class MatchingBalls:
     def detect_empty_tube(self)->(int,list):
         for name in self.__tubeTemplates:
             print(f"Trying to detect empty tube {name}")
-            matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_BGR2GRAY),self.__tubeTemplates[name],False)
+            matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_RGB2GRAY),self.__tubeTemplates[name],False)
             if len(matches) > 0:
                 return self.__tubeTemplates[name],matches
         #self.__ball_chart.setup_empty_stack(match)
@@ -102,13 +104,12 @@ class MatchingBalls:
         width = int(self.__image.shape[1] * 0.3)
         height = int(self.__image.shape[0] * 0.3)
         dim = (width, height)
-        edges = cv2.Canny(self.__image, 300, 600)
-        edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
         #cv.imwrite(os.path.join(SCREENSHOT_PATH, 'edges.png'), edges)
         for tube in self.__ball_chart.get_stacks():
             for (x, y, r,c) in tube.get_elements():
+                    
                     # draw the circle
-                    cv2.circle(self.__output, (x, y), r, (c[0],c[1], c[2]), 10)
+                    cv2.circle(self.__output, (x, y), r, (c[0],c[1],c[2]), 10)
                     cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
                     cv2.putText(self.__output, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         resized_input = cv2.cvtColor(cv2.resize(self.__image, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
@@ -117,7 +118,6 @@ class MatchingBalls:
         resized_gray = cv2.cvtColor(cv2.resize(self.__gray, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         #resized_blurred = cv2.cvtColor(cv2.resize(self.__blurred, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         result = np.concatenate((resized_input, resized_gray,resized_output), axis=1)
-        plt.figure(dpi=300)
         plt.imshow(result)
         plt.show()
         cv2.waitKey(0)

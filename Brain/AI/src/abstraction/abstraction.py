@@ -3,6 +3,7 @@ from AI.src.abstraction.stack import Stack
 import numpy as np
 import cv2
 
+from matplotlib import pyplot as plt
 class Abstraction:
     
     
@@ -125,21 +126,33 @@ class Abstraction:
         [stack.set_y_coordinate() for stack in stacks]
         return stacks
 
-    def assign_to_container(self, contained,containers)->dict:
-        elements_per_container ={}
-        for container in containers:
-            elements_per_container[container]=[]
+    def assign_to_container_as_stack(self, contained,containers,containers_coord)->dict:
+        elements_per_container =[]
+        for i in range(len(containers)):
+            elements_per_container.append([])
+        contained.sort(reverse=True,key = lambda x: x[1])
         for obj in contained:
-            for container in containers:
-                if cv2.pointPolygonTest(container,(obj[0],obj[1]),True)<obj[2]:
+            for i in range(len(containers)):                
+                dist = cv2.pointPolygonTest(containers[i],(float(obj[0]),float(obj[1])),True)
+
+                if  dist>0 and dist>obj[2]:
+                    print(i,obj[1])
                     skip=False
-                    for existing in elements_per_container[container]:
-                        if (existing[0] - obj[0])**2 + (existing[1] - obj[1])**2<(existing[2]+obj[2])**2:
+                    for existing in elements_per_container[i]:
+                        if (existing[1] -obj[1])<(existing[2]+obj[2]):
                             skip=True
-                        if not skip:
-                            elements_per_container[container].append(obj)
+                    if not skip:
+                        elements_per_container[i].append(obj)
                     break
-        return elements_per_container
+        empty=[]
+        non_empty=[]
+        for i in range(len(containers)):
+            if len(elements_per_container[i])==0:
+                empty.append(Stack(containers_coord[i]))
+            else:
+                non_empty.append(Stack(containers_coord[i]))
+                non_empty[-1].add_elements(elements_per_container[i])
+        return empty,non_empty
 
     def stack_no_duplicates(self, elements:dict)->list:
         stacks = []
