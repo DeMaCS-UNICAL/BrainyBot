@@ -5,11 +5,13 @@ from  numpy import array_equal
 from AI.src.constants import RESOURCES_PATH
 from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem
 
+from AI.src.abstraction.elementsStack import ElementsStacks
+
 class Validation:
     def __init__(self):
         pass
     
-    def stringfy(self,matrix):
+    def stringfy_matrix(self,matrix):
         string = []
         for i in range(len(matrix)):
             for j in range(len(matrix[i])):
@@ -19,8 +21,9 @@ class Validation:
                         string.append('None')
             string.append("||")
         return string
+    
     def validate_matrix(self, abstraction_result, validation_input):
-        abstraction = self.stringfy(abstraction_result)
+        abstraction = self.stringfy_matrix(abstraction_result)
         validation=[]
         #print(abstraction)
         #print()
@@ -31,7 +34,7 @@ class Validation:
                 validation.append("||")
         #print(validation)
        # return self.levensthein(abstraction_result,expected_result)
-        print(self.levensthein(abstraction,validation))
+        self.levensthein(abstraction,validation)
     
     def levensthein(self,first,second):
         dist = [[0 for col in range(len(second)+1)] for row in range(len(first)+1)]
@@ -46,6 +49,18 @@ class Validation:
                     sub=1
                 dist[i][j]=min(dist[i-1][j]+1,dist[i][j-1]+1,dist[i-1][j-1]+sub)
         print(f"Distance {dist[-1][-1]}")
-                    
-            
+
+
+    def validate_stacks(self, abstraction_result, validation_input):
+        validation=""
+        with open(validation_input) as file:
+            for line in file:
+                validation+=line
+        abstraction=""
+        for elem in abstraction_result:
+            abstraction+=str(elem)
+        print(abstraction)
+        print(validation)
+        self.levensthein(abstraction,validation)
+        
             

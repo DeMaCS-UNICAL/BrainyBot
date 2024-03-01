@@ -17,70 +17,94 @@ class MatchingBalls:
 
     BALLS_DISTANCE_RATIO = 30
     TUBES_DISTANCE_RATIO = 8
-    RADIUS_RATIO = 40
+    RADIUS_RATIO = 60
 
-    def __init__(self, screenshot_path, debug = False):
-        self.finder = ObjectsFinder(screenshot_path,debug=debug, threshold=0.8)
-        
-        self.__image = getImg(os.path.join(SCREENSHOT_PATH, screenshot_path))
-        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot_path),gray=True)
-        self.__output = self.__image.copy()  # Used to display the result
+    def __init__(self, screenshot_path, debug = False,validation=None):
+        self.screenshot=screenshot_path
+        self.debug=debug
+        self.image = None
+        self.__gray = None
+        self.__output = None
+        self.__ball_chart=None
+        self.validation=validation
         self.__tubeTemplates = {}
         self.__balls=[]
+        self.img_width = None
+        
         for file in os.listdir(SPRITE_PATH):
             if file.endswith('.png') or file.endswith('.jpg'):
                 fullname = os.path.join(SPRITE_PATH,file)
-                print(f"Found Tube sprite {fullname}")
+                if not validation:
+                    print(f"Found Tube sprite {fullname}")
                 img = getImg(fullname,gray=True)
                 self.__tubeTemplates[fullname]  = img
+
+    def get_balls_chart(self):
+        return self.abstraction(self.vision())
+
+    def vision(self):
+        self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)
+        
+        self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
+
+        if self.validation==None:
+            plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
+            plt.title(f"Screenshot")
+            plt.show()
+            if not self.debug:
+                plt.pause(0.1)
+
+        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),gray=True)
+        self.__output = self.__image.copy()  # Used to display the result
         self.__ball_chart = ElementsStacks()
         self.img_width = self.__image.shape[1]
+        self.__balls = self.detect_balls()
+        template,containers,coordinates = self.detect_empty_tube()
+        return template,containers,coordinates
             
     
-    def get_balls_chart(self)->ElementsStacks:
-        abstraction = Abstraction()
-        self.__balls = self.detect_balls()
-        #stacks = abstraction.Stack(self.__balls.copy())
-        #self.__ball_chart.add_stacks(stacks)
-        template,tubes = self.detect_empty_tube()
-        all_tubes,tubes_coordinates = self.finder.detect_container(template)
-        empty_stacks,non_empty_stacks = abstraction.assign_to_container_as_stack(self.__balls.copy(),all_tubes, tubes_coordinates)     
-        #width = self.img_width
-        matcher_width, matcher_height = template.shape[::-1]
-        #empty_stacks = abstraction.Empty_Stacks(tubes,width,matcher_width, matcher_height,MatchingBalls.TUBES_DISTANCE_RATIO)
-        #self.Remove_False_Empty_Stack(stacks,empty_stacks,width,matcher_width)
-        #empty_stacks = list(filter(lambda x: (len(x)==0), balls_in_tubes)) 
-        print(f"Empty tubes: {len(empty_stacks)}")
+    def abstraction(self,vision_output)->ElementsStacks:
+        stacker = Abstraction()
+        
+        empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1],vision_output[2]) 
+        matcher_width, matcher_height = vision_output[0].shape[::-1]
         self.__ball_chart.add_stacks(empty_stacks)
         # draw the empty tubes
-        print(f"full stacks: {len(non_empty_stacks)}")
         self.__ball_chart.add_stacks(non_empty_stacks)
-        #print(f"{width/MatchingBalls.TUBES_DISTANCE_RATIO}")
-        for p in empty_stacks:
-            cv2.rectangle(self.__output, (int(p.get_x() - matcher_width/2), int(p.get_y() - matcher_height/2)), 
-                          (int(p.get_x() + matcher_width/2), int(p.get_y() + matcher_height/2)), (0, 0, 255), 3)
-        
+        if self.validation==None:
+            balls_count = 0
+            for l in non_empty_stacks:
+                balls_count+=len(l.get_elements())
+            print("Found ",len(empty_stacks)," empty stacks;",len(non_empty_stacks),"non empty stacks;",balls_count,"balls")
+            for p in empty_stacks:
+                cv2.rectangle(self.__output, (int(p.get_x() - 10), int(p.get_y() - 30)), 
+                            (int(p.get_x() + 10), int(p.get_y() + 30)), (0, 0, 255), 3)
+            self.__show_result()
 
-        self.__show_result()
         return self.__ball_chart
 
     def detect_balls(self)->list:
         height = self.__image.shape[0]
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        maxRadius=int(height / MatchingBalls.RADIUS_RATIO)+5
-        self.balls = self.finder.find_circles(min_dist,minRadius,maxRadius)
+        maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
+        self.balls = self.finder.find_circles(minRadius)
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
 
     def detect_empty_tube(self)->(int,list):
+        c=0
         for name in self.__tubeTemplates:
-            print(f"Trying to detect empty tube {name}")
-            matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_RGB2GRAY),self.__tubeTemplates[name],False)
-            if len(matches) > 0:
-                return self.__tubeTemplates[name],matches
+            if self.validation==None:
+                print(f"Trying to detect empty tube {name}")
+            #matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_RGB2GRAY),self.__tubeTemplates[name],False)
+            #print(len(matches))
+            #if len(matches) > 0:
+            actual_matches,coordinates = self.finder.detect_container(self.__tubeTemplates[name],0.3)
+            if len(actual_matches)>0:
+                return self.__tubeTemplates[name],actual_matches,coordinates
         #self.__ball_chart.setup_empty_stack(match)
-        return None,[]
+        return None,[],[]
         
     def Remove_False_Empty_Stack(self,full,empty, width, matcher_width):
         to_remove=[]

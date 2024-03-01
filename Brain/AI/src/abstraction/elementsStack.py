@@ -12,7 +12,7 @@ class ElementsStacks:
             cls.__instance = super().__new__(cls)
         return cls.__instance
 
-    def __init__(self,tolerance=50,max_distance=150, min_number_elements=4) -> None:
+    def __init__(self,  tolerance=50,max_distance=150, min_number_elements=4) -> None:
         if type(self).__inited:
             return
         type(self).__inited = True
@@ -66,3 +66,4 @@ class ElementsStacks:
             if len(stack.get_elements())==0:
                 to_return.append(stack)
         return to_return
+    

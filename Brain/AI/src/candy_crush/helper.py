@@ -51,7 +51,7 @@ def candy_crush(screenshot,debug = False, validation=None):
     #print(f"NODES --> {nodesAndInformation}")
     validator = Validation()
     
-    if validation!=None:
+    if validation!=None:##MODIFY: pass asp input instead of object_matrix
         validator.validate_matrix(objects_matrix,validation)
     if(debug):
      #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:

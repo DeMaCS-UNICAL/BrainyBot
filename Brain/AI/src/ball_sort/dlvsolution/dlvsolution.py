@@ -21,33 +21,28 @@ class DLVSolution:
         except Exception as e:
             print(str(e))
 
-    def __init_static_facts(self, colors: [], balls: [], tubes: []):
-        for color in colors:
-            self.__static_facts.add_object_input(color)
-
-        for ball in balls:
-            self.__static_facts.add_object_input(ball)
-
-        tube_size = 0
+    def __init_facts(self, inputs: []):
+        
         full_tube = 0
-        for tube in tubes:
-            self.__static_facts.add_object_input(tube)
-            if len(tube.get_balls()) > 0:
-                tube_size = len(tube.get_balls())
-                full_tube += 1
-
-        self.__static_facts.add_program("tubeSize(" + str(tube_size) + ").")
+        for elem in inputs:
+            if(isinstance(elem,Color) or isinstance(elem,Ball)):
+                self.__static_facts.add_object_input(elem)
+            if(isinstance(elem,Tube)):
+                self.__static_facts.add_object_input(elem)
+                if len(elem.get_balls()) > 0:
+                    tube_size = len(elem.get_balls())
+                    full_tube += 1
+                    self.__static_facts.add_program("tubeSize(" + str(tube_size) + ").")
+            if(isinstance(elem,On)):
+                self.__dinamic_facts.add_object_input(elem)
         self.__static_facts.add_program("fullTube(" + str(full_tube) + ").")
 
 
-    def __init_dinamic_facts(self, on: []):
-        for o in on:
-            self.__dinamic_facts.add_object_input(o)
 
     def __init_fixed(self):
         self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort.txt"))
 
-    def call_asp(self, colors: [], balls: [], tubes: [], on: []):
+    def call_asp(self, inputs: []):
 
         ASPMapper.get_instance().register_class(Color)
         ASPMapper.get_instance().register_class(Ball)
@@ -56,8 +51,7 @@ class DLVSolution:
         ASPMapper.get_instance().register_class(On)
         ASPMapper.get_instance().register_class(GameOver)
 
-        self.__init_static_facts(colors, balls, tubes)
-        self.__init_dinamic_facts(on)
+        self.__init_facts(inputs)
         self.__init_fixed()
 
         self.__handler.add_program(self.__static_facts)

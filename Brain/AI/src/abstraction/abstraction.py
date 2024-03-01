@@ -136,10 +136,9 @@ class Abstraction:
                 dist = cv2.pointPolygonTest(containers[i],(float(obj[0]),float(obj[1])),True)
 
                 if  dist>0 and dist>obj[2]:
-                    print(i,obj[1])
                     skip=False
                     for existing in elements_per_container[i]:
-                        if (existing[1] -obj[1])<(existing[2]+obj[2]):
+                        if (existing[1] -obj[1])<existing[2]+obj[2]-(existing[2]+obj[2])*10/100:
                             skip=True
                     if not skip:
                         elements_per_container[i].append(obj)

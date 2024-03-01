@@ -32,3 +32,9 @@ class Stack:
     
     def add_elements(self, elements: list):
         self.__elements.extend(elements)
+
+    def to_string(self):
+        result=""
+        for elem in self.get_elements():
+            result+=elem.to_string()+"\n"
+        return result

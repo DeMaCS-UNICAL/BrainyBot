@@ -6,11 +6,10 @@ from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
 import constants
 import sys
-
+from contextlib import redirect_stdout
 gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
 
 def Start(screenshot,args):
-    print(f"Starting AI for game {args.games}")
     validate=None
     if args.test!=None:
         validate=os.path.join(VALIDATION_PATH,args.games,screenshot+".txt")
@@ -54,8 +53,6 @@ if __name__ == '__main__':
             print(screenshot)
         Start(screenshot,args)
     else:
-        if args.games == "ball_sort":
-            print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
         for filename in os.listdir(constants.SCREENSHOT_PATH):
             if filename.startswith(args.test):
                 screenshot = filename
@@ -63,6 +60,10 @@ if __name__ == '__main__':
                 #print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
                 #with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
                   #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
+                
+                print(f"Starting AI for game {args.games}")
+                #with open(os.path.join(VALIDATION_PATH,"ball_sort",screenshot+'.txt'), 'w') as f:
+                    #with redirect_stdout(f):
                 Start(screenshot,args)
     
     

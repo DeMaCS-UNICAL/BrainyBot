@@ -16,9 +16,15 @@ class Color(Predicate):
     __colors = []
     __MAX_DISTANCE = 40
 
+    def reset():
+        Color.__ids = count(1, 1)
+        Color.__colors = []
+        Color.__MAX_DISTANCE = 40
+
     def __init__(self, bgr=None):
         Predicate.__init__(self, [("id", int)])
-        self.__id = next(Color.__ids)
+        #self.__id = next(Color.__ids)
+        self.__id = -1
         self.__bgr = bgr
 
     def get_id(self) -> int:
@@ -26,12 +32,27 @@ class Color(Predicate):
 
     def set_id(self, id):
         self.__id = id
+    
+    def incr_id(self):
+        self.__id+=1
 
     def get_bgr(self) -> []:
         return self.__bgr
 
     def set_bgr(self, bgr: []):
         self.__bgr = bgr
+
+    @staticmethod
+    def is_less_than(color1,color2):
+        if color1.__bgr[0]<color2.__bgr[0]:
+            return True
+        if color1.__bgr[0]-color2.__bgr[0]<10:
+            if color1.__bgr[1]<color2.__bgr[1]:
+                return True
+            if color1.__bgr[1]-color2.__bgr[1]<10:
+                if color1.__bgr[2]<color2.__bgr[2]:
+                    return True
+        return False
 
     @staticmethod
     def __euclidean_distance(color1, color2):
@@ -43,14 +64,31 @@ class Color(Predicate):
             if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
                 return color
         color = Color(bgr)
-        Color.__colors.append(color)
+        pos=0
+        for i in range(len(Color.__colors)):
+            if Color.is_less_than(color,Color.__colors[i]):
+                for j in range(i,len(Color.__colors)):
+                    Color.__colors[j].incr_id()
+                break
+            pos+=1
+        Color.__colors.insert(pos,color)
+        color.set_id(pos+1 )
         return color
+    
+    @staticmethod
+    def get_bgr_by_id(id):
+        for color in Color.__colors:
+            if color.__id==id:
+                return color.__bgr
 
 
 class Ball(Predicate):
     predicate_name = "ball"
 
     __ids = count(1, 1)
+
+    def reset():
+        Ball.__ids = count(1, 1)
 
     def __init__(self, color=None):
         Predicate.__init__(self, [("id", int), ("color", int)])
@@ -69,11 +107,17 @@ class Ball(Predicate):
     def set_color(self, color):
         self.__color = color
 
+    def __str__(self):
+        return str(self.__color)
+
 
 class Tube(Predicate):
     predicate_name = "tube"
 
     __ids = count(1, 1)
+
+    def reset():
+        Tube.__ids = count(1, 1)
 
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
@@ -109,6 +153,12 @@ class Tube(Predicate):
     def set_y(self, y):
         self.__y = y
 
+    def __str__(self):
+        to_return = "tube:"+str(self.__id)+"\n"
+        for i in range(len(self.__balls),0,-1):
+            to_return+=str(self.__balls[i-1])+"\n"
+        return to_return
+
 
 class On(Predicate):
     predicate_name = "on"
@@ -143,6 +193,7 @@ class On(Predicate):
 
     def set_step(self, step):
         self.__step = step
+    
 
 
 class Move(Predicate):
@@ -207,7 +258,7 @@ def get_colors(tubes: []):
     for tube in tubes:
         for ball in tube.get_elements():
             colors.add(Color.get_color(ball[3]))
-    return colors
+    return list(colors)
 
 
 def get_balls_and_tubes(tubes: []):

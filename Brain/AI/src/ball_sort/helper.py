@@ -4,9 +4,12 @@ import time
 
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
-from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution
+from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution,Ball,Color,Tube
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
 from AI.src.abstraction.elementsStack import ElementsStacks
+
+from AI.src.vision.feedback import Feedback
+from AI.src.validation.validation import Validation
 
 
 def __get_ball_tube(ball, ons, step):
@@ -14,21 +17,35 @@ def __get_ball_tube(ball, ons, step):
         if on.get_ball_above() == ball and on.get_step() == step:
             return on.get_tube()
 
-
-def ball_sort(screenshot:str, debug = False, validation=None):
-
-    matcher = MatchingBalls(screenshot,debug)
-    balls_chart = matcher.get_balls_chart()
-    colors = get_colors(balls_chart.get_stacks())
+def asp_input(balls_chart):
+    input = get_colors(balls_chart.get_stacks())
     tubes, balls = get_balls_and_tubes(balls_chart.get_stacks())
-    empty_stacks = balls_chart.get_empty_stack()
-    print(f"{len(tubes)-len(empty_stacks)}\t{len(empty_stacks)}\t{len(balls)}\t{len(colors)}",file=sys.stderr)
+    input.extend(tubes)
+    input.extend(balls)
     on = get_balls_position(tubes)
+    input.extend(on)
+    empty_stacks = balls_chart.get_empty_stack()
+    input.extend(empty_stacks)
+    return input,tubes
+
+def ball_sort(screenshot, debug = False, validation=None):
+
+    matcher = MatchingBalls(screenshot,debug,validation)
+    balls_chart = matcher.get_balls_chart()
+    input,tubes = asp_input(balls_chart)
+    validator = Validation()
+    if validation!=None:
+        validate=[]
+        validate.extend(tubes)
+        validator.validate_stacks(validate,validation)
     if(debug):
+        Ball.reset()
+        Tube.reset()
+        Color.reset()
         balls_chart.Clean()
         return
     solution = DLVSolution()
-    moves, ons = solution.call_asp(colors, balls, tubes, on)
+    moves, ons = solution.call_asp(input)
 
     moves.sort(key=lambda x: x.get_step())
     ons.sort(key=lambda x: x.get_step())
