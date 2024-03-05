@@ -1,6 +1,6 @@
 import argparse
 import os
-from AI.src.ball_sort.helper import ball_sort
+from AI.src.ball_sort.helper import ball_sort,check_if_to_revalidate
 from AI.src.candy_crush.helper import candy_crush
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
@@ -8,12 +8,38 @@ import constants
 import sys
 from contextlib import redirect_stdout
 gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
+validationDictionary = { "ball_sort" : check_if_to_revalidate }
 
-def Start(screenshot,args):
+
+def Start(screenshot,args,iteration=0):
     validate=None
     if args.test!=None:
         validate=os.path.join(VALIDATION_PATH,args.games,screenshot+".txt")
-    gameDictionary[args.games](screenshot,args.debugVision,validate)
+    return gameDictionary[args.games](screenshot,args.debugVision,validate,iteration)
+
+
+def validate_game(args):
+    not_done=True
+    last_distance=10000
+    previous_threshold = 0
+    it=0
+    while(not_done):
+        outputs=[]
+        info=[]
+        for filename in os.listdir(constants.SCREENSHOT_PATH):
+            if filename.startswith(args.test):
+                screenshot = filename
+                print(f"{screenshot}")
+                #print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
+                #with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
+                #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
+                
+                #print(f"Starting AI for game {args.games}")
+                #with open(os.path.join(VALIDATION_PATH,"ball_sort",screenshot+'.txt'), 'w') as f:
+                    #with redirect_stdout(f):
+                outputs.append(Start(screenshot,args,it))
+        not_done,info=validationDictionary[args.games](outputs,info)
+        it+=1
 
 if __name__ == '__main__':
     msg = "Description"
@@ -53,18 +79,9 @@ if __name__ == '__main__':
             print(screenshot)
         Start(screenshot,args)
     else:
-        for filename in os.listdir(constants.SCREENSHOT_PATH):
-            if filename.startswith(args.test):
-                screenshot = filename
-                print(f"{screenshot}")
-                #print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
-                #with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
-                  #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
-                
-                print(f"Starting AI for game {args.games}")
-                #with open(os.path.join(VALIDATION_PATH,"ball_sort",screenshot+'.txt'), 'w') as f:
-                    #with redirect_stdout(f):
-                Start(screenshot,args)
+        validate_game(args)
+        
+
     
     
 

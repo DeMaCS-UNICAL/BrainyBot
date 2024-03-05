@@ -1,12 +1,13 @@
 import os
 import sys
 import time
-
+import re
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution,Ball,Color,Tube
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
 from AI.src.abstraction.elementsStack import ElementsStacks
+from AI.src.ball_sort.constants import SRC_PATH
 
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
@@ -28,22 +29,51 @@ def asp_input(balls_chart):
     input.extend(empty_stacks)
     return input,tubes
 
-def ball_sort(screenshot, debug = False, validation=None):
+def check_if_to_revalidate(output,last_output):
+    not_done=True
+    distance_sum=0
+    threshold = output[0][1]
+    for o in output:
+        distance_sum+=o[0]
+    if len(last_output)==0:
+        last_output=[10000,0]
+    last_distance_sum=last_output[0]
+    last_threshold = last_output[1]
+    print("distance sum:",distance_sum,"threshold:",threshold)
+    if distance_sum <2:
+        persist_threshold(threshold)
+        not_done= False
+    elif distance_sum>last_distance_sum :
+        print("distance sum:",distance_sum,"last distance:",last_distance_sum)
+        persist_threshold(last_threshold)
+        not_done= False
+    return not_done,[distance_sum,threshold]
 
-    matcher = MatchingBalls(screenshot,debug,validation)
+
+def persist_threshold(value):
+    f = open(os.path.join(SRC_PATH,"config"), "r")
+    x=f.read()
+    f.close()
+    f = open(os.path.join(SRC_PATH,"config"), "w")
+    f.write(re.sub('CANNY_THRESHOLD=([^\n]+)', 'CANNY_THRESHOLD='+str(value), x,flags=re.M))
+    print("threshold set to:", value)
+
+def ball_sort(screenshot, debug = False, validation=None,iteration=0):
+    matcher = MatchingBalls(screenshot,debug,validation,iteration)
     balls_chart = matcher.get_balls_chart()
     input,tubes = asp_input(balls_chart)
     validator = Validation()
+    distance=0
     if validation!=None:
         validate=[]
         validate.extend(tubes)
-        validator.validate_stacks(validate,validation)
+        distance = validator.validate_stacks(validate,validation)
     if(debug):
         Ball.reset()
         Tube.reset()
         Color.reset()
         balls_chart.Clean()
-        return
+        return distance, matcher.canny_threshold
     solution = DLVSolution()
     moves, ons = solution.call_asp(input)
 

@@ -38,17 +38,17 @@ class Validation:
     
     def levensthein(self,first,second):
         dist = [[0 for col in range(len(second)+1)] for row in range(len(first)+1)]
-        for i in range(1,len(first)+1):
+        for i in range(0,len(first)+1):
             dist[i][0]=i
-        for j in range(1,len(second)+1):
+        for j in range(0,len(second)+1):
             dist[0][j] = j
-            for i in range(1,len(first)+1):
-                if first[i-1]==second[j-1]:
-                    sub=0
-                else:
-                    sub=1
-                dist[i][j]=min(dist[i-1][j]+1,dist[i][j-1]+1,dist[i-1][j-1]+sub)
-        print(f"Distance {dist[-1][-1]}")
+            if j>0:
+                for i in range(1,len(first)+1):
+                    if first[i-1]==second[j-1]:
+                        dist[i][j]=dist[i-1][j-1]
+                    else:
+                        dist[i][j]=1 + min(dist[i-1][j],dist[i][j-1],dist[i-1][j-1])
+        return dist[-1][-1]
 
 
     def validate_stacks(self, abstraction_result, validation_input):
@@ -57,10 +57,12 @@ class Validation:
             for line in file:
                 validation+=line
         abstraction=""
-        for elem in abstraction_result:
-            abstraction+=str(elem)
-        print(abstraction)
-        print(validation)
-        self.levensthein(abstraction,validation)
+        for i in range(len(abstraction_result)):
+            abstraction+=str(abstraction_result[i])
+            if i<len(abstraction_result)-1:
+                abstraction+="\n"
+        #print("abstr:",abstraction)
+        #print("valid:",validation)
+        return self.levensthein(abstraction,validation)
         
             

@@ -127,12 +127,12 @@ class ObjectsFinder:
         # Create a contour from the points
         return points.reshape((-1, 1, 2))
 
-    def find_circles(self, min_radius):
+    def find_circles(self, min_radius,canny_threshold):
         circle_shape = self.get_circle_shape()
         gray = self.__gray
         # threshold
         #blurred_img = cv2.blur(gray,ksize=(5,5))
-        canny = cv2.Canny(gray, 30,80)
+        canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
         if not self.validation:
@@ -202,7 +202,7 @@ class ObjectsFinder:
         return balls
 
     
-    def detect_container(self,template,tolerance=0,rotate=False):
+    def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
 
         # Convert to grayscale and apply edge detection
         tem_gray = template.copy()
@@ -221,9 +221,11 @@ class ObjectsFinder:
         to_return=[]
         for i in range(len(containers)):
             (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
-            if not rotate and abs(tem_a+cont_a)%179>5:
+            if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
                     continue
-            if tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*0.05:
+            if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
+                continue
+            if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
                 continue
             to_return.append(containers[i])
             coordinates.append((x,y))

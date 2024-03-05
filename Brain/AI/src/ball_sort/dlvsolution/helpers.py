@@ -154,9 +154,10 @@ class Tube(Predicate):
         self.__y = y
 
     def __str__(self):
-        to_return = "tube:"+str(self.__id)+"\n"
+        to_return = "tube:"+str(self.__id)
         for i in range(len(self.__balls),0,-1):
-            to_return+=str(self.__balls[i-1])+"\n"
+            to_return+="\n"
+            to_return+=str(self.__balls[i-1])
         return to_return
 
 

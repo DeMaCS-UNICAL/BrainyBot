@@ -1,10 +1,11 @@
 import os
 
+import re
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 import sys 
-from AI.src.ball_sort.constants import SPRITE_PATH
+from AI.src.ball_sort.constants import SPRITE_PATH,SRC_PATH
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.objectsFinder import ObjectsFinder
@@ -19,7 +20,7 @@ class MatchingBalls:
     TUBES_DISTANCE_RATIO = 8
     RADIUS_RATIO = 60
 
-    def __init__(self, screenshot_path, debug = False,validation=None):
+    def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
         self.screenshot=screenshot_path
         self.debug=debug
         self.image = None
@@ -30,6 +31,8 @@ class MatchingBalls:
         self.__tubeTemplates = {}
         self.__balls=[]
         self.img_width = None
+        self.canny_threshold,self.proportion_tolerance,self.size_tolerance = self.retrieve_config()
+        self.canny_threshold = self.adjust_threshold(iteration)
         
         for file in os.listdir(SPRITE_PATH):
             if file.endswith('.png') or file.endswith('.jpg'):
@@ -38,6 +41,21 @@ class MatchingBalls:
                     print(f"Found Tube sprite {fullname}")
                 img = getImg(fullname,gray=True)
                 self.__tubeTemplates[fullname]  = img
+
+    def adjust_threshold(self,iteration):
+        if iteration==0:
+            return self.canny_threshold
+        return self.canny_threshold+iteration*10
+                
+    def retrieve_config(self):
+        f = open(os.path.join(SRC_PATH,"config"), "r")
+        x=f.read()
+        f.close()
+        canny_threshold=int(re.search("CANNY_THRESHOLD=([^\n]+)", x,flags=re.M).group(1))
+        proportion_tolerance=float(re.search("TUBE_PROPORTION_TOLERANCE=([^\n]+)", x,flags=re.M).group(1))
+        size_tolerance=float(re.search("TUBE_SIZE_TOLERANCE=([^\n]+)", x,flags=re.M).group(1))
+        return canny_threshold,proportion_tolerance,size_tolerance
+        
 
     def get_balls_chart(self):
         return self.abstraction(self.vision())
@@ -88,7 +106,7 @@ class MatchingBalls:
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
         maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        self.balls = self.finder.find_circles(minRadius)
+        self.balls = self.finder.find_circles(minRadius,self.canny_threshold)
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
 
@@ -100,7 +118,7 @@ class MatchingBalls:
             #matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_RGB2GRAY),self.__tubeTemplates[name],False)
             #print(len(matches))
             #if len(matches) > 0:
-            actual_matches,coordinates = self.finder.detect_container(self.__tubeTemplates[name],0.3)
+            actual_matches,coordinates = self.finder.detect_container(self.__tubeTemplates[name],self.proportion_tolerance,self.size_tolerance)
             if len(actual_matches)>0:
                 return self.__tubeTemplates[name],actual_matches,coordinates
         #self.__ball_chart.setup_empty_stack(match)
