@@ -59,10 +59,9 @@ class Validation:
         abstraction=""
         for i in range(len(abstraction_result)):
             abstraction+=str(abstraction_result[i])
-            if i<len(abstraction_result)-1:
-                abstraction+="\n"
         #print("abstr:",abstraction)
         #print("valid:",validation)
+        #print(abstraction,end="")
         return self.levensthein(abstraction,validation)
         
             

@@ -61,7 +61,11 @@ def persist_threshold(value):
 def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,validation,iteration)
     balls_chart = matcher.get_balls_chart()
-    input,tubes = asp_input(balls_chart)
+    if balls_chart!=None:
+        input,tubes = asp_input(balls_chart)
+    else:
+        input=[]
+        tubes=[]
     validator = Validation()
     distance=0
     if validation!=None:
@@ -72,7 +76,8 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
         Ball.reset()
         Tube.reset()
         Color.reset()
-        balls_chart.Clean()
+        if balls_chart!=None:
+            balls_chart.Clean()
         return distance, matcher.canny_threshold
     solution = DLVSolution()
     moves, ons = solution.call_asp(input)

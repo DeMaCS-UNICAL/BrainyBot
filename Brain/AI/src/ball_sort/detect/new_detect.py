@@ -58,7 +58,10 @@ class MatchingBalls:
         
 
     def get_balls_chart(self):
-        return self.abstraction(self.vision())
+        vision_output=self.vision()
+        if len(vision_output[1])==0:
+            return None
+        return self.abstraction(vision_output)
 
     def vision(self):
         self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)

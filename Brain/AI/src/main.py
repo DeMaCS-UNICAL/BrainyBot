@@ -36,7 +36,8 @@ def validate_game(args):
                 
                 #print(f"Starting AI for game {args.games}")
                 #with open(os.path.join(VALIDATION_PATH,"ball_sort",screenshot+'.txt'), 'w') as f:
-                    #with redirect_stdout(f):
+                 #   with redirect_stdout(f):
+                  #      outputs.append(Start(screenshot,args,it))
                 outputs.append(Start(screenshot,args,it))
         not_done,info=validationDictionary[args.games](outputs,info)
         it+=1
