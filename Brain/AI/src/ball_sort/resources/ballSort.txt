@@ -4,40 +4,39 @@ move(B, T, S) | notMove(B, T, S) :- ball(B, _), tube(T), step(S), not gameOver(S
 %CHECK
 
 %PREDICATI AUSILIARI
-
+feedback_on(B1,B2,T,1):-on(B1,B2,T,S+1),step(S).
 %Nuovo stato delle boccette dopo una mossa allo step S
 on(B1, B2, T, S + 1) :- step(S), move(B1, T, S), onTheTop(B2, T, S).
 on(B1, 0, T, S + 1) :- step(S), move(B1, T, S), not notEmptyTube(T, S).
 on(B1, B2, T, S + 1) :- step(S), on(B1, B2, T, S), not ballMoved(B1,S).
-
 %Numero di palline contenute nella boccetta T allo step S
 size(T, S, N) :- step(S), tube(T), #count{B: on(B, _, T, S)} = N.
 
 %La pallina B ha un'altra pallina sopra allo step S
 ballOnIt(B, S) :- step(S), on(_, B, _, S), B != 0.
 
-%La pallina B è in cima alla boccetta T allo step S
+%La pallina B ï¿½ in cima alla boccetta T allo step S
 onTheTop(B, T, S) :- step(S), on(B, _, T, S), not ballOnIt(B,S).
 
 %Numero di palline di un certo colore in cima alle boccette allo step S
 ballOnTheTopOfColor(C, N, S) :- step(S), color(C), #count{B : onTheTop(B, _, S), ball(B, C)} = N.
 
-%La pallina B è nel tubo T allo step S
+%La pallina B ï¿½ nel tubo T allo step S
 onTheTube(B, T, S) :- step(S), on(B, _, T, S).
 
 %E' stata effettuata una mossa allo step S
 existMove(S) :- step(S), move(_,_,S).
 
-%La boccetta T non è vuota allo step S
+%La boccetta T non ï¿½ vuota allo step S
 notEmptyTube(T, S) :- step(S), on(_, _, T, S).
 
-%Allo step S la boccetta T è vuota
+%Allo step S la boccetta T ï¿½ vuota
 existEmptyTube(T, S) :- tube(T), step(S), not notEmptyTube(T,S).
 
-%La pallina B è stata mossa allo step S
+%La pallina B ï¿½ stata mossa allo step S
 ballMoved(B, S) :- step(S), move(B, _, S).
 
-%Allo step S la boccetta T è completa
+%Allo step S la boccetta T ï¿½ completa
 completedTube(T, S) :- step(S), tube(T), #count{C : on(B, _, T, S), ball(B, C)} = 1, size(T, S, N), tubeSize(M), N = M.
 
 %Numero di boccette completate allo step S
@@ -48,36 +47,36 @@ singolColorTube(T, S) :- on(_, _, T, S), #count{C : on(B, _, T, S), ball(B, C)} 
 singolColorTubeWithColor(T, C, S) :- singolColorTube(T, S), on(B,_,T,S), ball(B,C).
 singolColorTubeWithColorMax(T, C, S) :- singolColorTubeWithColor(T, C, S), #max{N : singolColorTubeWithColor(T1, C, S), size(T1, S, N)} = MAX, size(T, S, MAX).
 
-%Il gioco è finito allo step S se tutte le boccette sono state completate a tale step
+%Il gioco ï¿½ finito allo step S se tutte le boccette sono state completate a tale step
 gameOver(S) :- fullTube(N), completed(N, S).
 
 %CONSTRAINTS
 
-%Non è possibile spostare una pallina che non è in cima allo step S
+%Non ï¿½ possibile spostare una pallina che non ï¿½ in cima allo step S
 :- step(S), move(B,_,S), on(B1, B, _, S).
 
-%Non è possibile spostare una pallina in una boccetta piena allo step S
+%Non ï¿½ possibile spostare una pallina in una boccetta piena allo step S
 :- step(S), move(B, T, S), size(T, S, N), tubeSize(M), N = M.
 
-%Non è possibile spostare una pallina nella stessa boccetta in cui si trova
+%Non ï¿½ possibile spostare una pallina nella stessa boccetta in cui si trova
 :- step(S), move(B, T, S), on(B,_,T,S).
 
-%Non è possibile spostare una pallina su un'altra di colore diverso allo step S
+%Non ï¿½ possibile spostare una pallina su un'altra di colore diverso allo step S
 :- step(S), move(B, T, S), onTheTop(B1, T, S), ball(B, C1), ball(B1, C2), C1 != C2.
 
-%Non è possibile spostare due palline allo stesso step S
+%Non ï¿½ possibile spostare due palline allo stesso step S
 :- step(S), move(B1, _, S), move(B2, _, S), B1 != B2.
 
-%Non è possibile spostare una pallina in due boccette diverse allo stesso step S
+%Non ï¿½ possibile spostare una pallina in due boccette diverse allo stesso step S
 :- step(S), move(B, T1, S), move(B, T2, S), T1 != T2.
 
-%Non è possibile spostare la stessa pallina in due step consecutivi
+%Non ï¿½ possibile spostare la stessa pallina in due step consecutivi
 :- step(S), move(B, _, S), move(B, _, S - 1).
 
-%Non è possibile spostare una pallina che si trova in un tubo già completo allo step S
+%Non ï¿½ possibile spostare una pallina che si trova in un tubo giï¿½ completo allo step S
 :- step(S), move(B, _, S), on(B, _, T, S), completedTube(T, S).
 
-%Non è possibile che ad uno step S non viene eseguita nessuna mossa se il gioco non è ancora stato completato
+%Non ï¿½ possibile che ad uno step S non viene eseguita nessuna mossa se il gioco non ï¿½ ancora stato completato
 :- step(S), not existMove(S), not gameOver(S).
 
 %OPTIMIZE
@@ -85,16 +84,16 @@ gameOver(S) :- fullTube(N), completed(N, S).
 %Pago se NON sposto una pallina di colore C in una boccetta che contiene solo palline di colore C
 :~ step(S), notMove(B, T1, S), ball(B,C), not onTheTube(B, T1, S), onTheTop(B, _, S), singolColorTubeWithColorMax(T1, C, S). [1@7, B,S]
 
-%Pago se sposto una pallina in una boccetta con colori diversi e c'è una boccetta vuota in cui spostare tale pallina
+%Pago se sposto una pallina in una boccetta con colori diversi e c'ï¿½ una boccetta vuota in cui spostare tale pallina
 :~ step(S), move(B,T1,S), not singolColorTube(T1,S), notEmptyTube(T1,S), existEmptyTube(T2,S), T1 != T2. [1@6, B, S]
 
 %Pago se ci sono tante palline di colore C in cima alle boccette e sposto una pallina di colore C1
 :~ step(S), move(B, _, S), ball(B, C), ballOnTheTopOfColor(C, N, S), ballOnTheTopOfColor(C1, M, S), C != C1, N < M. [1@5, B, S]
 
-%Pago se sposto una pallina che si trova già in una boccetta con un solo colore uguale a quello della pallina e tale boccetta è la più piena tra le boccette che contengono palline di quel colore
+%Pago se sposto una pallina che si trova giï¿½ in una boccetta con un solo colore uguale a quello della pallina e tale boccetta ï¿½ la piï¿½ piena tra le boccette che contengono palline di quel colore
 :~ step(S), onTheTube(B, T1, S), ball(B,C), singolColorTubeWithColorMax(T1,C,S), move(B, T2, S), not singolColorTubeWithColorMax(T2, C, S). [1@4, B, S]
 
-%Pago se NON preferisco le mosse che 'liberano' palline di colore C ed esiste già un tubo che contiene solo il colore C
+%Pago se NON preferisco le mosse che 'liberano' palline di colore C ed esiste giï¿½ un tubo che contiene solo il colore C
 :~ step(S), move(B, _, S), onTheTop(B1, T, S), not singolColorTube(T, S), on(B1, B2, T, S), ball(B2, C), singolColorTubeWithColor(_, C, S), B != B1. [1@3, B, S]
 
 %Spostare preferibilmente una pallina che sta su una una pallina dello stesso colore

@@ -12,6 +12,7 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
+from AI.src.ball_sort.dlvsolution.dlvsolution import Ball,Color,Tube,On
 
 
 class MatchingBalls:
@@ -64,11 +65,15 @@ class MatchingBalls:
         return self.abstraction(vision_output)
 
     def vision(self):
+        
+        Ball.reset()
+        Tube.reset()
+        Color.reset()
         self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)
         
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
 
-        if self.validation==None:
+        if self.debug and self.validation==None:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show()
@@ -149,17 +154,18 @@ class MatchingBalls:
         width = int(self.__image.shape[1] * 0.3)
         height = int(self.__image.shape[0] * 0.3)
         dim = (width, height)
+        img_copy=self.__output.copy()
         #cv.imwrite(os.path.join(SCREENSHOT_PATH, 'edges.png'), edges)
         for tube in self.__ball_chart.get_stacks():
             for (x, y, r,c) in tube.get_elements():
                     
                     # draw the circle
-                    cv2.circle(self.__output, (x, y), r, (c[0],c[1],c[2]), 10)
-                    cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                    cv2.putText(self.__output, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.circle(img_copy, (x, y), r, (c[0],c[1],c[2]), 10)
+                    cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
+                    cv2.putText(img_copy, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         resized_input = cv2.cvtColor(cv2.resize(self.__image, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         #resized_edges = cv2.cvtColor(cv2.resize(edges, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
-        resized_output = cv2.cvtColor(cv2.resize(self.__output, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
+        resized_output = cv2.cvtColor(cv2.resize(img_copy, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         resized_gray = cv2.cvtColor(cv2.resize(self.__gray, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         #resized_blurred = cv2.cvtColor(cv2.resize(self.__blurred, dim, interpolation=cv2.INTER_AREA), cv2.COLOR_BGR2RGB)
         result = np.concatenate((resized_input, resized_gray,resized_output), axis=1)

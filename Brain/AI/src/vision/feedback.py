@@ -24,7 +24,7 @@ class Feedback:
         self.current_abstraction_to_asp_callback = abstraction_to_asp
         for obj in expected_result.get_answer_set():
             if(obj.startswith('feedback_')):
-                self.current_expected_result.append(obj[8:])
+                self.current_expected_result.append(obj[9:])
         return self.main()
     
     
@@ -38,13 +38,21 @@ class Feedback:
             exit(1)
 
     def compare_with_expected(self,actual)->bool:
-        to_return= np.all(np.isin(self.current_expected_result, actual))
+        print(self.current_expected_result)
+        print("______________________________________")
+        print(actual)
+        to_return= True
+        for x in self.current_expected_result:
+            if not np.isin(x, actual).any():
+                print(x)
+                to_return=False
+                break
         print("success? ",to_return)
         self.current_expected_result=[]
         return to_return
 
     def board_is_stable(self, abstr1, abstr2):
-        if np.array_equal(abstr1,abstr2):
+        if np.isin(abstr1,abstr2).any():
             return True
         return False
 
@@ -60,16 +68,15 @@ class Feedback:
         vision_result = self.current_vision_callback()
         abstraction_result = self.current_abstraction_callback(vision_result)
         asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-        mapped_objects1 = self.get_mapped(asp_input)
+        mapped_objects1 = self.get_mapped(asp_input[0])
         while True:
             self.take_screenshot()
             vision_result = self.current_vision_callback()
             abstraction_result = self.current_abstraction_callback(vision_result)
             asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-            mapped_objects2 = self.get_mapped(asp_input)
+            mapped_objects2 = self.get_mapped(asp_input[0])
             if not self.board_is_stable(mapped_objects1,mapped_objects2):
                 mapped_objects1 = mapped_objects2
-                sleep(0.1)
             else:
                 return (self.compare_with_expected(mapped_objects2),abstraction_result,asp_input)
    

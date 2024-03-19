@@ -58,7 +58,7 @@ class Validation:
                 validation+=line
         abstraction=""
         for i in range(len(abstraction_result)):
-            abstraction+=str(abstraction_result[i])
+            abstraction+=abstraction_result[i].custom_str()
         #print("abstr:",abstraction)
         #print("valid:",validation)
         #print(abstraction,end="")

@@ -28,6 +28,7 @@ class ObjectsFinder:
         
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
+        self.debug=debug
 
 
     def worker_process(self,id,dictionary,elements:list,regmax):
@@ -135,7 +136,7 @@ class ObjectsFinder:
         canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
-        if not self.validation:
+        if self.debug and not self.validation:
             canny = cv2.cvtColor(canny, cv2.COLOR_GRAY2RGB)
             canny2 = canny.copy()
             canny3 = canny.copy()
@@ -154,16 +155,16 @@ class ObjectsFinder:
                 y=int(center[1])
                 r=int(r)
                 color = np.array(self.__blurred[y,x])
-                if not self.validation:
+                if self.debug and not self.validation:
                     print(f"Found ball:({x}, {y}): {color}")
-                    # draw the circle
-                    cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                    #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
-                    cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                # draw the circle
+                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
+                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 balls.append([x, y, r,color.tolist()])
-            if not self.validation:
+            if self.debug and not self.validation:
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
                 plt.show()
                 cv2.waitKey(0)

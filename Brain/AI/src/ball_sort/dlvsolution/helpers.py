@@ -5,6 +5,7 @@ from math import sqrt
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
 
 from AI.src.constants import DLV_PATH
 
@@ -107,8 +108,6 @@ class Ball(Predicate):
     def set_color(self, color):
         self.__color = color
 
-    def __str__(self):
-        return str(self.__color)
 
 
 class Tube(Predicate):
@@ -145,15 +144,15 @@ class Tube(Predicate):
         return self.__x
 
     def set_x(self, x):
-        self.__x = x
+        self.__x = int(x)
 
     def get_y(self) -> int:
         return self.__y
 
     def set_y(self, y):
-        self.__y = y
+        self.__y = int(y)
 
-    def __str__(self):
+    def custom_str(self):
         to_return = "T\n"
         for i in range(len(self.__balls),0,-1):
             to_return+=str(self.__balls[i-1])+"\n"
@@ -162,11 +161,11 @@ class Tube(Predicate):
 
 class On(Predicate):
     predicate_name = "on"
-
-    def __init__(self, ball_above=None, ball_below=None, tube=None, step=None):
-        Predicate.__init__(self, [("ball_above", int), ("ball_below", int), ("tube", int), ("step", int)])
+    def __init__(self, ball_above=None, ball_below=None, tube=None,position=None, step=None):
+        Predicate.__init__(self, [("ball_above", int), ("tube", int),("position",int), ("step", int)])
         self.__ball_above = ball_above
         self.__ball_below = ball_below
+        self.__position=position
         self.__tube = tube
         self.__step = step
 
@@ -175,6 +174,12 @@ class On(Predicate):
 
     def set_ball_above(self, ball_above):
         self.__ball_above = ball_above
+
+    def get_position(self) -> int:
+        return self.__position
+
+    def set_position(self, position):
+        self.__position = position
 
     def get_ball_below(self) -> int:
         return self.__ball_below
@@ -199,23 +204,23 @@ class On(Predicate):
 class Move(Predicate):
     predicate_name = "move"
 
-    def __init__(self, ball=None, tube=None, step=None):
-        Predicate.__init__(self, [("ball", int), ("tube", int), ("step", int)])
-        self.__ball = ball
-        self.__tube = tube
+    def __init__(self, tube1=None, tube2=None, step=None):
+        Predicate.__init__(self, [("tube1", int), ("tube2", int)])
+        self.__tube1 = tube1
+        self.__tube2 = tube2
         self.__step = step
 
-    def get_ball(self) -> int:
-        return self.__ball
+    def get_tube1(self) -> int:
+        return self.__tube1
 
-    def set_ball(self, ball):
-        self.__ball = ball
+    def set_tube1(self, tube1):
+        self.__tube1 = tube1
 
-    def get_tube(self) -> int:
-        return self.__tube
+    def get_tube2(self) -> int:
+        return self.__tube2
 
-    def set_tube(self, tube):
-        self.__tube = tube
+    def set_tube2(self, tube2):
+        self.__tube2 = tube2
 
     def get_step(self) -> int:
         return self.__step
@@ -249,9 +254,15 @@ def choose_dlv_system() -> DesktopHandler:
         else:
             return DesktopHandler(
                 DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux")))
+        
     except Exception as e:
         print(e)
 
+def choose_clingo_system()->DesktopHandler:
+    try:
+        return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
+    except Exception as e:
+        print(e)
 
 def get_colors(tubes: []):
     colors = set()
@@ -280,7 +291,7 @@ def get_balls_position(tubes: [Tube]):
     on = []
     for tube in tubes:
         ball_below = 0
-        for ball in tube.get_balls():
-            on.append(On(ball.get_id(), ball_below, tube.get_id(), 1))
-            ball_below = ball.get_id()
+        balls = tube.get_balls()
+        for i in range(len(balls)-1,-1,-1):
+            on.append(On(balls[i].get_color(), None, tube.get_id(),i+1, 1))
     return on

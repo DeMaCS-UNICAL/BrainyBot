@@ -58,6 +58,7 @@ def persist_threshold(value):
     f.write(re.sub('CANNY_THRESHOLD=([^\n]+)', 'CANNY_THRESHOLD='+str(value), x,flags=re.M))
     print("threshold set to:", value)
 
+
 def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,validation,iteration)
     balls_chart = matcher.get_balls_chart()
@@ -66,21 +67,16 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     else:
         input=[]
         tubes=[]
-    validator = Validation()
     distance=0
     if validation!=None:
+        validator = Validation()
         validate=[]
         validate.extend(tubes)
         distance = validator.validate_stacks(validate,validation)
     if(debug):
-        Ball.reset()
-        Tube.reset()
-        Color.reset()
-        if balls_chart!=None:
-            balls_chart.Clean()
         return distance, matcher.canny_threshold
     solution = DLVSolution()
-    moves, ons = solution.call_asp(input)
+    moves, ons, answer_sets = solution.call_asp(input)
 
     moves.sort(key=lambda x: x.get_step())
     ons.sort(key=lambda x: x.get_step())
@@ -89,7 +85,12 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
 
     coordinates = []
     x1, y1, x2, y2 = 0, 0, 0, 0
-    for move in moves:
+    if len(moves)==0:
+        print("No moves found.")
+        return
+    feedback=Feedback()
+    for i in range(len(moves)):
+        move=moves[i]
         previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
         next_tube = move.get_tube()
         for tube in tubes:
@@ -103,4 +104,6 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
         time.sleep(0.25)
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+        feedback.request_feedback(matcher.vision,matcher.abstraction,asp_input,answer_sets[i])
+        
         
