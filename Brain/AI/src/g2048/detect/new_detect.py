@@ -3,7 +3,7 @@ import cv2
 from math import sqrt
 
 class Matching2048:
-    def __init__(self, screenshot_path, debug = False):
+    def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
         self.__image = cv2.imread(screenshot_path)
         self.__finder = ObjectsFinder(screenshot_path)
         self.__debug = debug
