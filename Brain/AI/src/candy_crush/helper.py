@@ -97,6 +97,7 @@ def candy_crush(screenshot,debug = False):
 
             os.chdir(CLIENT_PATH)
             os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
+            time.sleep(1)
             feedback = Feedback()
             success,candyGraph,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
     

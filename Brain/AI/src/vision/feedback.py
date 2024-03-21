@@ -33,6 +33,7 @@ class Feedback:
     def take_screenshot(self):
         server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
         try:
+            print("ASKING FOR SCREENSHOT.")
             getScreenshot(server_ip, port)
             print("SCREENSHOT TAKEN.")
         except Exception as e:
@@ -46,7 +47,7 @@ class Feedback:
         return to_return
 
     def board_is_stable(self, abstr1, abstr2):
-        if np.array_equal(abstr1,abstr2):
+        if np.array_equal(sorted(abstr1),sorted(abstr2)):
             return True
         return False
 

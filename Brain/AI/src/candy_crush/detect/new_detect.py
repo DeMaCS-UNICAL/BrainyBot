@@ -14,8 +14,6 @@ from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE
 
 
 def draw(matrixCopy, nodes, color):
-    print(nodes)
-    print(color)
     width, height = 110, 110
     cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
     cv2.putText(matrixCopy,f"{nodes[ID]}",(nodes[PX],nodes[PY]),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
@@ -48,7 +46,7 @@ class MatchingCandy:
         self.__graph=None
 
     def vision(self):
-        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, threshold=0.78)
+        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
         plt.imshow( self.__matrix)
         plt.title(f"Screenshot")
@@ -68,9 +66,9 @@ class MatchingCandy:
             if not node[TYPE] in number_per_type.keys():
                 number_per_type[node[TYPE]] = 0
             number_per_type[node[TYPE]] = number_per_type[node[TYPE]]+1
-        for type in number_per_type.keys():
-            print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
-        print("",file=sys.stderr)
+        #for type in number_per_type.keys():
+         #   print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
+        #print("",file=sys.stderr)
         plt.imshow(matrix_copy)
         plt.title(f"Matching")
         plt.show()

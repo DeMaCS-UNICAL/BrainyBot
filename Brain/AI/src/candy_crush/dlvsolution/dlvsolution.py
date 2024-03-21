@@ -33,7 +33,7 @@ class DLVSolution:
             
             # insert nodes from graph to asp program
             for element in input:
-                print(element)
+                #print(element)
                 self.__variableInputProgram.add_object_input(element)
             print (f"Created Nodes.")
             
