@@ -1,5 +1,5 @@
 DLV 2.1.1
 
-{swap(2,11), swap(11,2)}
-COST 18@1
+{swap(1010,2014), swap(2014,1010)}
+COST 29@3 1@2 4@1
 OPTIMUM

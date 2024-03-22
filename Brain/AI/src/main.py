@@ -2,12 +2,13 @@ import argparse
 import os
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
+from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
 import constants
 import sys
 
-gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
+gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048 }
 
 def Start(screenshot,args):
     print(f"Starting AI for game {args.games}")
@@ -34,8 +35,10 @@ if __name__ == '__main__':
         if not args.debugVision:
             server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
             try:
-                getScreenshot(server_ip, port)
-                print("SCREENSHOT TAKEN.")
+                if getScreenshot(server_ip, port):
+                    print("SCREENSHOT TAKEN.")
+                else:
+                    exit(1)
             except Exception as e:
                 print(e)
                 exit(1)

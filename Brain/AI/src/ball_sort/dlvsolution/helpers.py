@@ -101,13 +101,13 @@ class Tube(Predicate):
         return self.__x
 
     def set_x(self, x):
-        self.__x = x
+        self.__x = int(x)
 
     def get_y(self) -> int:
         return self.__y
 
     def set_y(self, y):
-        self.__y = y
+        self.__y = int(y)
 
 
 class On(Predicate):
@@ -207,7 +207,7 @@ def get_colors(tubes: []):
     for tube in tubes:
         for ball in tube.get_elements():
             colors.add(Color.get_color(ball[3]))
-    return colors
+    return list(colors)
 
 
 def get_balls_and_tubes(tubes: []):
