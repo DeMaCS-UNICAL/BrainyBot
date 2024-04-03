@@ -5,6 +5,9 @@ from math import sqrt
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
+from embasp_incremental_dlv2.incremental_dlv2_desktop_handler import IncrementalDLV2DesktopHandler
+from embasp_incremental_dlv2.incremental_dlv2_desktop_service import IncrementalDLV2DesktopService
 
 from AI.src.constants import DLV_PATH
 
@@ -201,6 +204,17 @@ def choose_dlv_system() -> DesktopHandler:
     except Exception as e:
         print(e)
 
+def choose_clingo_system()->DesktopHandler:
+    try:
+        return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
+    except Exception as e:
+        print(e)
+
+def choose_incremental_system()->IncrementalDLV2DesktopHandler:
+    try:
+        return IncrementalDLV2DesktopHandler(IncrementalDLV2DesktopService(os.path.join(DLV_PATH,"incremental_dlv2")))
+    except Exception as e:
+        print(e)
 
 def get_colors(tubes: []):
     colors = set()

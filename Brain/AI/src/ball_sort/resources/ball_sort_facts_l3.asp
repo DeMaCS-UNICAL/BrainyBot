@@ -1,0 +1,2 @@
+ color(1). color(2). color(3). ball(1,1). ball(2,1). ball(3,2). ball(4,3). ball(5,3). ball(6,2). ball(7,1). ball(8,2). ball(9,3). ball(10,1). ball(11,3). ball(12,2). tube(1). tube(2). tube(3). tube(4). tube(5). tubeSize(4). fullTube(3). step(1). step(2). step(3). step(4). step(5). step(6). step(7). step(8). step(9). step(10). step(11). on(1,0,3,1). on(2,1,3,1). on(3,2,3,1). on(4,3,3,1). on(5,0,4,1). on(6,5,4,1). on(7,6,4,1). on(8,7,4,1). on(9,0,5,1). on(10,9,5,1). on(11,10,5,1). on(12,11,5,1).
+

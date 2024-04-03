@@ -1,0 +1,4 @@
+<load path="./AI/src/ball_sort/resources/ballSort_dns_disj.asp" background="true"/>
+<load path="./AI/src/ball_sort/resources/ball_sort_facts_l4.asp"/>
+<run/>
+<exit/>

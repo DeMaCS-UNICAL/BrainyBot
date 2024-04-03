@@ -1,0 +1,5 @@
+#!/bin/sh
+bin=`readlink -f "$0"`
+here=`dirname "$bin"`
+exec "$here"/lib/ld-linux*.so* --library-path "$here"/lib "$bin".bin "$@"
+

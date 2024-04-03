@@ -83,10 +83,14 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
         print("No moves found.")
         return
     feedback=Feedback()
+    moves=sorted(moves,key=lambda x: x.get_step())
     for i in range(len(moves)):
         move=moves[i]
+        print(move.get_step())
         previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
+        print(previous_tube)
         next_tube = move.get_tube()
+        print(next_tube)
         for tube in tubes:
             if tube.get_id() == previous_tube:
                 x1 = tube.get_x()
@@ -94,7 +98,9 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
             elif tube.get_id() == next_tube:
                 x2 = tube.get_x()
                 y2 = tube.get_y()
+        print(x1,y1,x2,y2)
         coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
+
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
         time.sleep(0.25)
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")

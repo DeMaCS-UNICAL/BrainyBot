@@ -168,6 +168,8 @@ class MatchingBalls:
         result = np.concatenate((resized_input, resized_gray,resized_output), axis=1)
         plt.imshow(result)
         plt.show()
-        cv2.waitKey(0)
+        if not self.debug: 
+            plt.pause(0.5)
+        #cv2.waitKey(0)
 
 #### prendo il contorno del template che fa match, faccio i contorni dello screenshot e mi prendo solo i contorni uguali a quelli del template. Trovo le palle: per ogni palla controllo che i punti massimi lungo gli assi siano contenuti nei contorni: ogni contorno sarà un container, la palla verrà associata al container
