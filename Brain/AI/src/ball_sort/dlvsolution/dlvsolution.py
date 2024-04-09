@@ -22,6 +22,7 @@ class DLVSolution:
             ASPMapper.get_instance().register_class(GameOver)
             #self.__handler = choose_dlv_system()
             self.__handler = choose_incremental_system()
+            #self.__handler = choose_clingo_system()
             self.__static_facts = ASPInputProgram()
             self.__dinamic_facts = ASPInputProgram()
             self.__fixed_input_program = ASPInputProgram()
@@ -56,7 +57,7 @@ class DLVSolution:
 
     def __init_fixed(self):
         #self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort.txt"))
-        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort_dns.asp"))
+        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort_dns_choice.asp"))
 
     def call_asp(self, colors: [], balls: [], tubes: [], on: []):
 
@@ -104,20 +105,20 @@ class DLVSolution:
             #assert_true(answer_sets.get_errors() is None,
                         #"Found error:\n" + str(answer_sets.get_errors()))
             no_ans=False
-            answer_sets_result = answer_sets.get_answer_sets() #if len(answer_sets.get_optimal_answer_sets()) == 0 else answer_sets.get_optimal_answer_sets()
+            answer_sets_result = answer_sets.get_answer_sets() if len(answer_sets.get_optimal_answer_sets()) == 0 else answer_sets.get_optimal_answer_sets()
             
             #assert_true(len(answer_sets_result)!=0,"No optimal solutions found for this level.")
 
             for answer_set in answer_sets_result:
                 for obj in answer_set.get_atoms():
-
+                    #print(obj)
                     if isinstance(obj, On):
                         #if obj.get_step() == 1:
                         #if 1 <= obj.get_step() < step+LOOK_AHEAD:
                         #    ons.append(obj)
                         #if obj.get_step() == step + 1:
                         #if step + 1 <= obj.get_step() < step+LOOK_AHEAD:
-                        #    self.__dinamic_facts.add_object_input(obj)
+                            #self.__dinamic_facts.add_object_input(obj)
                         ons.append(obj)
                     if isinstance(obj, Move):
                         #if obj.get_step() == step:
@@ -133,6 +134,7 @@ class DLVSolution:
                 break
             else:
                 moves=[]
+                ons=[]
             step+=1
         self.__handler.quit()
 

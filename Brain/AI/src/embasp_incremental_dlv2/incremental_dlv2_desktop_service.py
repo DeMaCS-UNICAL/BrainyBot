@@ -5,7 +5,7 @@ from base.input_program import InputProgram
 from platforms.desktop.desktop_service import DesktopService
 from specializations.dlv2.dlv2_answer_sets import DLV2AnswerSets
 from io import StringIO, TextIOWrapper
-from threading import Thread
+from threading import Thread,RLock,Condition
 from time import sleep
 
 class IncrementalDLV2DesktopService(DesktopService):
@@ -16,6 +16,8 @@ class IncrementalDLV2DesktopService(DesktopService):
         self._stderr=""
         self.solver_process = None
         self.stop=False
+        self.lock=RLock()
+        self.condition=Condition(self.lock)
         self.run_grounder_process()
 
     def run_grounder_process(self):
@@ -46,13 +48,22 @@ class IncrementalDLV2DesktopService(DesktopService):
 
     def proc_errors(self):
         while not self.stop:
-            self._stderr+=self.solver_process.stderr.readline()
-            print(self._stderr)
+            err = self.solver_process.stderr.readline()
+            with self.lock:
+                self._stderr+=err
+                self.condition.notify_all()
+                self.stop_grounder_process()
+                if "Killed: Bye!" in self._stderr:
+                    return
+                print(self._stderr)
     
     def proc_output(self):
         while not self.stop:
-            self._stdout+=self.solver_process.stdout.readline()
-            print(self._stdout)
+            out=self.solver_process.stdout.readline()
+            with self.lock:
+                self._stdout+=out
+                self.condition.notify_all()
+                print(self._stdout)
 
     def load_program(self, program, background):
         try:
@@ -71,6 +82,7 @@ class IncrementalDLV2DesktopService(DesktopService):
             print(ex)
 
     def get_output(self, output, error):
+        print("returing AS for", output,error)
         return DLV2AnswerSets(output, error)
 
     def start_sync(self, programs, options):
@@ -82,12 +94,15 @@ class IncrementalDLV2DesktopService(DesktopService):
             if programs:
                 writer.write("<run/>\n")
                 writer.flush()
-
-            while not self._stderr and "<END>\n" not in self._stdout and not self.solver_process.poll():
-                continue
-            print("poll",self.solver_process.poll())
-
-            solver_error = self._stderr
+            with self.lock:
+                while not self._stderr and "<END>\n" not in self._stdout and not self.solver_process.poll():
+                    self.condition.wait()
+                if self.solver_process.poll() is not None:
+                    self.stop=True
+                solver_error = self._stderr
+                solver_output = self._stdout
+                self._stderr=""
+                self._stdout=""
             if solver_error:
                 print("error")
                 print(solver_error)
