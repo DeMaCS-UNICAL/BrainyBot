@@ -36,8 +36,8 @@ class DLVSolution:
                 tube_size = len(tube.get_balls())
                 full_tube += 1
 
-        self.__static_facts.add_program("tubeSize(" + str(tube_size) + ").")
-        self.__static_facts.add_program("fullTube(" + str(full_tube) + ").")
+        #self.__static_facts.add_program("tubeSize(" + str(tube_size) + ").")
+        #self.__static_facts.add_program("fullTube(" + str(full_tube) + ").")
 
 
     def __init_dinamic_facts(self, on: []):
@@ -45,7 +45,7 @@ class DLVSolution:
             self.__dinamic_facts.add_object_input(o)
 
     def __init_fixed(self):
-        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort.txt"))
+        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballSort.asp"))
 
     def call_asp(self, colors: [], balls: [], tubes: [], on: []):
 
@@ -64,7 +64,7 @@ class DLVSolution:
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1")
+        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, size/3")
         self.__handler.add_option(option)
 
         moves = []
@@ -89,6 +89,7 @@ class DLVSolution:
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this level.")
 
             for answer_set in answer_sets.get_optimal_answer_sets():
+                print(answer_set)
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, Move):
                         if obj.get_step() == step:
