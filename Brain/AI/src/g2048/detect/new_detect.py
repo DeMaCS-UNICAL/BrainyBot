@@ -16,7 +16,7 @@ class Matching2048:
     
     def set_image(self, screenshot_path, recalculate_metadata = False):
         self.__image = cv2.imread(screenshot_path)
-        self.__finder.change_image(screenshot_path)
+        self.__finder = ObjectsFinder(screenshot_path)
         if recalculate_metadata:
             self.__calculate_metadata()
 
@@ -99,4 +99,7 @@ class Matching2048:
                     cv2.putText(output, str(number) if number != None else "0" , (x+10, y+30), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
         cv2.imwrite(f'output/output{i}.png', output)
         return numbers
+    
+    def isOver(self) -> bool:
+        return False
         
