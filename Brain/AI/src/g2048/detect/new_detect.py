@@ -1,5 +1,6 @@
 from AI.src.vision.objectsFinder import ObjectsFinder
 import cv2
+import numpy as np
 from math import sqrt
 
 class Matching2048:
@@ -13,6 +14,12 @@ class Matching2048:
 
     def get_image(self):
         return self.__image
+    
+    def get_image_width(self):
+        return self.__finder.get_image_width()
+    
+    def get_image_height(self):
+        return self.__finder.get_image_height()
     
     def set_image(self, screenshot_path, recalculate_metadata = False):
         self.__image = cv2.imread(screenshot_path)
@@ -99,7 +106,4 @@ class Matching2048:
                     cv2.putText(output, str(number) if number != None else "0" , (x+10, y+30), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
         cv2.imwrite(f'output/output{i}.png', output)
         return numbers
-    
-    def isOver(self) -> bool:
-        return False
         

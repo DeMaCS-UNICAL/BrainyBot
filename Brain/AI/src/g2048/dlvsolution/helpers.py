@@ -18,60 +18,74 @@ class Node(Predicate):
     def get_id(self):
         return self.__id
     
+    def set_id(self, id):
+        self.__id = id
+    
 class Connect:
-    def __init__(self, id1=None, id2=None):
-        self.__id1 = id1
-        self.__id2 = id2
+    def __init__(self, node1=None, node2=None):
+        self.__node1 = node1
+        self.__node2 = node2
 
-    def get_id1(self):
-        return self.__id1
+    def get_node1(self):
+        return self.__node1
 
-    def get_id2(self):
-        return self.__id2
+    def get_node2(self):
+        return self.__node2
 
-    def set_id1(self, id1):
-        self.__id1 = id1
+    def set_node1(self, node1):
+        self.__node1 = node1
 
-    def set_id2(self, id2):
-        self.__id2 = id2
+    def set_node2(self, node2):
+        self.__node2 = node2
     
 class Superior(Predicate, Connect):
     predicate_name = "superior"
 
-    def __init__(self, node1, node2):
-        Predicate.__init__(self, [("id1", int), ("id2", int)])
+    def __init__(self, node1=None, node2=None):
+        Predicate.__init__(self, [("node1", int), ("node2", int)])
         Connect.__init__(self, node1, node2)
 
 class Left(Predicate, Connect):
     predicate_name = "left"
 
-    def __init__(self, node1, node2):
-        Predicate.__init__(self, [("id1", int), ("id2", int)])
+    def __init__(self, node1=None, node2=None):
+        Predicate.__init__(self, [("node1", int), ("node2", int)])
         Connect.__init__(self, node1, node2)
 
 class Value(Predicate):
     predicate_name = "value"
 
-    def __init__(self, node, value):
-        Predicate.__init__(self, [("id", int), ("value", int)])
-        self.node = node
-        self.value = value
+    def __init__(self, node = None, value = None):
+        Predicate.__init__(self, [("node", int), ("value", int)])
+        self.__node = node
+        self.__value = value
 
-    def get_id(self):
-        return self.node
+    def get_node(self):
+        return self.__node
     
     def get_value(self):
-        return self.value
+        return self.__value
+    
+    def set_node(self, node):
+        self.__node = node
+
+    def set_value(self, value):
+        self.__value = value
+
 
 class Direction(Predicate):
     predicate_name = "direction"
 
-    def __init__ (self, d):
-        self.direction = d
-        Predicate.__init__(self, [("d", int)])
+    def __init__(self, dir=None):
+        self.__dir = dir
+        Predicate.__init__(self, [("dir", int)])
 
     def get_dir(self):
-        return self.direction
+        return self.__dir
+    
+    def set_dir(self, dir):
+        self.__dir = dir
+
     
 def chooseDLVSystem() -> DesktopHandler:
     try:
@@ -82,7 +96,6 @@ def chooseDLVSystem() -> DesktopHandler:
             return DesktopHandler(
                 DLV2DesktopService(os.path.join(DLV_PATH, "dlv2.mac_7")))
         else:
-            print(f"I will use this ASP Solver: {os.path.join(DLV_PATH, 'dlv2-linux')}")
             return DesktopHandler(
                 DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux")))
     except Exception as e:

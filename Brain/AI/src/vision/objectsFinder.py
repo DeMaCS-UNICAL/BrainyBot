@@ -39,7 +39,11 @@ class ObjectsFinder:
             dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
         #print(f"I'm done {id}")
 
-        
+    def get_image_width(self):
+        return self.__img_matrix.shape[1]
+    
+    def get_image_height(self):
+        return self.__img_matrix.shape[0]
 
 
     def worker_process(self,id,dictionary,elements:list,regmax):

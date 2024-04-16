@@ -1,28 +1,17 @@
-% ENCODING 2048
-% by Emanuele Galardo (itsmexp)
-
-% INPUT
-% node(N) N=Nome del nodo
-% value(N, V) N=Nome del nodo, V=Valore del nodo
-% superior(N1, N2) N1, N2 = Nome nodo, N1 è sopra N2
-% left(N1, N2) N1, N2 = Nome nodo, N1 è a sinistra di N2
-
 % Il nodo ha un valore
 valued(Node) :- value(Node, _).
 
-% connessioni indirette sulle colonne
+% connessioni indirette 
 upper(Node1, Node2) :- superior(Node1, Node2).
 upper(Node1, Node2) :- superior(Node1, Node3), upper(Node3, Node2).
 
 % il nodo non ha nodi superiori
 firstUpper(Node1) :- node(Node1), #count{Node2: superior(Node2, Node1)} = 0.
 
-% connessioni indirette sulle righe
+
+% connessioni indirette
 lefter(Node1, Node2) :- left(Node1, Node2).
 lefter(Node1, Node2) :- left(Node1, Node3), lefter(Node3, Node2).
-
-% Il nodo non ha nodi a sinistra
-firstLefter(Node1) :- node(Node1), #count{Node2: left(Node2, Node1)} = 0.
 
 % I due nodi sono sulla stessa colonna
 inCol(Node1, Node2) :- upper(Node1, Node2).
@@ -34,7 +23,9 @@ inRow(Node1, Node2) :- lefter(Node1, Node2).
 inRow(Node1, Node2) :- lefter(Node2, Node1).
 inRow(Node1, Node1) :- node(Node1).
 
-% GUESS
+% Il nodo non ha nodi a sinistra
+firstLefter(Node1) :- node(Node1), #count{Node2: left(Node2, Node1)} = 0.
+
 % N = 1, S = 2, E = 3, W = 4
 direction(1) | direction(2) | direction(3) | direction(4).
 
@@ -102,6 +93,9 @@ mapping(Node1, Node2) :- direction(4), sorted(Node1, Pos1), sorted(Node2, Pos2),
 % Output finale
 output(Node2, Value) :- mapping(Node1, Node2), partialOutput(Node1, Value).
 
+mapChanged :- mapping(Node1, Node2), Node1 != Node2.
+:- not mapChanged.
+
 % Weak Constraints
 %% Preferisco le mosse che aumentino il numero di celle vuote
 :~ output(Node, Value). [1@2, Node]
@@ -109,6 +103,3 @@ output(Node2, Value) :- mapping(Node1, Node2), partialOutput(Node1, Value).
 %% In caso di pareggio, preferisco le mosse che contribuiscono alla monotonicità della griglia
 :~ output(Node1, Value1), output(Node2, Value2), superior(Node1, Node2), Value1 > Value2. [1@1, Node1, Node2]
 :~ output(Node1, Value1), output(Node2, Value2), left(Node1, Node2), Value1 > Value2. [1@1, Node1, Node2]
-
-#show direction/1.
-#show output/2.
