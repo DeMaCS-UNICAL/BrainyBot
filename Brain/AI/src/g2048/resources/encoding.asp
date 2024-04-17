@@ -93,7 +93,9 @@ mapping(Node1, Node2) :- direction(4), sorted(Node1, Pos1), sorted(Node2, Pos2),
 % Output finale
 output(Node2, Value) :- mapping(Node1, Node2), partialOutput(Node1, Value).
 
+% Non è possibile fare mosse che non modifichino la griglia
 mapChanged :- mapping(Node1, Node2), Node1 != Node2.
+mapChanged :- inMerge(_, _).
 :- not mapChanged.
 
 % Weak Constraints
