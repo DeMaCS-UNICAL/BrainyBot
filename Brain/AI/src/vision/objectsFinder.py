@@ -244,6 +244,38 @@ class ObjectsFinder:
             cv2.rectangle(mat_contour, (x, y), (x + w, y + h), 255, thickness=1, lineType=cv2.LINE_AA)
         boxes, hierarchy = cv2.findContours(mat_contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return boxes, hierarchy[0]
+    
+    def find_numbers_multithread(self, boxes, criteria):
+        num_processes = min(multiprocessing.cpu_count(), len(boxes))
+        boxes_per_process = len(boxes) // num_processes
+        input_worker = []
+        output_worker = []
+        for i in range(num_processes):
+            input_worker.append([])
+            output_worker.append([])
+            if i == num_processes - 1:
+                input_worker[num_processes - 1] = boxes[(num_processes - 1) * boxes_per_process:]
+            else:
+                input_worker[i] = boxes[i * boxes_per_process: (i + 1) * boxes_per_process]
+        processes = []
+        for i in range(num_processes):
+            process = multiprocessing.Process(target=self.__worker_find_numbers, args=(input_worker[i], output_worker[i], criteria))
+            processes.append(process)
+            process.start()
+        
+        for process in processes:
+            process.join()
+
+        output = []
+        for i in range(num_processes):
+            output += output_worker[i]
+        return output
+
+    def __worker_find_numbers(self, boxes, output, criteria):
+        for box in boxes:
+            x, y, w, h = cv2.boundingRect(box)
+            elem = criteria(x, y, w, h)
+            output.append(elem)
 
     def find_text(self, x, y, w, h) -> str:
         img = self.__img_matrix[y:y+h, x:x+w].copy()
