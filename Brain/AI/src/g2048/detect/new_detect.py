@@ -82,6 +82,12 @@ class Matching2048:
                 else:
                     numbers.append(int(number))
         return numbers
+    
+    def find_numbers_multithread(self):
+        numbers = []
+        if self.__numbers_boxes != None:
+            numbers = self.__finder.find_numbers_multithread(self.__numbers_boxes)
+        return numbers
 
     def __cut_image_to_matrix(self):
         x, y, w, h = self.__matrix

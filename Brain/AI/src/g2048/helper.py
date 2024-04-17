@@ -13,7 +13,7 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
     matcher = Matching2048(screenshot,debug,validation,iteration)
     cx = matcher.get_image_width() // 2
     cy = matcher.get_image_height() // 2
-    l = matcher.find_numbers()
+    l = matcher.find_numbers_multithread()
     n = int(sqrt(len(l)))
     g = Graph2048(n)
     solver = DLVSolution()
@@ -22,7 +22,8 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
         print("New Screenshot taken")
         getScreenshot()
         matcher.set_image(screenshot)
-        l = matcher.find_numbers()
+        l = matcher.find_numbers_multithread()
+        print(l)
         value = g.get_value(l)
         print("Numeri Letti")
         sw = solver.recall_asp(value)

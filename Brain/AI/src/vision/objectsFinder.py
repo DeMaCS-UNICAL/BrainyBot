@@ -1,3 +1,4 @@
+import multiprocessing.managers
 import os
 import sys
 import cv2
@@ -21,9 +22,9 @@ class ObjectsFinder:
         #
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
-        self.__output = self.__img_matrix.copy()  
-        self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
-        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
+        #self.__output = self.__img_matrix.copy()  
+        #self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
+        #self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
         self.__threshold=threshold
@@ -245,45 +246,45 @@ class ObjectsFinder:
         boxes, hierarchy = cv2.findContours(mat_contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return boxes, hierarchy[0]
     
-    def find_numbers_multithread(self, boxes, criteria):
+    def find_numbers_multithread(self, boxes):
         num_processes = min(multiprocessing.cpu_count(), len(boxes))
         boxes_per_process = len(boxes) // num_processes
-        input_worker = []
-        output_worker = []
-        for i in range(num_processes):
-            input_worker.append([])
-            output_worker.append([])
-            if i == num_processes - 1:
-                input_worker[num_processes - 1] = boxes[(num_processes - 1) * boxes_per_process:]
-            else:
-                input_worker[i] = boxes[i * boxes_per_process: (i + 1) * boxes_per_process]
+        res_list = []
+        res = []
         processes = []
-        for i in range(num_processes):
-            process = multiprocessing.Process(target=self.__worker_find_numbers, args=(input_worker[i], output_worker[i], criteria))
-            processes.append(process)
-            process.start()
-        
-        for process in processes:
-            process.join()
+        with multiprocessing.Manager() as manager:
+            for i in range(num_processes):
+                res_list.append(manager.list())
+                if i == num_processes - 1:
+                    processes.append(multiprocessing.Process(target=self.__worker_find_numbers, args=(boxes[(num_processes - 1) * boxes_per_process:], res_list[i])))
+                else:
+                    processes.append(multiprocessing.Process(target=self.__worker_find_numbers, args=(boxes[i * boxes_per_process: (i + 1) * boxes_per_process], res_list[i])))
+                processes[i].start()
+            for i in range(num_processes):
+                processes[i].join()
+                res.extend(list(res_list[i]))
+        return res
 
-        output = []
-        for i in range(num_processes):
-            output += output_worker[i]
-        return output
-
-    def __worker_find_numbers(self, boxes, output, criteria):
+    def __worker_find_numbers(self, boxes, output):
         for box in boxes:
-            x, y, w, h = cv2.boundingRect(box)
-            elem = criteria(x, y, w, h)
-            output.append(elem)
+            x, y, w, h = box
+            elem = self.find_number(x, y, w, h)
+            if elem == None:
+                output.append(0)
+            else:
+                output.append(elem)
 
     def find_text(self, x, y, w, h) -> str:
+        img = self.__img_matrix[y:y+h, x:x+w]
+        # Upscale the image to improve the OCR if the image is too small
+        if img.shape[0] < 150 or img.shape[1] < 150:
+            img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
         img = self.__img_matrix[y:y+h, x:x+w].copy()
         elem = ts.image_to_string(img, config='--psm 8 --oem 3') 
         return elem if elem != '' else None
 
     def find_number(self, x, y, w, h) -> int:
-        img = self.__img_matrix[y:y+h, x:x+w].copy()
+        img = self.__img_matrix[y:y+h, x:x+w]
         # Upscale the image to improve the OCR if the image is too small
         if img.shape[0] < 150 or img.shape[1] < 150:
             img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
@@ -293,20 +294,7 @@ class ObjectsFinder:
         try:
             return int(elem)
         except:
-            return None
-    
-    def find_text_from_dictionary(self, x, y, w, h, dictionary_path) -> str:
-        img = self.__img_matrix[y:y+h, x:x+w].copy()
-        elem = ts.image_to_string(img, config='--psm 8 --oem 3 --user-words {}'.format(dictionary_path))
-        return elem if elem != '' else None
-
-    def find_text_from_regex(self, x, y, w, h, regex) -> str:
-        img = self.__img_matrix[y:y+h, x:x+w].copy()
-        elem = ts.image_to_string(img, config='--psm 8 --oem 3')
-        if regex.match(elem):
-            return elem
-        else:
-            return None        
+            return None     
 
     
     def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
