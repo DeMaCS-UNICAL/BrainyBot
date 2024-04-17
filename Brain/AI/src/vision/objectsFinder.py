@@ -147,6 +147,8 @@ class ObjectsFinder:
         # threshold
         #blurred_img = cv2.blur(gray,ksize=(5,5))
         canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
+        #kernel=np.ones((4,1),np.uint8)
+        #closed = cv2.morphologyEx(canny,cv2.MORPH_CLOSE,kernel)
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
         if self.debug and not self.validation:

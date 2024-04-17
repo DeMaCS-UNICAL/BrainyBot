@@ -5,10 +5,11 @@ from AI.src.candy_crush.helper import candy_crush
 from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
+from AI.src.puzzle_bubble.helper import puzzle_bubble
 import constants
 import sys
 
-gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048 }
+gameDictionary = { "ball_sort" : ball_sort,"candy_crush" : candy_crush, "2048" : g2048, "puzzle_bubble" : puzzle_bubble }
 
 def Start(screenshot,args):
     print(f"Starting AI for game {args.games}")

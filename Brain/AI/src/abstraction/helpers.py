@@ -17,3 +17,6 @@ def getImg(file, gray=False,color_conversion=None):
     
 def check_in_range(node1: (), node2: (), p: int, approximation) -> bool:
     return node1[p] - approximation <= node2[p] <= node1[p] + approximation
+
+def customExagonalSorter(elements : list):
+    return (elements[1], elements[0])
