@@ -64,13 +64,14 @@ class DLVSolution:
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, size/3")
+        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, feedback_on_color/4, wrongPlace/1, wrongs/1, freeToMove/1, singleColorTubeWithColorMax/3")
         self.__handler.add_option(option)
 
         moves = []
         ons = []
         game_over = False
-
+        
+        ans=[]
         step = 1
         while not game_over and step <= MAX_STEPS:
             # for a in range(0,LOOK_AHEAD):
@@ -87,11 +88,12 @@ class DLVSolution:
             #assert_true(answer_sets.get_errors() is None,
             #            "Found error:\n" + str(answer_sets.get_errors()))
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this level.")
-
             for answer_set in answer_sets.get_optimal_answer_sets():
-                print(answer_set)
+                #print(answer_set)
+                ans.append(answer_set)
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, Move):
+                        print(obj.get_ball(),obj.get_tube(),obj.get_step())
                         if obj.get_step() == step:
                         #if step <= obj.get_step() < step+LOOK_AHEAD:
                             self.__dinamic_facts.add_object_input(obj)
@@ -112,4 +114,4 @@ class DLVSolution:
             #step += LOOK_AHEAD
             step+=1
 
-        return moves, ons
+        return moves, ons, ans

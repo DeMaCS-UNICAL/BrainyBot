@@ -23,11 +23,11 @@ def asp_input(balls_chart):
     input=colors.copy()
     input.extend(tubes)
     input.extend(balls)
-    on = get_balls_position(tubes)
+    on,on_for_feedback = get_balls_position(tubes)
     input.extend(on)
     empty_stacks = balls_chart.get_empty_stack()
     input.extend(empty_stacks)
-    return input,colors,tubes,balls,on
+    return input,colors,tubes,balls,on,on_for_feedback
 
 def check_if_to_revalidate(output,last_output):
     not_done=True
@@ -63,40 +63,51 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,validation,iteration)
     balls_chart = matcher.get_balls_chart()
     if balls_chart!=None:
-        input,colors,tubes,balls,on = asp_input(balls_chart)
+        input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
     else:
         input=[]
         tubes=[]
     if(debug):
         return matcher.canny_threshold
-    solution = DLVSolution()
-    moves, ons = solution.call_asp(colors,balls,tubes,on)
+    recompute=True
+    while recompute:
+        solution = DLVSolution()
+        moves, ons, ans = solution.call_asp(colors,balls,tubes,on)
 
-    moves.sort(key=lambda x: x.get_step())
-    ons.sort(key=lambda x: x.get_step())
+        moves.sort(key=lambda x: x.get_step())
+        ons.sort(key=lambda x: x.get_step())
 
-    os.chdir(CLIENT_PATH)
+        os.chdir(CLIENT_PATH)
 
-    coordinates = []
-    x1, y1, x2, y2 = 0, 0, 0, 0
-    if len(moves)==0:
-        print("No moves found.")
-        return
-    feedback=Feedback()
-    for i in range(len(moves)):
-        move=moves[i]
-        previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
-        next_tube = move.get_tube()
-        for tube in tubes:
-            if tube.get_id() == previous_tube:
-                x1 = tube.get_x()
-                y1 = tube.get_y()
-            elif tube.get_id() == next_tube:
-                x2 = tube.get_x()
-                y2 = tube.get_y()
-        coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
-        time.sleep(0.25)
-        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+        coordinates = []
+        x1, y1, x2, y2 = 0, 0, 0, 0
+        if len(moves)==0:
+            print("No moves found.")
+            return
+        feedback=Feedback()
+        for i in range(len(moves)):
+            step=i
+            move=moves[i]
+            previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
+            next_tube = move.get_tube()
+            for tube in tubes:
+                if tube.get_id() == previous_tube:
+                    x1 = tube.get_x()
+                    y1 = tube.get_y()
+                elif tube.get_id() == next_tube:
+                    x2 = tube.get_x()
+                    y2 = tube.get_y()
+            coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
+            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
+            time.sleep(0.25)
+            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+            time.sleep(0.25)
+            success,_,(_,colors,tubes,balls,on,on_feedback) = feedback.request_feedback(matcher.vision,matcher.abstraction,asp_input,ans[step])
+            print("Success?",success)
+            if not success:
+                break
+            if i==len(moves)-1:
+                recompute=False
+        
         
         

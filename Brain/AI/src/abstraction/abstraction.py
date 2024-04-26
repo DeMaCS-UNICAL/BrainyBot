@@ -19,7 +19,8 @@ class Abstraction:
                 graph.add_another_node(match[0], match[1], label,int(str(main_id)+str(sub_id)))
         return graph
 
-    def ToMatrix(self, elements:dict, distance:())->[]:
+    #elements.values are tuple of the kind (x,y,match_value)
+    def ToMatrix(self, elements:dict, distance:(), labelMatrix:bool=True)->[]:
         offset, delta = self.compute_offest_delta_dict(elements, distance)
         max=[0,0]
         for label in elements.keys():            
@@ -27,7 +28,7 @@ class Abstraction:
                 for i in range(2):
                     current = (match[i]-offset[i])//delta[i]
                     if current > max[(i+1)%2]:
-                        max[(i+1)%2]=current
+                        max[(i+1)%2]=int(current)
         matrix=[]
         for i in range(max[0]+1):
             matrix.append([])
@@ -35,8 +36,8 @@ class Abstraction:
                 matrix[i].append(None)
         for label in elements.keys():
             for match in elements[label]:
-                r=(match[1]-offset[1])//delta[1]
-                c=(match[0]-offset[0])//delta[0]
+                r=int((match[1]-offset[1])//delta[1])
+                c=int((match[0]-offset[0])//delta[0])
                 if matrix[r][c]!=None and matrix[r][c][1][2]>match[2]:#matrix[r][c][1][2]: matrix stores the lable and the coordinates+value of the match
                     continue
                 matrix[r][c]=(label,match)
@@ -44,13 +45,17 @@ class Abstraction:
         for r in range(len(matrix)):
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
-                    matrix[r][c]=matrix[r][c][0]
+                    if labelMatrix:
+                        matrix[r][c]=matrix[r][c][0]
+                    else:
+                        matrix[r][c]=matrix[r][c][1]
+
         print(matrix)
         return matrix,offset,delta
 
     def compute_offest_delta_dict(self, elements, distance):
         offset=[10000,10000]
-        delta=[distance[0]*10,distance[1]*10]
+        delta=[10000,10000]
         all_matches=[[],[],]
         for match_list in elements.values():
             for match in match_list:
@@ -155,7 +160,37 @@ class Abstraction:
             else:
                 non_empty.append(Stack(containers_coord[i]))
                 non_empty[-1].add_elements(elements_per_container[i])
+        self.assign_id_to_containers(empty,non_empty)
         return empty,non_empty
+
+    def assign_id_to_containers(self, empty,non_empty):
+        l = []
+        l.extend(empty)
+        l.extend(non_empty)
+        for i in range(len(l)):
+            l[i].set_id(int(str(int(l[i].get_x()))+str(int(l[i].get_y()))))
+        ''' NICE TRY!
+        
+        tuples_dictionary={}
+        for key in containers_dictionary.keys():
+            tuples_dictionary[key]=[]
+            for elem in containers_dictionary[key]:
+                tuples_dictionary[key].append((elem.get_x(),elem.get_y(),1))
+        containers_matrix,_,_ = self.ToMatrix(tuples_dictionary,(10,10), False)
+        for i in range(len(containers_matrix)):
+            for j in range(len(containers_matrix[0])):
+                if containers_matrix[i][j]!=None:
+                    for key in containers_dictionary.keys():
+                        found=False
+                        for elem in containers_dictionary[key]:
+                            if elem.get_x()==containers_matrix[i][j][0] and elem.get_y()==containers_matrix[i][j][1]:
+                                elem.set_id(int(str(i+1)+str(j+1)))
+                                print(elem.get_id())
+                                found=True
+                                break
+                        if found:
+                            break
+        '''
 
     def stack_no_duplicates(self, elements:dict)->list:
         stacks = []

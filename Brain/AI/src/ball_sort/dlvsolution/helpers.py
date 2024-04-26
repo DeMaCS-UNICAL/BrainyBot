@@ -5,6 +5,7 @@ from math import sqrt
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
 
 from AI.src.constants import DLV_PATH
 
@@ -16,9 +17,15 @@ class Color(Predicate):
     __colors = []
     __MAX_DISTANCE = 40
 
+    def reset():
+        Color.__ids = count(1, 1)
+        Color.__colors = []
+        Color.__MAX_DISTANCE = 40
+
     def __init__(self, bgr=None):
         Predicate.__init__(self, [("id", int)])
-        self.__id = next(Color.__ids)
+        #self.__id = next(Color.__ids)
+        self.__id = -1
         self.__bgr = bgr
 
     def get_id(self) -> int:
@@ -26,12 +33,27 @@ class Color(Predicate):
 
     def set_id(self, id):
         self.__id = id
+    
+    def incr_id(self):
+        self.__id+=1
 
     def get_bgr(self) -> []:
         return self.__bgr
 
     def set_bgr(self, bgr: []):
         self.__bgr = bgr
+
+    @staticmethod
+    def is_less_than(color1,color2):
+        if color1.__bgr[0]<color2.__bgr[0]:
+            return True
+        if color1.__bgr[0]-color2.__bgr[0]<10:
+            if color1.__bgr[1]<color2.__bgr[1]:
+                return True
+            if color1.__bgr[1]-color2.__bgr[1]<10:
+                if color1.__bgr[2]<color2.__bgr[2]:
+                    return True
+        return False
 
     @staticmethod
     def __euclidean_distance(color1, color2):
@@ -43,19 +65,36 @@ class Color(Predicate):
             if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
                 return color
         color = Color(bgr)
-        Color.__colors.append(color)
+        pos=0
+        for i in range(len(Color.__colors)):
+            if Color.is_less_than(color,Color.__colors[i]):
+                for j in range(i,len(Color.__colors)):
+                    Color.__colors[j].incr_id()
+                break
+            pos+=1
+        Color.__colors.insert(pos,color)
+        color.set_id(pos+1 )
         return color
+    
+    @staticmethod
+    def get_bgr_by_id(id):
+        for color in Color.__colors:
+            if color.__id==id:
+                return color.__bgr
 
 
 class Ball(Predicate):
     predicate_name = "ball"
 
     __ids = count(1, 1)
+    def reset():
+        Ball.__ids = count(1, 1)
 
     def __init__(self, color=None):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
+
 
     def get_id(self) -> int:
         return self.__id
@@ -75,9 +114,12 @@ class Tube(Predicate):
 
     __ids = count(1, 1)
 
+    def reset():
+        Tube.__ids=count(1,1)
+
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
-        self.__id = next(Tube.__ids)
+        self.__id = None
         self.__balls = []
         self.__x = x
         self.__y = y
@@ -119,6 +161,8 @@ class On(Predicate):
         self.__ball_below = ball_below
         self.__tube = tube
         self.__step = step
+
+
 
     def get_ball_above(self) -> int:
         return self.__ball_above
@@ -201,6 +245,8 @@ def choose_dlv_system() -> DesktopHandler:
     except Exception as e:
         print(e)
 
+def choose_clingo_system() -> DesktopHandler:
+    return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
 def get_colors(tubes: []):
     colors = set()
@@ -217,6 +263,7 @@ def get_balls_and_tubes(tubes: []):
         tube = Tube()
         tube.set_x(t.get_x())
         tube.set_y(t.get_y())
+        tube.set_id(t.get_id())
         for ball in t.get_elements():
             b = Ball(Color.get_color(ball[3]).get_id())
             balls.append(b)
@@ -227,9 +274,14 @@ def get_balls_and_tubes(tubes: []):
 
 def get_balls_position(tubes: [Tube]):
     on = []
+    as_stacks=[]
     for tube in tubes:
         ball_below = 0
+        below_color=0
+        cont=0
         for ball in tube.get_balls():
             on.append(On(ball.get_id(), ball_below, tube.get_id(), 1))
+            as_stacks.append("on_color("+str(ball.get_color())+","+str(cont)+","+str(tube.get_id())+",1)")
+            cont+=1
             ball_below = ball.get_id()
-    return on
+    return on, as_stacks

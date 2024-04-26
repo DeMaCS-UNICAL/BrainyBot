@@ -26,7 +26,7 @@ class Feedback:
         self.current_abstraction_to_asp_callback = abstraction_to_asp
         for obj in expected_result.get_answer_set():
             if(obj.startswith('feedback_')):
-                self.current_expected_result.append(obj[8:])
+                self.current_expected_result.append(obj[9:])
         return self.main()
     
     
@@ -42,7 +42,6 @@ class Feedback:
 
     def compare_with_expected(self,actual)->bool:
         to_return= np.all(np.isin(self.current_expected_result, actual))
-        print("success? ",to_return)
         self.current_expected_result=[]
         return to_return
 
@@ -50,12 +49,25 @@ class Feedback:
         if np.array_equal(sorted(abstr1),sorted(abstr2)):
             return True
         return False
-
+    
+    def flatten_list(input):
+        flattened_list = []
+        for item in input:
+            if isinstance(item, tuple) or isinstance(item,list):
+                flattened_list.extend(Feedback.flatten_list(item))
+            else:
+                flattened_list.append(item)
+        return flattened_list
+    
     def get_mapped(self,to_map):
         to_return=[]
-        for element in to_map:
+        flattened_to_map=Feedback.flatten_list(to_map)
+
+        for element in flattened_to_map:
             if issubclass(type(element),Predicate):
                 to_return.append( self.mapper.get_string(element))
+            elif isinstance(element,str):
+                to_return.append(element)
         return to_return
 
     def main(self):
@@ -72,7 +84,6 @@ class Feedback:
             mapped_objects2 = self.get_mapped(asp_input)
             if not self.board_is_stable(mapped_objects1,mapped_objects2):
                 mapped_objects1 = mapped_objects2
-                sleep(0.1)
             else:
                 return (self.compare_with_expected(mapped_objects2),abstraction_result,asp_input)
    
