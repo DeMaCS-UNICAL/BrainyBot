@@ -10,6 +10,7 @@ class Matching2048:
         self.__debug = debug
         self.__matrix = None
         self.__numbers_boxes = None
+        self.__blank_box_color = None
         self.__calculate_metadata()
 
     def get_image(self):
@@ -34,12 +35,14 @@ class Matching2048:
             return False
         self.__matrix = cv2.boundingRect(boxes[matrix_index])
         self.__numbers_boxes = self.__find_numbers_boxes(boxes, hierarchy, matrix_index)
-
-    def get_numbers(self):
-        for i in range(len(self.__numbers_boxes)):
-            x, y, w, h = self.__numbers_boxes[i]
-            elem = self.__finder.find_number(x, y, w, h)
-
+        out = self.find_numbers_multithread()
+        for i in range(len(out)):
+            if out[i] == 0:
+                x, y, w, h = self.__numbers_boxes[i]
+                self.__blank_box_color = self.__image[y:y+h//2, x:x+w//2]
+                print(self.__blank_box_color)
+                break
+        return True
 
     def __find_matrix(self, boxes, hierarchy):
         dictionary = {}
@@ -88,10 +91,21 @@ class Matching2048:
         if self.__numbers_boxes != None:
             numbers = self.__finder.find_numbers_multithread(self.__numbers_boxes)
         return numbers
+    
+    def find_numbers_with_cache(self, cache):
+        numbers = cache
+        for i in range(len(numbers)):
+            if numbers[i] == 0:
+                x, y, w, h = self.__numbers_boxes[i]
+                number = self.__finder.find_number(x, y, w, h)
+                if number != None:
+                    numbers[i] = int(number)
+        return numbers
+            
 
-    def __cut_image_to_matrix(self):
-        x, y, w, h = self.__matrix
-        return self.__image[y:y+h, x:x+w].copy()
+
+
+
 
     def get_output(self, i):
         output = self.__image.copy()

@@ -5,7 +5,7 @@ from languages.asp.asp_input_program import ASPInputProgram
 from languages.asp.asp_mapper import ASPMapper
 from languages.asp.answer_sets import *
 
-from AI.src.g2048.dlvsolution.helpers import chooseDLVSystem, Node, Superior, Left, Value, Direction
+from AI.src.g2048.dlvsolution.helpers import chooseDLVSystem, Node, Superior, Left, Value, Direction, Output
 from AI.src.g2048.constants import RESOURCES_PATH
 
 class DLVSolution:
@@ -48,6 +48,7 @@ class DLVSolution:
         ASPMapper.get_instance().register_class(Left)
         ASPMapper.get_instance().register_class(Value)
         ASPMapper.get_instance().register_class(Direction)
+        ASPMapper.get_instance().register_class(Output)
 
         self.__init_fixed(encoding)
         self.__init_static(nodes, superior, left)
@@ -68,12 +69,19 @@ class DLVSolution:
 
         if len(oas) == 0:
             self.__gameOver = True
-            return None
+            return None, None
+        
+        dir = None
+        output = []
         
         for answer_set in oas:
             for obj in answer_set.get_atoms():
                 if isinstance(obj, Direction):
-                    return obj.get_dir()
+                    dir = obj.get_dir()
+                elif isinstance(obj, Output):
+                    output.append(obj)
+
+        return dir, output
         
         
 

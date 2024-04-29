@@ -5,8 +5,6 @@ from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 from AI.src.constants import DLV_PATH
 
 from languages.predicate import Predicate
-
-
     
 class Node(Predicate):
     predicate_name = "node"
@@ -85,6 +83,26 @@ class Direction(Predicate):
     
     def set_dir(self, dir):
         self.__dir = dir
+
+class Output(Predicate):
+    predicate_name = "output"
+
+    def __init__(self, node=None, value=None):
+        self.__node = node
+        self.__value = value
+        Predicate.__init__(self, [("node", int), ("value", int)])
+
+    def get_node(self):
+        return self.__node
+    
+    def get_value(self):
+        return self.__value
+    
+    def set_node(self, node):
+        self.__node = node
+
+    def set_value(self, value):
+        self.__value = value
 
     
 def chooseDLVSystem() -> DesktopHandler:

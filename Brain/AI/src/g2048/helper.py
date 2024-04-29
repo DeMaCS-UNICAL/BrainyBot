@@ -14,19 +14,28 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
     cx = matcher.get_image_width() // 2
     cy = matcher.get_image_height() // 2
     l = matcher.find_numbers_multithread()
+    print(l)
     n = int(sqrt(len(l)))
     g = Graph2048(n)
     solver = DLVSolution()
     solver.start_asp("encoding.asp", g.nodes, g.superior, g.left)
+    sw, output = solver.recall_asp(value)
+    cache = setCache(output, n)
+    acting(sw, cx, cy)
+    sleep(1)
     while not solver.isGameOver():
-        print("New Screenshot taken")
-        getScreenshot()
+        if getScreenshot():
+            print("Screenshot Taken")
+        else:
+            print("Screenshot Not Taken")
+            return
         matcher.set_image(screenshot)
-        l = matcher.find_numbers_multithread()
+        l = matcher.find_numbers_with_cache(cache)
         print(l)
         value = g.get_value(l)
         print("Numeri Letti")
-        sw = solver.recall_asp(value)
+        sw, output = solver.recall_asp(value)
+        cache = setCache(output, n)
         print("Mossa Trovata")
         acting(sw, cx, cy)
         sleep(1)
@@ -55,4 +64,10 @@ def acting(swipe_direction, cx, cy):
         SX2 = cx + offset_eo
     os.chdir(CLIENT_PATH)
     os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
+
+def setCache(output, l):
+    cache = [0 for i in range(len(l))]
+    for o in output:
+        cache[o.get_node() - 1] = o.get_value()
+    return cache
     
