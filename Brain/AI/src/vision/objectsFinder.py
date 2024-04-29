@@ -22,9 +22,9 @@ class ObjectsFinder:
         #
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
-        #self.__output = self.__img_matrix.copy()  
-        #self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
-        #self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
+        self.__output = self.__img_matrix.copy()  
+        self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
+        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
         self.__threshold=threshold
@@ -52,8 +52,6 @@ class ObjectsFinder:
             print(f"Looking for {pair[0]}: ",end='')
             dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
         #print(f"I'm done {id}")
-
-        
 
     def find_one_among(self,  elements_to_find:{}, request_regmax=True) -> list:
         objects_found=[]
@@ -264,6 +262,25 @@ class ObjectsFinder:
                 processes[i].join()
                 res.extend(list(res_list[i]))
         return res
+    
+    def find_text_multithread(self, boxes):
+        num_processes = min(multiprocessing.cpu_count(), len(boxes))
+        boxes_per_process = len(boxes) // num_processes
+        res_list = []
+        res = []
+        processes = []
+        with multiprocessing.Manager() as manager:
+            for i in range(num_processes):
+                res_list.append(manager.list())
+                if i == num_processes - 1:
+                    processes.append(multiprocessing.Process(target=self.__worker_find_text, args=(boxes[(num_processes - 1) * boxes_per_process:], res_list[i])))
+                else:
+                    processes.append(multiprocessing.Process(target=self.__worker_find_text, args=(boxes[i * boxes_per_process: (i + 1) * boxes_per_process], res_list[i])))
+                processes[i].start()
+            for i in range(num_processes):
+                processes[i].join()
+                res.extend(list(res_list[i]))
+        return res
 
     def __worker_find_numbers(self, boxes, output):
         for box in boxes:
@@ -271,6 +288,15 @@ class ObjectsFinder:
             elem = self.find_number(x, y, w, h)
             if elem == None:
                 output.append(0)
+            else:
+                output.append(elem)
+
+    def __worker_find_text(self, boxes, output):
+        for box in boxes:
+            x, y, w, h = box
+            elem = self.find_text(x, y, w, h)
+            if elem == None:
+                output.append('')
             else:
                 output.append(elem)
 
