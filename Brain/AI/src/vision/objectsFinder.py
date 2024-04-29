@@ -34,6 +34,9 @@ class ObjectsFinder:
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.debug=debug
 
+    def get_image(self):
+        return self.__img_matrix
+
 
     def worker_process(self,id,dictionary,elements:list,regmax):
         for pair in elements:
