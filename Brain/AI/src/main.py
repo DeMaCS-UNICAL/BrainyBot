@@ -1,14 +1,26 @@
 import argparse
 import os
+from AI.src.ball_pool.helper import ball_pool
 from AI.src.ball_sort.helper import ball_sort
 from AI.src.candy_crush.helper import candy_crush
 from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
+#from Brain.AI.src import ball_pool
 import constants
 import sys
 
-gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048 }
+'''
+cd Brain
+export PYTHONPATH=.
+pipenv shell
+python3 AI/src/main.py -g ball_sort
+
+sudo npm start -- --hardware=headless
+
+'''
+#"ball_pool" : ball_pool,
+gameDictionary = { "ball_pool" : ball_pool, "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048 }
 
 def Start(screenshot,args):
     print(f"Starting AI for game {args.games}")
@@ -54,13 +66,16 @@ if __name__ == '__main__':
     else:
         if args.games == "ball_sort":
             print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
+        elif args.games == "ball_pool":
+            print("Screenshot\t#Balls\t#Colors", file=sys.stderr)
+            
         for filename in os.listdir(constants.SCREENSHOT_PATH):
             if filename.startswith(args.test):
                 screenshot = filename
                 print(f"{screenshot}")
                 print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
                 Start(screenshot,args)
-    
-    
-
         
+
+    
+    
