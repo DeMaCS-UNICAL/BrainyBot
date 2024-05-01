@@ -62,19 +62,10 @@ class MatchingBalls:
         self.ball_chart = ElementsStacks()
         self.image_width = self.__gray.shape[1]
         self.__balls = self.detect_balls()
-        #templates, containers, cordinates = self.detect
+        self.__balls_pocketed = self.detect_myPocketedBalls()
+        return
         pass
 
-    def detect_myPocketedBalls(self):
-        height = self.image.shape[0] # altezza dell'immagine
-        min_radius = int((height / self.RAIUS_RATIO) * 1.3) # raggio minimo delle palle
-        self.__balls_pocketed = self.finder.find_circles(min_radius, self.canny_threshold)
-        return self.__balls_pocketed
-
-
-
-    def get_balls_chart(self):
-        pass
 
     def detect_balls(self):
         height = self.image.shape[0] # altezza dell'immagine
@@ -83,6 +74,27 @@ class MatchingBalls:
         max_radius = int(height / self.RAIUS_RATIO)
         self.balls = self.finder.find_circles(min_radius, self.canny_threshold)
         return self.balls
+    
+
+    def detect_myPocketedBalls(self):
+        height = self.image.shape[0] # altezza dell'immagine
+        min_radius = int((height / self.RAIUS_RATIO) * 1.3) # raggio minimo delle palle
+        self.balls_pocketed = self.finder.find_circles(min_radius, self.canny_threshold)
+        return self.__balls_pocketed
+
+    def abstraction(self, vision_output):
+        stacker = Abstraction()
+
+
+    
+
+    def get_balls_chart(self):
+        vision_output = self.vision()
+        if len(vision_output[1]) == 0:
+            return None
+        return self.abstraction(vision_output)
+
+    
 
             
 
