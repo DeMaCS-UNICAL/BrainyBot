@@ -14,7 +14,6 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
     cx = matcher.get_image_width() // 2
     cy = matcher.get_image_height() // 2
     l = matcher.find_numbers_multithread()
-    print(l)
     n = int(sqrt(len(l)))
     g = Graph2048(n)
     solver = DLVSolution()
@@ -22,18 +21,17 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
     value = g.get_value(l)
     sw, output = solver.recall_asp(value)
     cache = setCache(output, len(l))
-    print("cache", end=" ")
-    print(cache)
     acting(sw, cx, cy)
-    while not solver.isGameOver():
+    while True:
         if not getScreenshot():
             print("Screenshot Not Taken")
             return
         matcher.set_image(screenshot)
         l = matcher.find_numbers_with_cache(cache)
-        print(l)
         value = g.get_value(l)
         sw, output = solver.recall_asp(value)
+        if solver.isGameOver():
+            break
         cache = setCache(output, len(l))
         acting(sw, cx, cy)
     print("END GAME")

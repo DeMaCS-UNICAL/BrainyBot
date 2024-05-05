@@ -71,12 +71,12 @@ indirectReachable(Node1, Node2) :- reachable(Node1, Node2).
 indirectReachable(Node1, Node2) :- reachable(Node1, Node3), indirectReachable(Node3, Node2).
 
 % Ordinamento delle righe
-sorted(Node, Pos):- direction(D), D < 3, firstUpper(Node), Pos = 1.
-sorted(Node, Pos):- direction(D), D < 3, superior(Node2, Node), sorted(Node2, Pos1), Pos = Pos1 + 1.
+sorted(Node, Pos, r):- direction(D), D < 3, firstUpper(Node), Pos = 1.
+sorted(Node, Pos, r):- direction(D), D < 3, superior(Node2, Node), sorted(Node2, Pos1, r), Pos = Pos1 + 1.
 
 % Ordinamento delle colonne
-sorted(Node, Pos):- direction(D), D > 2, firstLefter(Node), Pos = 1.
-sorted(Node, Pos):- direction(D), D > 2, left(Node2, Node), sorted(Node2, Pos1), Pos = Pos1 + 1.
+sorted(Node, Pos, c):- direction(D), D > 2, firstLefter(Node), Pos = 1.
+sorted(Node, Pos, c):- direction(D), D > 2, left(Node2, Node), sorted(Node2, Pos1, c), Pos = Pos1 + 1.
 
 % Offset per spostarsi durante il riposizionamento dopo il merge
 blank(Node, N):- direction(1), partialOutput(Node, _), #count{Node2: indirectReachable(Node2, Node), not tempValuated(Node2)} = N.
@@ -85,23 +85,31 @@ blank(Node, N):- direction(3), partialOutput(Node, _), #count{Node2: indirectRea
 blank(Node, N):- direction(4), partialOutput(Node, _), #count{Node2: indirectReachable(Node, Node2), not tempValuated(Node2)} = N.
 
 % Mappatura dei nodi da prima a dopo il riposizionamento
-mapping(Node1, Node2) :- direction(1), sorted(Node1, Pos1), sorted(Node2, Pos2), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 - Offset, inCol(Node1, Node2).
-mapping(Node1, Node2) :- direction(2), sorted(Node1, Pos1), sorted(Node2, Pos2), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 + Offset, inCol(Node1, Node2).
-mapping(Node1, Node2) :- direction(3), sorted(Node1, Pos1), sorted(Node2, Pos2), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 - Offset, inRow(Node1, Node2).
-mapping(Node1, Node2) :- direction(4), sorted(Node1, Pos1), sorted(Node2, Pos2), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 + Offset, inRow(Node1, Node2).
+mapping(Node1, Node2) :- direction(1), sorted(Node1, Pos1, r), sorted(Node2, Pos2, r), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 - Offset, inCol(Node1, Node2).
+mapping(Node1, Node2) :- direction(2), sorted(Node1, Pos1, r), sorted(Node2, Pos2, r), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 + Offset, inCol(Node1, Node2).
+mapping(Node1, Node2) :- direction(3), sorted(Node1, Pos1, c), sorted(Node2, Pos2, c), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 - Offset, inRow(Node1, Node2).
+mapping(Node1, Node2) :- direction(4), sorted(Node1, Pos1, c), sorted(Node2, Pos2, c), blank(Node1, Offset), partialOutput(Node1, _), Pos2 = Pos1 + Offset, inRow(Node1, Node2).
 
 % Output finale
 output(Node2, Value) :- mapping(Node1, Node2), partialOutput(Node1, Value).
 
+outputValued(Node) :- output(Node, Value).
+
 % Non è possibile fare mosse che non modifichino la griglia
 mapChanged :- mapping(Node1, Node2), Node1 != Node2.
-mapChanged :- inMerge(_, _).
+mapChanged :- inMerge(Node1, Node2).
 :- not mapChanged.
 
 % Weak Constraints
 %% Preferisco le mosse che aumentino il numero di celle vuote
-:~ output(Node, Value). [1@2, Node]
+:~ output(Node, Value). [1@4, Node]
 
 %% In caso di pareggio, preferisco le mosse che contribuiscono alla monotonicità della griglia
-:~ output(Node1, Value1), output(Node2, Value2), superior(Node1, Node2), Value1 > Value2. [1@1, Node1, Node2]
-:~ output(Node1, Value1), output(Node2, Value2), left(Node1, Node2), Value1 > Value2. [1@1, Node1, Node2]
+:~ output(Node1, Value1), output(Node2, Value2), sorted(Node1, PosR1, r), sorted(Node2, PosR2, r), sorted(Node1, PosC1, c), sorted(Node2, PosC2, c), Pos1 = PosR1 + PosC1, Pos2 = PosR2 + PosC2, Pos1 < Pos2, Value1 > Value2. [1@3, Node1, Node2]
+
+%% In caso di pareggio, preferisco le mosse che creino celle con lo stesso valore adiacenti
+:~ output(Node1, Value1), output(Node2, Value2), superior(Node1, Node2), Value1 != Value2. [1@2, Node1, Node2]
+:~ output(Node1, Value1), output(Node2, Value2), left(Node1, Node2), Value1 != Value2. [1@2, Node1, Node2]
+
+%% In caso di pareggio evito di andare in alto.
+:~ direction(1). [1@1]
