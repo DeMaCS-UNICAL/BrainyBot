@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE, ID
 from AI.src.abstraction.abstraction import Abstraction
+from AI.src.abstraction.objectsMatrix import ObjectMatrix
 from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
@@ -57,15 +58,29 @@ class MatchingCandy:
     
     def abstraction(self,vision_output):
         gridifier = Abstraction()
-        self.__graph = gridifier.ToGraph(vision_output,self.__difference)
+        #self.__graph = gridifier.ToGraph(vision_output,self.__difference)
+        matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__difference)
+        objectMatrix = ObjectMatrix(matrix_rep,offset,delta)
+
         number_per_type={}
         matrix_copy=self.__matrix.copy()
+        '''
         for node in self.__graph.get_nodes():
             color = get_color(node[TYPE])
             draw(matrix_copy , node, color)
             if not node[TYPE] in number_per_type.keys():
                 number_per_type[node[TYPE]] = 0
             number_per_type[node[TYPE]] = number_per_type[node[TYPE]]+1
+        '''
+        for row in objectMatrix.get_cells():
+            for cell in row:
+                value=cell.get_value()
+                if value != None:
+                    color = get_color(value)
+                    draw(matrix_copy , (cell.x,cell.y,value,cell.get_id()), color)
+                #if not value in number_per_type.keys():
+                #    number_per_type[value] = 0
+                #number_per_type[value] = number_per_type[value]+1
         #for type in number_per_type.keys():
          #   print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
         #print("",file=sys.stderr)
@@ -74,11 +89,13 @@ class MatchingCandy:
         plt.show()
         if not self.debug: 
             plt.pause(0.5)
-        return self.__graph
+        #return self.__graph
+        return objectMatrix
     
-    def search(self) -> ObjectGraph:
-        self.__graph = self.abstraction(self.vision())
-        return self.__graph
+    def search(self) -> ObjectMatrix:
+        #self.__graph = self.abstraction(self.vision())
+        #return self.__graph
+        return self.abstraction(self.vision())
 
     def get_matrix(self):
         return self.__matrix

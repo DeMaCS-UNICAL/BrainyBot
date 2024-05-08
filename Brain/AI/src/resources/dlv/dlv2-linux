@@ -9,6 +9,7 @@ ERR=$DIRPATH/dlv-err.log
 echo "Start dlv wrapping script" > $ERR
 echo "Arguments to dlv are $@" > $ERR
 cat | tee $IN | $DIRPATH/dlv2-linux.bin "$@" 2>>$ERR | tee $OUT 
+echo "\n" >> $IN
 #
 # This can be different as STDERR is printed at the end. WARNING
 #

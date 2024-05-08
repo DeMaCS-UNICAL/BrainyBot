@@ -1,0 +1,3 @@
+Arguments to dlv are /home/denise/GIT/BrainyBot/Brain/AI/src/candy_crush/resources/matrix_encoding.asp --stdin
+*** ERROR: (clingo): In context '<clingo>': unknown option: 'stdin'
+*** Info : (clingo): Try '--help' for usage information
