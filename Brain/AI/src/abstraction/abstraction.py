@@ -18,7 +18,7 @@ class Abstraction:
     def ToMatrix(self, elements:dict, distance:())->[]:
         offset, delta = self.compute_offest_delta_dict(elements, distance)
         max=[0,0]
-        for label in elements.keys():            
+        for label in elements.keys():          
             for match in elements[label]:
                 for i in range(2):
                     current = (match[i]-offset[i])//delta[i]

@@ -17,7 +17,7 @@ class ObjectsFinder:
         # Use Matrix2.png for testing
         #
         self.validation=validation
-        self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color) 
+        self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
         self.__output = self.__img_matrix.copy()  
         self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls

@@ -21,7 +21,7 @@ def asp_input(matrix):
     to_return = get_input_dlv_matrix(matrix)
     return to_return
 
-def candy_crush(screenshot,debug = False, validation=None):
+def candy_crush(screenshot,debug = False, validation=None,it=0):
     # execute template matching
     spriteSize = (110, 110)
     matchingCandy = MatchingCandy(screenshot,spriteSize,debug,validation)
