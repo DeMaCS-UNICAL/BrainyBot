@@ -3,14 +3,15 @@ import os
 from languages.asp.asp_input_program import ASPInputProgram
 
 from AI.src.candy_crush.constants import RESOURCES_PATH
-from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem, InputNode, Edge, Swap, assert_true
+from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem, chooseClingo, InputNode, Edge, Swap, assert_true
 
 
 class DLVSolution:
 
     def __init__(self):
         try:
-            self.__handler = chooseDLVSystem()
+            self.__handler = chooseClingo()
+            #self.__handler = chooseDLVSystem()
             self.__variableInputProgram = None
             self.__fixedInputProgram = ASPInputProgram()
 
@@ -19,11 +20,14 @@ class DLVSolution:
             print(str(e))
 
     def __init_fixed(self):
-        print (f"Looking for rules in {os.path.join(RESOURCES_PATH, 'rules.dlv2')}")
-        self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "rules.dlv2"))
+        #print (f"Looking for rules in {os.path.join(RESOURCES_PATH, 'rules.dlv2')}")
+        print (f"Looking for rules in {os.path.join(RESOURCES_PATH, 'matrix_encoding.asp')}")
+        #self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "rules.dlv2"))
+        self.__fixedInputProgram.add_files_path(os.path.join(RESOURCES_PATH, "matrix_encoding.asp"))
         self.__handler.add_program(self.__fixedInputProgram)
 
     def recall_asp(self, input):
+        print("recalling ASP")
         try:
             print (f"Calling ASP Solver.")
             
@@ -33,7 +37,6 @@ class DLVSolution:
             
             # insert nodes from graph to asp program
             for element in input:
-                print(element)
                 self.__variableInputProgram.add_object_input(element)
             print (f"Created Nodes.")
             
@@ -55,15 +58,17 @@ class DLVSolution:
 
             swap = None
             as_to_return = None
-            for answerSet in answerSets.get_optimal_answer_sets():
+            optimal = answerSets.get_optimal_answer_sets()
+            answers = optimal if len(optimal)>0 else answerSets.get_answer_sets()
+            for answerSet in answers:
                 print(answerSet)
                 for obj in answerSet.get_atoms():
                     print(obj)
                     if isinstance(obj, Swap):
                         swap = Swap(obj.get_id1(), obj.get_id2())
                         as_to_return = answerSet
-
             self.__handler.remove_program_from_id(index)
+            
             return swap,as_to_return
 
         except Exception as e:

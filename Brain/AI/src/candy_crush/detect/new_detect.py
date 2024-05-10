@@ -7,6 +7,7 @@ from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE, ID
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.validation.validation import Validation
+from AI.src.abstraction.objectsMatrix import ObjectMatrix
 from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
@@ -14,11 +15,11 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 
 
-def draw(matrixCopy, row,column,offset,delta, color):
-    x_start =  offset[0]+column*delta[0]
-    y_start = offset[1]+row*delta[1]
-    cv2.rectangle(matrixCopy, (x_start,y_start), (x_start+delta[0], y_start+delta[1]), color, 10)
-    #cv2.putText(matrixCopy,f"({x_start},{y_start})",(x_start,y_start),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+def draw(matrixCopy, nodes, color):
+    width, height = 110, 110
+    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
+    cv2.putText(matrixCopy,f"{nodes[ID]}",(nodes[PX],nodes[PY]),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
 
 def get_color(strg) -> ():
     # print(strg)
@@ -49,10 +50,10 @@ class MatchingCandy:
         self.validation=validation
 
     def vision(self):
-        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, threshold=0.78)
-        self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
+        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78)
+        self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
         if self.validation==None:
-            plt.imshow( self.image)
+            plt.imshow( self.__matrix)
             plt.title(f"Screenshot")
             plt.show()
             if not self.debug:
@@ -62,45 +63,43 @@ class MatchingCandy:
     def abstraction(self,vision_output):
         gridifier = Abstraction()
         #self.__graph = gridifier.ToGraph(vision_output,self.__difference)
-        matrix,offset,delta=gridifier.ToMatrix(vision_output,self.__difference)
-        '''
-        for l in matrix:
-            for l1 in l:
-                print(l1,end=' ')
-            print()
-        '''
+        matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__difference)
+        objectMatrix = ObjectMatrix(matrix_rep,offset,delta)
+
         number_per_type={}
-        matrix_copy=self.image.copy()
-        print(offset)
-        print(delta)
-        for i in range(len(matrix)):
-            for j in range(len(matrix[i])):
-                #print(matrix[i][j],end=" ")
-                if matrix[i][j] != None:
-                    color = get_color(matrix[i][j])
-                    draw(matrix_copy , i,j,offset,delta, color)
-                    if not matrix[i][j] in number_per_type.keys():
-                        number_per_type[matrix[i][j]] = 0
-                    number_per_type[matrix[i][j]] = number_per_type[matrix[i][j]]+1
-            #print()
-        for type in number_per_type.keys():
-            print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
-        print("",file=sys.stderr)
-        if self.validation==None:
-            plt.imshow(matrix_copy)
-            plt.title(f"Matching")
-            plt.show()
-            if not self.debug: 
-                plt.pause(0.5)
-        return matrix
+        matrix_copy=self.__matrix.copy()
+        '''
+        for node in self.__graph.get_nodes():
+            color = get_color(node[TYPE])
+            draw(matrix_copy , node, color)
+            if not node[TYPE] in number_per_type.keys():
+                number_per_type[node[TYPE]] = 0
+            number_per_type[node[TYPE]] = number_per_type[node[TYPE]]+1
+        '''
+        for row in objectMatrix.get_cells():
+            for cell in row:
+                value=cell.get_value()
+                if value != None:
+                    color = get_color(value)
+                    draw(matrix_copy , (cell.x,cell.y,value,cell.get_id()), color)
+                #if not value in number_per_type.keys():
+                #    number_per_type[value] = 0
+                #number_per_type[value] = number_per_type[value]+1
+        #for type in number_per_type.keys():
+         #   print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
+        #print("",file=sys.stderr)
+        plt.imshow(matrix_copy)
+        plt.title(f"Matching")
+        plt.show()
+        if not self.debug: 
+            plt.pause(0.5)
+        #return self.__graph
+        return objectMatrix
     
-    def old_search(self) -> ObjectGraph:
-        self.__graph = self.abstraction(self.vision())
-        return self.__graph
-    
-    def search(self)->[]:
-        self.__matrix= self.abstraction(self.vision())
-        return self.__matrix
+    def search(self) -> ObjectMatrix:
+        #self.__graph = self.abstraction(self.vision())
+        #return self.__graph
+        return self.abstraction(self.vision())
 
     def get_matrix(self):
-        return self.image
+        return self.__matrix

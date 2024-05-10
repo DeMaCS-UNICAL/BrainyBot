@@ -1,6 +1,21 @@
 class ElementsStacks:
+    __instance = None
+    __inited = False
 
-    def __init__(self,  tolerance=50,max_distance=150, min_number_elements=4) -> None:
+    def Clean(self):
+        ElementsStacks.__instance=None
+        ElementsStacks.__inited=False
+
+
+    def __new__(cls):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __init__(self,tolerance=50,max_distance=150, min_number_elements=4) -> None:
+        if type(self).__inited:
+            return
+        type(self).__inited = True
         self.__stacks = []
         self.__tolerance = tolerance
         self.__max_distance = max_distance
@@ -51,4 +66,3 @@ class ElementsStacks:
             if len(stack.get_elements())==0:
                 to_return.append(stack)
         return to_return
-    

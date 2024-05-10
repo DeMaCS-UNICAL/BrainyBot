@@ -3,6 +3,7 @@ import sys
 import cv2
 import numpy as np
 import mahotas
+import pytesseract as ts
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
@@ -112,6 +113,7 @@ class ObjectsFinder:
             x, y = pt
             confidence = res[y, x]  # Extract the confidence value at the corresponding position
             objects_found.append((x, y, confidence))
+        print(f"found {len(objects_found)} matches")
         return objects_found
 
     def get_circle_shape(self):
@@ -201,6 +203,63 @@ class ObjectsFinder:
                 plt.show()
                 cv2.waitKey(0)
         return balls
+            
+    def find_boxes(self) -> list:
+        contour = cv2.Canny(self.__img_matrix, 25, 80)
+        contour = cv2.dilate(contour, None, iterations=1)
+        contours, _ = cv2.findContours(contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        boxes = []
+        for i in range(len(contours)):
+            per = cv2.arcLength(contours[i], True)
+            epsilon = 0.05 * per
+            approx = cv2.approxPolyDP(contours[i], epsilon, True)
+            
+            # if the contour is not a rettangle or if it is too small, ignore it
+            if len(approx) != 4 or cv2.isContourConvex(approx) == False or cv2.contourArea(approx) < 3000:
+                continue
+            x, y, w, h = cv2.boundingRect(approx)
+            boxes.append((x, y, w, h))
+        return boxes
+    
+    def find_boxes_and_hierarchy(self):
+        mat_contour = np.zeros((self.__img_matrix.shape[0], self.__img_matrix.shape[1]), dtype=np.uint8)
+        boxes = self.find_boxes()
+        for box in boxes:
+            x, y, w, h = box
+            cv2.rectangle(mat_contour, (x, y), (x + w, y + h), 255, thickness=1, lineType=cv2.LINE_AA)
+        boxes, hierarchy = cv2.findContours(mat_contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        return boxes, hierarchy[0]
+
+    def find_text(self, x, y, w, h) -> str:
+        img = self.__img_matrix[y:y+h, x:x+w].copy()
+        elem = ts.image_to_string(img, config='--psm 8 --oem 3') 
+        return elem if elem != '' else None
+
+    def find_number(self, x, y, w, h) -> int:
+        img = self.__img_matrix[y:y+h, x:x+w].copy()
+        # Upscale the image to improve the OCR if the image is too small
+        if img.shape[0] < 150 or img.shape[1] < 150:
+            img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
+        elem = ts.image_to_string(img, config='--psm 6 --oem 1 -c tessedit_char_whitelist=0123456789')
+        if elem == '':
+            elem = ts.image_to_string(img, config='--psm 7 --oem 1 -c tessedit_char_whitelist=0123456789')
+        try:
+            return int(elem)
+        except:
+            return None
+    
+    def find_text_from_dictionary(self, x, y, w, h, dictionary_path) -> str:
+        img = self.__img_matrix[y:y+h, x:x+w].copy()
+        elem = ts.image_to_string(img, config='--psm 8 --oem 3 --user-words {}'.format(dictionary_path))
+        return elem if elem != '' else None
+
+    def find_text_from_regex(self, x, y, w, h, regex) -> str:
+        img = self.__img_matrix[y:y+h, x:x+w].copy()
+        elem = ts.image_to_string(img, config='--psm 8 --oem 3')
+        if regex.match(elem):
+            return elem
+        else:
+            return None        
 
     
     def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
@@ -234,4 +293,3 @@ class ObjectsFinder:
         # Show the image
         #plt.figure(dpi=300)
         return to_return,coordinates
-

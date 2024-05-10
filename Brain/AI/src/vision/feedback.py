@@ -31,6 +31,7 @@ class Feedback:
     def take_screenshot(self):
         server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
         try:
+            print("ASKING FOR SCREENSHOT.")
             getScreenshot(server_ip, port)
             print("SCREENSHOT TAKEN.")
         except Exception as e:
@@ -38,29 +39,33 @@ class Feedback:
             exit(1)
 
     def compare_with_expected(self,actual)->bool:
-        print(self.current_expected_result)
-        print("______________________________________")
-        print(actual)
-        to_return= True
-        for x in self.current_expected_result:
-            if not np.isin(x, actual).any():
-                print(x)
-                to_return=False
-                break
-        print("success? ",to_return)
+        to_return= np.all(np.isin(self.current_expected_result, actual))
         self.current_expected_result=[]
         return to_return
 
     def board_is_stable(self, abstr1, abstr2):
-        if np.isin(abstr1,abstr2).any():
+        if np.array_equal(sorted(abstr1),sorted(abstr2)):
             return True
         return False
-
+    
+    def flatten_list(input):
+        flattened_list = []
+        for item in input:
+            if isinstance(item, tuple) or isinstance(item,list):
+                flattened_list.extend(Feedback.flatten_list(item))
+            else:
+                flattened_list.append(item)
+        return flattened_list
+    
     def get_mapped(self,to_map):
         to_return=[]
-        for element in to_map:
+        flattened_to_map=Feedback.flatten_list(to_map)
+
+        for element in flattened_to_map:
             if issubclass(type(element),Predicate):
                 to_return.append( self.mapper.get_string(element))
+            elif isinstance(element,str):
+                to_return.append(element)
         return to_return
 
     def main(self):
@@ -68,13 +73,13 @@ class Feedback:
         vision_result = self.current_vision_callback()
         abstraction_result = self.current_abstraction_callback(vision_result)
         asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-        mapped_objects1 = self.get_mapped(asp_input[0])
+        mapped_objects1 = self.get_mapped(asp_input)
         while True:
             self.take_screenshot()
             vision_result = self.current_vision_callback()
             abstraction_result = self.current_abstraction_callback(vision_result)
             asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-            mapped_objects2 = self.get_mapped(asp_input[0])
+            mapped_objects2 = self.get_mapped(asp_input)
             if not self.board_is_stable(mapped_objects1,mapped_objects2):
                 mapped_objects1 = mapped_objects2
             else:

@@ -2,12 +2,13 @@ import argparse
 import os
 from AI.src.ball_sort.helper import ball_sort,check_if_to_revalidate
 from AI.src.candy_crush.helper import candy_crush
+from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
 import constants
 import sys
 from contextlib import redirect_stdout
-gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush }
+gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048  }
 validationDictionary = { "ball_sort" : check_if_to_revalidate }
 
 

@@ -87,7 +87,6 @@ class Ball(Predicate):
     predicate_name = "ball"
 
     __ids = count(1, 1)
-
     def reset():
         Ball.__ids = count(1, 1)
 
@@ -95,6 +94,7 @@ class Ball(Predicate):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
+
 
     def get_id(self) -> int:
         return self.__id
@@ -109,18 +109,17 @@ class Ball(Predicate):
         self.__color = color
 
 
-
 class Tube(Predicate):
     predicate_name = "tube"
 
     __ids = count(1, 1)
 
     def reset():
-        Tube.__ids = count(1, 1)
+        Tube.__ids=count(1,1)
 
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
-        self.__id = next(Tube.__ids)
+        self.__id = None
         self.__balls = []
         self.__x = x
         self.__y = y
@@ -152,34 +151,24 @@ class Tube(Predicate):
     def set_y(self, y):
         self.__y = int(y)
 
-    def custom_str(self):
-        to_return = "T\n"
-        for i in range(len(self.__balls),0,-1):
-            to_return+=str(self.__balls[i-1])+"\n"
-        return to_return
-
 
 class On(Predicate):
     predicate_name = "on"
-    def __init__(self, ball_above=None, ball_below=None, tube=None,position=None, step=None):
-        Predicate.__init__(self, [("ball_above", int), ("tube", int),("position",int), ("step", int)])
+
+    def __init__(self, ball_above=None, ball_below=None, tube=None, step=None):
+        Predicate.__init__(self, [("ball_above", int), ("ball_below", int), ("tube", int), ("step", int)])
         self.__ball_above = ball_above
         self.__ball_below = ball_below
-        self.__position=position
         self.__tube = tube
         self.__step = step
+
+
 
     def get_ball_above(self) -> int:
         return self.__ball_above
 
     def set_ball_above(self, ball_above):
         self.__ball_above = ball_above
-
-    def get_position(self) -> int:
-        return self.__position
-
-    def set_position(self, position):
-        self.__position = position
 
     def get_ball_below(self) -> int:
         return self.__ball_below
@@ -198,29 +187,28 @@ class On(Predicate):
 
     def set_step(self, step):
         self.__step = step
-    
 
 
 class Move(Predicate):
     predicate_name = "move"
 
-    def __init__(self, tube1=None, tube2=None, step=None):
-        Predicate.__init__(self, [("tube1", int), ("tube2", int)])
-        self.__tube1 = tube1
-        self.__tube2 = tube2
+    def __init__(self, ball=None, tube=None, step=None):
+        Predicate.__init__(self, [("ball", int), ("tube", int), ("step", int)])
+        self.__ball = ball
+        self.__tube = tube
         self.__step = step
 
-    def get_tube1(self) -> int:
-        return self.__tube1
+    def get_ball(self) -> int:
+        return self.__ball
 
-    def set_tube1(self, tube1):
-        self.__tube1 = tube1
+    def set_ball(self, ball):
+        self.__ball = ball
 
-    def get_tube2(self) -> int:
-        return self.__tube2
+    def get_tube(self) -> int:
+        return self.__tube
 
-    def set_tube2(self, tube2):
-        self.__tube2 = tube2
+    def set_tube(self, tube):
+        self.__tube = tube
 
     def get_step(self) -> int:
         return self.__step
@@ -254,15 +242,11 @@ def choose_dlv_system() -> DesktopHandler:
         else:
             return DesktopHandler(
                 DLV2DesktopService(os.path.join(DLV_PATH, "dlv2-linux")))
-        
     except Exception as e:
         print(e)
 
-def choose_clingo_system()->DesktopHandler:
-    try:
-        return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
-    except Exception as e:
-        print(e)
+def choose_clingo_system() -> DesktopHandler:
+    return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
 def get_colors(tubes: []):
     colors = set()
@@ -279,6 +263,7 @@ def get_balls_and_tubes(tubes: []):
         tube = Tube()
         tube.set_x(t.get_x())
         tube.set_y(t.get_y())
+        tube.set_id(t.get_id())
         for ball in t.get_elements():
             b = Ball(Color.get_color(ball[3]).get_id())
             balls.append(b)
@@ -289,9 +274,14 @@ def get_balls_and_tubes(tubes: []):
 
 def get_balls_position(tubes: [Tube]):
     on = []
+    as_stacks=[]
     for tube in tubes:
         ball_below = 0
-        balls = tube.get_balls()
-        for i in range(len(balls)-1,-1,-1):
-            on.append(On(balls[i].get_color(), None, tube.get_id(),i+1, 1))
-    return on
+        below_color=0
+        cont=0
+        for ball in tube.get_balls():
+            on.append(On(ball.get_id(), ball_below, tube.get_id(), 1))
+            as_stacks.append("on_color("+str(ball.get_color())+","+str(cont)+","+str(tube.get_id())+",1)")
+            cont+=1
+            ball_below = ball.get_id()
+    return on, as_stacks

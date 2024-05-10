@@ -40,9 +40,11 @@ class ObjectGraph(nx.Graph):
         self.__difference = difference
         self.__approximation = ((difference[PX] + difference[PY]) // 2) * 0.2
 
-    def add_another_node(self, px, py, label) -> None:  # TODO: we can override this
-        node = (px, py, label, self.__idNumber)
-        self.__idNumber += 1
+    def add_another_node(self, px, py, label,my_id=-1) -> None:  # TODO: we can override this
+        node_id = self.__idNumber if my_id==-1 else my_id
+        node = (px, py, label, node_id)
+        if(my_id==-1):
+            self.__idNumber += 1
 
         if not self.__exist_neighbours_too_close(node):  # check if there are some false matching
             super().add_node(node)
