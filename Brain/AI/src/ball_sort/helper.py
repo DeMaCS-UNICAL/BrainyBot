@@ -10,6 +10,7 @@ from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_sort.constants import SRC_PATH
 
 from AI.src.vision.feedback import Feedback
+from AI.src.validation.validation import Validation
 
 
 def __get_ball_tube(ball, ons, step):
@@ -67,8 +68,14 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     else:
         input=[]
         tubes=[]
+    distance=0
+    if validation!=None:
+        validator = Validation()
+        validate=[]
+        validate.extend(tubes)
+        distance = validator.validate_stacks(validate,validation)
     if(debug):
-        return matcher.canny_threshold
+        return distance, matcher.canny_threshold
     recompute=True
     while recompute:
         solution = DLVSolution()
