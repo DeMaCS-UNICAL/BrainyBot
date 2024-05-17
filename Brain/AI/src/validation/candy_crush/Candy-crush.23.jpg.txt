@@ -1,8 +1,72 @@
-purple.png blue.png green.png orange.png purple.png blue.png
-blue.png purple.png purple.png blueVertical.png blue.png orange.png
-green.png orange.png orange.png purple.png blue.png green.png
-purple.png orange.png purple.png blue.png orange.png orange.png
-orange.png blue.png green.png orange.png orange.png green.png
-notTouch.png blue.png greenHorizontal.png purple.png purple.png blue.png
-notTouch.png notTouch.png orange.png blue.png orange.png notTouch.png
-green.png notTouch.png notTouch.png notTouch.png notTouch.png green.png
+orangeHorizontal.png = 0
+red.png = 0
+blueHorizontal.png = 0
+orangeVertical.png = 0
+orangeBomb.png = 0
+green.png = 7
+purpleHorizontal.png = 0
+blueVertical.png = 1
+redVertical.png = 0
+purple.png = 9
+orange.png = 12
+redBomb.png = 0
+purpleVertical.png = 0
+greenBomb.png = 0
+greenHorizontal.png = 1
+redHorizontal.png = 0
+greenVertical.png = 0
+blueBomb.png = 0
+purpleBomb.png = 0
+colourB.png = 0
+blue.png = 11
+notTouch.png = 8
+cell(0,0,0,"purple").
+cell(1,0,1,"blue").
+cell(2,0,2,"green").
+cell(3,0,3,"orange").
+cell(4,0,4,"purple").
+cell(5,0,5,"blue").
+cell(8,1,0,"blue").
+cell(9,1,1,"purple").
+cell(10,1,2,"purple").
+cell(11,1,3,"blue").
+cell(12,1,4,"blue").
+cell(13,1,5,"orange").
+cell(16,2,0,"green").
+cell(17,2,1,"orange").
+cell(18,2,2,"orange").
+cell(19,2,3,"purple").
+cell(20,2,4,"blue").
+cell(21,2,5,"green").
+cell(24,3,0,"purple").
+cell(25,3,1,"orange").
+cell(26,3,2,"purple").
+cell(27,3,3,"blue").
+cell(28,3,4,"orange").
+cell(29,3,5,"orange").
+cell(32,4,0,"orange").
+cell(33,4,1,"blue").
+cell(34,4,2,"green").
+cell(35,4,3,"orange").
+cell(36,4,4,"orange").
+cell(37,4,5,"green").
+cell(40,5,0,"notTouch.png").
+cell(41,5,1,"blue").
+cell(42,5,2,"green").
+cell(43,5,3,"purple").
+cell(44,5,4,"purple").
+cell(45,5,5,"blue").
+cell(48,6,0,"notTouch.png").
+cell(49,6,1,"notTouch.png").
+cell(50,6,2,"orange").
+cell(51,6,3,"blue").
+cell(52,6,4,"orange").
+cell(53,6,5,"notTouch.png").
+cell(56,7,0,"green").
+cell(57,7,1,"notTouch.png").
+cell(58,7,2,"notTouch.png").
+cell(59,7,3,"notTouch.png").
+cell(60,7,4,"notTouch.png").
+cell(61,7,5,"green").
+type_of(11,"vertical").
+type_of(42,"horizontal").

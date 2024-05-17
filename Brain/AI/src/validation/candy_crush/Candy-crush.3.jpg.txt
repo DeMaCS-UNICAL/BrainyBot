@@ -1,5 +1,47 @@
-green.png green.png blue.png orange.png green.png
-green.png green.png orange.png blue.png blue.png
-purple.png purple.png blue.png purple.png green.png
-green.png blue.png blue.png orange.png purple.png
-blue.png purple.png orange.png purple.png blue.png
+redVertical.png = 0
+orangeVertical.png = 0
+orangeBomb.png = 0
+orangeHorizontal.png = 0
+greenHorizontal.png = 0
+orange.png = 4
+blueHorizontal.png = 0
+green.png = 7
+purple.png = 6
+blueVertical.png = 0
+purpleVertical.png = 0
+red.png = 0
+redBomb.png = 0
+purpleHorizontal.png = 0
+greenBomb.png = 0
+redHorizontal.png = 0
+greenVertical.png = 0
+blueBomb.png = 0
+purpleBomb.png = 0
+colourB.png = 0
+blue.png = 8
+notTouch.png = 0
+cell(0,0,0,"green").
+cell(1,0,1,"green").
+cell(2,0,2,"blue").
+cell(3,0,3,"orange").
+cell(4,0,4,"green").
+cell(5,1,0,"green").
+cell(6,1,1,"green").
+cell(7,1,2,"orange").
+cell(8,1,3,"blue").
+cell(9,1,4,"blue").
+cell(10,2,0,"purple").
+cell(11,2,1,"purple").
+cell(12,2,2,"blue").
+cell(13,2,3,"purple").
+cell(14,2,4,"green").
+cell(15,3,0,"green").
+cell(16,3,1,"blue").
+cell(17,3,2,"blue").
+cell(18,3,3,"orange").
+cell(19,3,4,"purple").
+cell(20,4,0,"blue").
+cell(21,4,1,"purple").
+cell(22,4,2,"orange").
+cell(23,4,3,"purple").
+cell(24,4,4,"blue").

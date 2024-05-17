@@ -50,7 +50,7 @@ class Abstraction:
                     else:
                         matrix[r][c]=matrix[r][c][1]
 
-        print(matrix)
+        #print(matrix)
         return matrix,offset,delta
 
     def compute_offest_delta_dict(self, elements, distance):

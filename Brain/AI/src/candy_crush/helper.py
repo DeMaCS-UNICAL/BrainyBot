@@ -17,6 +17,7 @@ from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
 from AI.src.constants import RESOURCES_PATH
 
+from languages.asp.asp_mapper import ASPMapper
 
 
 def asp_input(matrix):
@@ -49,11 +50,13 @@ def candy_crush(screenshot,debug = False, validation=None,it=0):
 
     # get nodes and edges of graph for DLV
     input = asp_input(candyMatrix)
-
+    for e in input:
+        print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
     #print(f"EDGES --> {edges}")
     #print()
     #print(f"NODES --> {nodesAndInformation}")
+    return
     validator = Validation()
     
     if validation!=None:##MODIFY: pass asp input instead of object_matrix

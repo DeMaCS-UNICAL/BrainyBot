@@ -1,7 +1,74 @@
-green.png red.png blue.png purple.png orange.png green.png red.png
-orange.png purple.png blue.png red.png green.png redVertical.png orange.png
-green.png blue.png green.png orange.png blue.png green.png orange.png
-red.png purple.png red.png purple.png red.png orange.png red.png
-purple.png green.png orange.png green.png purple.png orange.png blue.png
-green.png blue.png red.png purple.png purple.png green.png purple.png
-red.png orange.png blueVertical.png orange.png redHorizontal.png orange.png green.png
+orangeVertical.png = 0
+blueHorizontal.png = 0
+orangeHorizontal.png = 0
+orangeBomb.png = 0
+redVertical.png = 1
+orange.png = 11
+red.png = 14
+redBomb.png = 0
+greenHorizontal.png = 0
+greenBomb.png = 0
+purpleHorizontal.png = 0
+green.png = 11
+purple.png = 9
+purpleVertical.png = 0
+blueVertical.png = 1
+redHorizontal.png = 1
+greenVertical.png = 0
+blueBomb.png = 0
+purpleBomb.png = 0
+colourB.png = 0
+blue.png = 8
+notTouch.png = 0
+cell(0,0,0,"green").
+cell(1,0,1,"red").
+cell(2,0,2,"blue").
+cell(3,0,3,"purple").
+cell(4,0,4,"orange").
+cell(5,0,5,"green").
+cell(6,0,6,"red").
+cell(7,1,0,"orange").
+cell(8,1,1,"purple").
+cell(9,1,2,"blue").
+cell(10,1,3,"red").
+cell(11,1,4,"green").
+cell(12,1,5,"red").
+cell(13,1,6,"orange").
+cell(14,2,0,"green").
+cell(15,2,1,"blue").
+cell(16,2,2,"green").
+cell(17,2,3,"orange").
+cell(18,2,4,"blue").
+cell(19,2,5,"green").
+cell(20,2,6,"orange").
+cell(21,3,0,"red").
+cell(22,3,1,"purple").
+cell(23,3,2,"red").
+cell(24,3,3,"purple").
+cell(25,3,4,"red").
+cell(26,3,5,"orange").
+cell(27,3,6,"red").
+cell(28,4,0,"purple").
+cell(29,4,1,"green").
+cell(30,4,2,"orange").
+cell(31,4,3,"green").
+cell(32,4,4,"purple").
+cell(33,4,5,"orange").
+cell(34,4,6,"blue").
+cell(35,5,0,"green").
+cell(36,5,1,"blue").
+cell(37,5,2,"red").
+cell(38,5,3,"purple").
+cell(39,5,4,"purple").
+cell(40,5,5,"green").
+cell(41,5,6,"purple").
+cell(42,6,0,"red").
+cell(43,6,1,"orange").
+cell(44,6,2,"blue").
+cell(45,6,3,"orange").
+cell(46,6,4,"red").
+cell(47,6,5,"orange").
+cell(48,6,6,"green").
+type_of(12,"vertical").
+type_of(44,"vertical").
+type_of(46,"horizontal").

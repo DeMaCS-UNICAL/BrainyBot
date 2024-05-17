@@ -88,11 +88,12 @@ class MatchingCandy:
         #for type in number_per_type.keys():
          #   print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
         #print("",file=sys.stderr)
-        plt.imshow(matrix_copy)
-        plt.title(f"Matching")
-        plt.show()
-        if not self.debug: 
-            plt.pause(0.5)
+        if self.validation==None:
+            plt.imshow(matrix_copy)
+            plt.title(f"Matching")
+            plt.show()
+            if not self.debug: 
+                plt.pause(0.5)
         #return self.__graph
         return objectMatrix
     

@@ -1,7 +1,73 @@
-purple.png red.png green.png green.png red.png purple.png green.png
-red.png purple.png red.png red.png blue.png green.png green.png
-green.png red.png purple.png orange.png blue.png purple.png orange.png
-purple.png blue.png blue.png green.png green.png purple.png blue.png
-red.png green.png green.png redBomb.png blue.png orange.png blue.png
-blue.png red.png red.png orange.png red.png orangeBomb.png red.png
-red.png red.png purple.png purple.png red.png green.png blue.png
+red.png = 22
+orangeVertical.png = 0
+purple.png = 9
+greenHorizontal.png = 0
+green.png = 11
+blueHorizontal.png = 0
+redBomb.png = 2
+blueVertical.png = 0
+purpleVertical.png = 0
+orange.png = 4
+orangeBomb.png = 2
+redVertical.png = 0
+orangeHorizontal.png = 0
+purpleHorizontal.png = 0
+greenBomb.png = 0
+redHorizontal.png = 0
+greenVertical.png = 0
+blueBomb.png = 0
+purpleBomb.png = 0
+colourB.png = 0
+blue.png = 10
+notTouch.png = 0
+cell(0,0,0,"purple").
+cell(1,0,1,"red").
+cell(2,0,2,"green").
+cell(3,0,3,"green").
+cell(4,0,4,"red").
+cell(5,0,5,"purple").
+cell(6,0,6,"green").
+cell(7,1,0,"red").
+cell(8,1,1,"purple").
+cell(9,1,2,"red").
+cell(10,1,3,"red").
+cell(11,1,4,"blue").
+cell(12,1,5,"green").
+cell(13,1,6,"green").
+cell(14,2,0,"green").
+cell(15,2,1,"red").
+cell(16,2,2,"purple").
+cell(17,2,3,"orange").
+cell(18,2,4,"blue").
+cell(19,2,5,"purple").
+cell(20,2,6,"orange").
+cell(21,3,0,"purple").
+cell(22,3,1,"blue").
+cell(23,3,2,"blue").
+cell(24,3,3,"green").
+cell(25,3,4,"green").
+cell(26,3,5,"purple").
+cell(27,3,6,"blue").
+cell(28,4,0,"red").
+cell(29,4,1,"green").
+cell(30,4,2,"green").
+cell(31,4,3,"red").
+cell(32,4,4,"blue").
+cell(33,4,5,"orange").
+cell(34,4,6,"blue").
+cell(35,5,0,"blue").
+cell(36,5,1,"red").
+cell(37,5,2,"red").
+cell(38,5,3,"orange").
+cell(39,5,4,"red").
+cell(40,5,5,"orange").
+cell(41,5,6,"red").
+cell(42,6,0,"red").
+cell(43,6,1,"red").
+cell(44,6,2,"purple").
+cell(45,6,3,"purple").
+cell(46,6,4,"red").
+cell(47,6,5,"green").
+cell(48,6,6,"blue").
+type_of(31,"bomb").
+type_of(40,"bomb").

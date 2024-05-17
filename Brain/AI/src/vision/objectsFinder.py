@@ -35,6 +35,7 @@ class ObjectsFinder:
     def worker_process(self,id,dictionary,elements:list,regmax):
         for pair in elements:
             dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
+            print(pair[0],"=",len(dictionary[pair[0]]))
         #print(f"I'm done {id}")
 
         
@@ -113,7 +114,7 @@ class ObjectsFinder:
             x, y = pt
             confidence = res[y, x]  # Extract the confidence value at the corresponding position
             objects_found.append((x, y, confidence))
-        print(f"found {len(objects_found)} matches")
+        #print(f"found {len(objects_found)} matches")
         return objects_found
 
     def get_circle_shape(self):

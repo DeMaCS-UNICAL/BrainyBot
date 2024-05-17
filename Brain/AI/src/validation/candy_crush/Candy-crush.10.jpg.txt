@@ -1,6 +1,66 @@
-None orange.png purple.png blue.png green.png blue.png None
-None orange.png blue.png blue.png orange.png purple.png None
-orange.png green.png purple.png purple.png blue.png blue.png purple.png
-orange.png purple.png blueHorizontal.png greenHorizontal.png purple.png orange.png blue.png
-purple.png purple.png green.png blue.png purple.png purple.png green.png
-None blue.png purple.png green.png green.png blue.png None
+orangeBomb.png = 0
+redVertical.png = 0
+orangeHorizontal.png = 0
+redBomb.png = 0
+blueHorizontal.png = 1
+red.png = 0
+orange.png = 6
+purpleVertical.png = 0
+purple.png = 12
+blueVertical.png = 0
+greenHorizontal.png = 1
+green.png = 6
+purpleHorizontal.png = 0
+orangeVertical.png = 0
+greenBomb.png = 0
+redHorizontal.png = 0
+greenVertical.png = 0
+blueBomb.png = 0
+purpleBomb.png = 0
+colourB.png = 0
+blue.png = 13
+notTouch.png = 0
+cell(0,0,0,"").
+cell(1,0,1,"orange").
+cell(2,0,2,"purple").
+cell(3,0,3,"blue").
+cell(4,0,4,"green").
+cell(5,0,5,"blue").
+cell(6,0,6,"").
+cell(6,1,0,"").
+cell(7,1,1,"orange").
+cell(8,1,2,"blue").
+cell(9,1,3,"blue").
+cell(10,1,4,"orange").
+cell(11,1,5,"purple").
+cell(12,1,6,"").
+cell(12,2,0,"orange").
+cell(13,2,1,"green").
+cell(14,2,2,"purple").
+cell(15,2,3,"purple").
+cell(16,2,4,"blue").
+cell(17,2,5,"blue").
+cell(18,2,6,"purple").
+cell(18,3,0,"orange").
+cell(19,3,1,"purple").
+cell(20,3,2,"blue").
+cell(21,3,3,"green").
+cell(22,3,4,"purple").
+cell(23,3,5,"orange").
+cell(24,3,6,"blue").
+cell(24,4,0,"purple").
+cell(25,4,1,"purple").
+cell(26,4,2,"green").
+cell(27,4,3,"blue").
+cell(28,4,4,"purple").
+cell(29,4,5,"purple").
+cell(30,4,6,"green").
+cell(30,5,0,"").
+cell(31,5,1,"blue").
+cell(32,5,2,"purple").
+cell(33,5,3,"green").
+cell(34,5,4,"green").
+cell(35,5,5,"blue").
+cell(36,5,6,"").
+type_of(20,"horizontal").
+type_of(21,"horizontal").
