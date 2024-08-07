@@ -3,6 +3,7 @@ from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.abstraction.stack import Stack
 import numpy as np
 import cv2
+import math
 
 from matplotlib import pyplot as plt
 class Abstraction:
@@ -170,98 +171,116 @@ class Abstraction:
             stacks.append(stack)
         return stacks
 
-    def compute_row_type_exagonal_matrix(self,bubble,radius,grid_metadata):
+    def compute_rows_exagonal_matrix(self,bubbles:list,radius,grid_metadata):
         major_row=radius
         minor_row=2*radius
         row_type=None
-        starting_distance=None
+
         #search between the possible positions of a major_row or minor_row to determine which one is the first one
         for _ in range(grid_metadata[1]):
 
-            if(bubble[0] >= major_row - grid_metadata[0] and bubble[0] <= major_row + grid_metadata[0]):
+            if(bubbles[0][0] >= major_row - grid_metadata[0] and bubbles[0][0] <= major_row + grid_metadata[0]):
                 row_type=grid_metadata[1]
-                starting_distance=radius
                 break
 
-            if(bubble[0] >= minor_row - grid_metadata[0] and bubble[0] <= minor_row + grid_metadata[0]):
+            if(bubbles[0][0] >= minor_row - grid_metadata[0] and bubbles[0][0] <= minor_row + grid_metadata[0]):
                 row_type=grid_metadata[1]-1
-                starting_distance=2*radius
                 break
 
             minor_row+=2*radius
-            major_row+=2*radius   
+            major_row+=2*radius 
+        
+        #Defined the type of rows we then calculate the number of rows based on the bubbles detected
+        number_of_rows = 0
 
-        return row_type,starting_distance  
+        if(len(bubbles) > 0):
+            number_of_rows = 1
+
+        for i in range(len(bubbles)):
+            if( i < len(bubbles)-1 and bubbles[i+1][1] > bubbles[i][1] + grid_metadata[0]):
+                number_of_rows+= round((bubbles[i+1][1]-bubbles[i][1]) / grid_metadata[2])
+
+        return row_type,number_of_rows
     
     def removing_false_matches(self,elements:list,radius,height_matching,grid_metadata):
         bubbles= []
+        player_bubbles=[]
         #also changes the y value so that way there are no inconsistency with the y center of the bubbles on the same row
-        for b in range(len(elements)):
-            if(elements[b][1] > height_matching[0]) and (elements[b][1] < height_matching[1]):
-                if(elements[b][2] >= radius - grid_metadata[0] and elements[b][2]<= radius + grid_metadata[0]):
+        #this is done to avoid problems when sorting the list based on the y values
+        for bubble in range(len(elements)):
+            if(elements[bubble][1] > height_matching[0]) and (elements[bubble][1] < height_matching[1]):
+                if(elements[bubble][2] >= radius - grid_metadata[0] and elements[bubble][2]<= radius + grid_metadata[0]):
                     skip=False
                     for existing in bubbles:
-                        if((elements[b][0] >= existing[0]-grid_metadata[0] and elements[b][0] <= existing[0] + grid_metadata[0]) and  
-                            (elements[b][1] >= existing[1]-grid_metadata[0] and elements[b][1] <= existing[1] + grid_metadata[0])):
+                        if((elements[bubble][0] >= existing[0]-grid_metadata[0] and elements[bubble][0] <= existing[0] + grid_metadata[0]) and  
+                            (elements[bubble][1] >= existing[1]-grid_metadata[0] and elements[bubble][1] <= existing[1] + grid_metadata[0])):
                             skip=True
                             break
                     if not skip:
-                       #changes the value if the last bubble inserted has an y coord similar to yours
-                        if(len(bubbles) > 0 and (elements[b][1]  >= bubbles[-1][1] - grid_metadata[0] and elements[b][1] <= bubbles[-1][1] + grid_metadata[0])):
-                            elements[b][1]=bubbles[-1][1]
+                    #changes the value if the last bubble inserted has an y coord similar to yours
+                        if(len(bubbles) > 0 and (elements[bubble][1]  >= bubbles[-1][1] - grid_metadata[0] and elements[bubble][1] <= bubbles[-1][1] + grid_metadata[0])):
+                            elements[bubble][1]=bubbles[-1][1]
+                            
 
-                        bubbles.append(elements[b])
-        
+                        bubbles.append(elements[bubble])
+
         return bubbles
 
-    def ExagonalGridToMatrix(self,elements:list,height_matching,radius,grid_metadata):
+    def ExagonalGridToMatrix(self,elements:list,height_matching,radius,grid_data):
 
         #Removing False match
         
-        bubbles=self.removing_false_matches(elements,radius,height_matching,grid_metadata)
+        bubbles=self.removing_false_matches(elements,radius,height_matching,grid_data)
 
         #Now sort and then construct
         ExagonalMatrix=[[]]
         bubbles = sorted(bubbles,key=customExagonalSorter)
-        bubbles_max_index=len(bubbles)
+        bubbles_max_index=len(bubbles) - 1
         row=0
 
         #Finding row type based on the first bubble(first row)
-        row_type,distance=self.compute_row_type_exagonal_matrix(bubbles[0],radius,grid_metadata)
-        ###                
-        for i in range(bubbles_max_index):
-            for _ in range(row_type):
-                #decides whether the current bubble matches with the examinated position or not
-                if(bubbles[i][0] >= distance - grid_metadata[0] and bubbles[i][0] <= distance + grid_metadata[0]):
-                    ExagonalMatrix[row].append(bubbles[i])
-                    distance+=2*radius
-                    break
-                else:
-                    ExagonalMatrix[row].append([distance,bubbles[i][1],0])
-                    distance+=2*radius
-            
-            #FillUp when is the last row
-            if( i == bubbles_max_index -1):
-                for _ in range(len(ExagonalMatrix[row]),row_type):
-                    ExagonalMatrix[row].append([0,0,0])
-            
-            #FillUp if the next bubble is not on the same row and after start a new row and update parameters
-            if(i != bubbles_max_index-1 and bubbles[i+1][1] > bubbles[i][1] + grid_metadata[0]):
-                for _ in range(len(ExagonalMatrix[row]),row_type):
-                    ExagonalMatrix[row].append([0,0,0])
+        if(bubbles_max_index >= 0):
 
-                ExagonalMatrix.append([])
-                row+=1
+            row_type,number_of_rows=self.compute_rows_exagonal_matrix(bubbles,radius,grid_data)
+            currentRowY = bubbles[0][1]
+
+            if(row_type == grid_data[1]):
+                distance = radius
+            else:
+                distance = 2*radius
+
+            ###   
+
+            currentBubble = 0   
+
+            #Constructs each row based on the number of rows, adding empty spots where no bubbles detected
+
+            for value in range(number_of_rows):
+                for _ in range(row_type):
+                    if ((bubbles[currentBubble][0] >= distance - grid_data[0] and bubbles[currentBubble][0] <= distance + grid_data[0]) and 
+                        (bubbles[currentBubble][1] >= currentRowY - grid_data[0] and bubbles[currentBubble][1] <= currentRowY + grid_data[0])):
+                        ExagonalMatrix[row].append(bubbles[currentBubble])
+                        if(currentBubble < bubbles_max_index):
+                            currentBubble+=1
+                    else:
+                        ExagonalMatrix[row].append([distance,currentRowY,radius/2])
+                    
+                    distance+=2*radius
                 
-                if(row_type == grid_metadata[1]):
-                    row_type-=1
-                    distance=2*radius
+                #at the end of each row approx to next row
+                currentRowY += grid_data[2]
+                
+                
+                if(row_type == grid_data[1]):
+                    row_type -= 1
+                    distance = 2*radius
                 else:
-                    row_type+=1
-                    distance=radius
-            
-        #L'intera astrazione si basa sul fatto di non poter avere una riga della nostra matrice per cui non è stata trovata almeno una pallina  
+                    row_type += 1
+                    distance = radius
+
+                if(value < number_of_rows - 1):
+                    ExagonalMatrix.append([])
+                    row+=1
 
         return ExagonalMatrix
-
         

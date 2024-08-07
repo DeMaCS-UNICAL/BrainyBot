@@ -144,11 +144,7 @@ class ObjectsFinder:
     def find_circles(self, min_radius,canny_threshold):
         circle_shape = self.get_circle_shape()
         gray = self.__gray
-        # threshold
-        #blurred_img = cv2.blur(gray,ksize=(5,5))
         canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
-        #kernel=np.ones((4,1),np.uint8)
-        #closed = cv2.morphologyEx(canny,cv2.MORPH_CLOSE,kernel)
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
         if self.debug and not self.validation:
@@ -194,7 +190,7 @@ class ObjectsFinder:
             plt.imshow(gray, cmap="gray")
             plt.show()
             cv2.waitKey(0)
-        circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,param1= 100, param2=15, minRadius=balls_min_radius,     maxRadius=balls_max_radius)
+        circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,param1= 100, param2=15, minRadius=balls_min_radius,maxRadius=balls_max_radius)
         balls = []
         if circles is not None:
             circles = np.round(circles[0, :]).astype("int")
@@ -306,3 +302,51 @@ class ObjectsFinder:
         # Show the image
         #plt.figure(dpi=300)
         return to_return,coordinates
+
+
+    def find_circles_blurred(self, min_radius,canny_threshold):
+        circle_shape = self.get_circle_shape()
+        gray = self.__gray
+        
+        #blurred = cv2.GaussianBlur(gray,(3,3),3)
+        blurred =  cv2.bilateralFilter(gray,8,5,5)
+        canny = cv2.Canny(blurred, canny_threshold,int(canny_threshold*3.5))
+        kernel = np.ones((18, 16), np.uint8)
+        closed = cv2.morphologyEx(canny, cv2.MORPH_CLOSE, kernel)
+        contours, _ = cv2.findContours(closed, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.12]
+        
+        if self.debug and not self.validation:
+            closed = cv2.cvtColor(closed, cv2.COLOR_GRAY2RGB)
+            #canny2 = canny.copy()
+            #canny3 = canny.copy()
+            cv2.drawContours(closed, contours, -1, (255, 0, 0), 1)
+            plt.imshow(closed)
+            plt.show()
+        gray = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+        balls = []
+        if circles is not None:
+            for circle in circles:
+                (center),r = cv2.minEnclosingCircle(circle)
+                if r<min_radius:
+                    continue
+                # get the color of pixel (x, y) form the blurred image
+                x=int(center[0])
+                y=int(center[1])
+                r=int(r)
+                color = np.array(self.__blurred[y,x])
+                if self.debug and not self.validation:
+                    print(f"Found ball:({x}, {y}): {color}")
+                # draw the circle
+                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
+                #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
+                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                balls.append([x, y, r,color.tolist()])
+            if self.debug and not self.validation:
+                plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
+                plt.show()
+                cv2.waitKey(0)
+
+        return balls

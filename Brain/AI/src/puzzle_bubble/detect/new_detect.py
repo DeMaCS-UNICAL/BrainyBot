@@ -1,13 +1,13 @@
 import os
 import cv2
+import math
 from matplotlib import pyplot as plt
-from math import ceil
 
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.helpers import getImg
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.constants import SCREENSHOT_PATH
-from AI.src.puzzle_bubble.constants import GRID_START_APPROXIMATION,GRID_END_APPROXIMATION,MAX_BUBBLES_PER_ROW,MAX_RADIUS_OFFSET
+from AI.src.puzzle_bubble.constants import GRID_START_APPROXIMATION,GRID_END_APPROXIMATION,MAX_BUBBLES_PER_ROW
 
 
 class MatchingBubblePuzzle:
@@ -18,6 +18,8 @@ class MatchingBubblePuzzle:
         self.screenshot=screenshot_path
         self.__finder = ObjectsFinder(screenshot_path,debug=True)
         self.__matrix = None
+        self.__radius = None
+        self.__radius_offset = None
     
     def vision(self):
 
@@ -27,22 +29,28 @@ class MatchingBubblePuzzle:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show()
+        
+        self.__radius= round((self.__image.shape[1] / MAX_BUBBLES_PER_ROW) / 2,2)
+        self.__radius_offset = round(self.__radius / 4)
 
-        min_radius= ((self.__image.shape[1] / MAX_BUBBLES_PER_ROW) // 2) - MAX_RADIUS_OFFSET
+        min_radius= (self.__radius) - self.__radius_offset
 
-        return self.__finder.find_circles(min_radius,canny_threshold=20)
+        return self.__finder.find_circles_blurred(min_radius,canny_threshold=10)
         
         #valori canny da rivedere
 
     def abstraction(self,vision_output):
         ExagonalMatrix = Abstraction()
 
+        #approximation of where the grid should be
         start_approximation = self.__image.shape[0] * GRID_START_APPROXIMATION
         end_approximation = self.__image.shape[0] * GRID_END_APPROXIMATION
 
-        radius= round((self.__image.shape[1] / MAX_BUBBLES_PER_ROW) / 2,2)
+        #defining the distance between two rows on flat-top exagonal grid implementation, source :
+        # https://www.redblobgames.com/grids/hexagons/
+        distance_next_row = math.sqrt(3) * self.__radius
         
-        return ExagonalMatrix.ExagonalGridToMatrix(vision_output,(start_approximation,end_approximation),radius,(MAX_RADIUS_OFFSET,MAX_BUBBLES_PER_ROW))
+        return ExagonalMatrix.ExagonalGridToMatrix(vision_output,(start_approximation,end_approximation),self.__radius,(self.__radius_offset,MAX_BUBBLES_PER_ROW,distance_next_row))
         #Vedere qui invece come fare per passare ToExagonalMatrix
 
     def SearchGrid(self):
