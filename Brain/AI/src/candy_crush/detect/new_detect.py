@@ -13,6 +13,7 @@ from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
+from AI.src.vision.input_game_object import TemplateMatch
 
 
 def draw(matrixCopy, nodes, color):
@@ -58,7 +59,7 @@ class MatchingCandy:
             plt.show()
             if not self.debug:
                 plt.pause(0.1)
-        return finder.find_all(SPRITES)
+        return finder.find(TemplateMatch(SPRITES))
     
     def abstraction(self,vision_output):
         gridifier = Abstraction()

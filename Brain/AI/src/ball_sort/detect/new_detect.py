@@ -113,7 +113,7 @@ class MatchingBalls:
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
         maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        self.balls = self.finder.find_circles(minRadius,self.canny_threshold)
+        self.balls = self.finder.__find_circles(minRadius,self.canny_threshold)
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
 

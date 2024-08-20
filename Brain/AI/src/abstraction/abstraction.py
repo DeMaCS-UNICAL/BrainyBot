@@ -4,11 +4,13 @@ import numpy as np
 import cv2
 
 from matplotlib import pyplot as plt
+from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch
+
 class Abstraction:
     
     
     
-    def ToGraph(self, elements:dict, distance:())->ObjectGraph:
+    def ToGraph(self, elements:dict, distance:tuple)->ObjectGraph:
         graph = ObjectGraph(distance)
         main_id=9
         for label in sorted(elements.keys()):
@@ -19,55 +21,54 @@ class Abstraction:
                 graph.add_another_node(match[0], match[1], label,int(str(main_id)+str(sub_id)))
         return graph
 
-    #elements.values are tuple of the kind (x,y,match_value)
-    def ToMatrix(self, elements:dict, distance:(), labelMatrix:bool=True)->[]:
+    #elements.values are OutputGameObject
+    def ToMatrix(self, elements:list, distance:tuple, labelMatrix:bool=True)->list:
         offset, delta = self.compute_offest_delta_dict(elements, distance)
-        max=[0,0]
-        for label in elements.keys():            
-            for match in elements[label]:
+        max_row_col=[0,0]
+        for element in elements:       
                 for i in range(2):
-                    current = (match[i]-offset[i])//delta[i]
-                    if current > max[(i+1)%2]:
-                        max[(i+1)%2]=int(current)
+                    current_coord = element.x if i==0 else element.y
+                    current = (current_coord-offset[i])//delta[i]
+                    if current > max_row_col[(i+1)%2]:
+                        max_row_col[(i+1)%2]=int(current)
         matrix=[]
-        for i in range(max[0]+1):
+        for i in range(max_row_col[0]+1):
             matrix.append([])
-            for j in range(max[1]+1):
+            for j in range(max_row_col[1]+1):
                 matrix[i].append(None)
-        for label in elements.keys():
-            for match in elements[label]:
-                r=int((match[1]-offset[1])//delta[1])
-                c=int((match[0]-offset[0])//delta[0])
-                if matrix[r][c]!=None and matrix[r][c][1][2]>match[2]:#matrix[r][c][1][2]: matrix stores the lable and the coordinates+value of the match
-                    continue
-                matrix[r][c]=(label,match)
+        for element in elements:
+                r=int((element.y-offset[1])//delta[1])
+                c=int((element.x-offset[0])//delta[0])
+                if isinstance(element,OutputTemplateMatch):
+                    if matrix[r][c]!=None and matrix[r][c].confidence> element.confidence:
+                        continue
+                matrix[r][c]=element
         offset, delta = self.compute_offest_delta_matrix(matrix)
         for r in range(len(matrix)):
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
-                    if labelMatrix:
-                        matrix[r][c]=matrix[r][c][0]
+                    if labelMatrix and isinstance(matrix[r][c],OutputTemplateMatch) :
+                        matrix[r][c]=matrix[r][c].label
                     else:
-                        matrix[r][c]=matrix[r][c][1]
+                        matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
 
         #print(matrix)
         return matrix,offset,delta
 
-    def compute_offest_delta_dict(self, elements, distance):
+    def compute_offest_delta_dict(self, elements:list, distance):
         offset=[10000,10000]
         delta=[10000,10000]
-        all_matches=[[],[],]
-        for match_list in elements.values():
-            for match in match_list:
-                all_matches[0].append(match[0])
-                all_matches[1].append(match[1])
+        all_coordinates=[[],[],]
+        for element in elements:
+            all_coordinates[0].append(element.x)
+            all_coordinates[1].append(element.y)
         for i in range(2):
-            all_matches[i].sort()
-            offset[i]=all_matches[i][0]
-        for match_index in range(len(all_matches[0])):
+            all_coordinates[i].sort()
+            offset[i]=all_coordinates[i][0]
+        for coordinate_index in range(len(all_coordinates[0])):
             for i in range(2):
-                if match_index<len(all_matches[i])-1:
-                    current_delta=all_matches[i][match_index+1]-all_matches[i][match_index]
+                if coordinate_index<len(all_coordinates[i])-1:
+                    current_delta=all_coordinates[i][coordinate_index+1]-all_coordinates[i][coordinate_index]
                     if current_delta>=distance[i] and current_delta<delta[i]:
                         delta[i]=current_delta
         return offset,delta
@@ -76,20 +77,20 @@ class Abstraction:
         offset=[0,0]
         for i in range(len(matrix)):
             if matrix[i][0]!=None:
-                offset[0]=matrix[i][0][1][0]
+                offset[0]=matrix[i][0].x
         for i in range(len(matrix[0])):
             if matrix[0][i]!=None:
-                offset[1]=matrix[0][i][1][1]
+                offset[1]=matrix[0][i].y
         delta=[0,0]
         cont=[0,0]
         for r in range(len(matrix)):
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
                     if c<len(matrix[r])-1 and matrix[r][c+1]!=None:
-                        delta[0]+=matrix[r][c+1][1][0]-matrix[r][c][1][0]
+                        delta[0]+=matrix[r][c+1].x-matrix[r][c].x
                         cont[0]+=1
                     if r<len(matrix)-1 and matrix[r+1][c]!=None:
-                        delta[1]+=matrix[r+1][c][1][1]-matrix[r][c][1][1]
+                        delta[1]+=matrix[r+1][c].y-matrix[r][c].y
                         cont[1]+=1
         delta[0]//=cont[0]
         delta[1]//=cont[1]

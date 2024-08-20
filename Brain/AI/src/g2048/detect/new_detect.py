@@ -1,6 +1,7 @@
 from AI.src.vision.objectsFinder import ObjectsFinder
 import cv2
 from math import sqrt
+from AI.src.vision.input_game_object import Rectangle,TextRectangle, OutputRectangle
 
 class Matching2048:
     def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
@@ -21,7 +22,7 @@ class Matching2048:
             self.__calculate_metadata()
 
     def __calculate_metadata(self):
-        boxes, hierarchy = self.__finder.find_boxes_and_hierarchy()
+        boxes, hierarchy = self.__finder.find(Rectangle(True))
         matrix_index = self.__find_matrix(boxes, hierarchy)
         if matrix_index == None:
             return False
@@ -31,7 +32,7 @@ class Matching2048:
     def get_numbers(self):
         for i in range(len(self.__numbers_boxes)):
             x, y, w, h = self.__numbers_boxes[i]
-            elem = self.__finder.find_number(x, y, w, h)
+            elem = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
 
 
     def __find_matrix(self, boxes, hierarchy):
@@ -69,7 +70,7 @@ class Matching2048:
         if self.__numbers_boxes != None:
             for box in self.__numbers_boxes:
                 x, y, w, h = box
-                number = self.__finder.find_number(x, y, w, h)
+                number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
                 if number == None:
                     numbers.append(0)
                 else:
@@ -90,7 +91,7 @@ class Matching2048:
             if self.__numbers_boxes != None:
                 for box in self.__numbers_boxes:
                     x, y, w, h = box
-                    number = self.__finder.find_number(x, y, w, h)
+                    number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
                     if number == None:
                         numbers.append(0)
                     else:

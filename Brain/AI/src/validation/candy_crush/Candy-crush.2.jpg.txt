@@ -1,3 +1,4 @@
+###VISION
 redVertical.png = 0
 blueHorizontal.png = 0
 orange.png = 4
@@ -20,6 +21,7 @@ purpleBomb.png = 0
 colourB.png = 0
 blue.png = 9
 notTouch.png = 0
+###ABSTRACTION
 cell(0,0,0,"blue").
 cell(1,0,1,"green").
 cell(2,0,2,"orange").
