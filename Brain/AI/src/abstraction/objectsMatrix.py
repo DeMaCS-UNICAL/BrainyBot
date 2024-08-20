@@ -5,6 +5,11 @@ class ObjectMatrix():
 
     def __init__(self, matrix, offset, delta):
         self.matrix=matrix
+        self.num_row = len(self.matrix)
+        self.num_col=-1
+        for i in self.matrix:
+            if len(i)>self.num_col:
+                self.num_col=len(i)
         self.cells = self.to_cells(offset,delta)
 
     def set_cell(self,i,j,value):
@@ -17,16 +22,14 @@ class ObjectMatrix():
         if j!=-1:
             return self.cells[i][j]
         else:
-            return self.cells[i//len(self.matrix)][i%len(self.matrix[0])]
+            return self.cells[i//self.num_col][i%self.num_col]
     
     def to_cells(self,offset,delta):
         cells=[]
-        n=len(self.matrix)
-        m=len(self.matrix[0])
-        for i in range(n):
+        for i in range(self.num_row):
             cells.append([])
-            for j in range(m):
-                cells[i].append(ObjectCell(i*n+j,i,j,self.matrix[i][j], j*delta[0]+offset[0],i*delta[1]+offset[1]))
+            for j in range(self.num_col):
+                cells[i].append(ObjectCell(i*self.num_col+j,i,j,self.matrix[i][j], j*delta[0]+offset[0],i*delta[1]+offset[1]))
         return cells
     
 class ObjectCell(Predicate):
