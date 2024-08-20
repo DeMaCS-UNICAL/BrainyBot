@@ -1,0 +1,37 @@
+
+Path(3,8,30).
+%define ASP PROGRAM 
+
+%Guess
+
+Move(I,A,X,Y) | NotMove(I,A,X,Y) :- PlayerBubble(I,C), Empty(X,Y), Path(X,Y,A).
+
+%Check
+
+:- #count{I,A,X,Y : Move(I,A,X,Y)} != 1.
+
+:- Move(_,_,X,Y), #count{ Z,V : Neighbour(X,Y,Z,V)} < 1.
+
+% Predicati ausiliari
+
+Neighbour(X,Y,X+1,Y+1,C) :- Empty(X,Y), Bubble(X+1,Y+1,C,_).
+Neighbour(X,Y,X+1,Y-1,C) :- Empty(X,Y), Bubble(X+1,Y-1,C,_).
+Neighbour(X,Y,X-1,Y+1,C) :- Empty(X,Y), Bubble(X-1,Y+1,C,_).
+Neighbour(X,Y,X-1,Y-1,C) :- Empty(X,Y), Bubble(X-1,Y-1,C,_).
+Neighbour(X,Y,X+2,Y,C) :- Empty(X,Y), Bubble(X+2,Y,C,_).
+Neighbour(X,Y,X-2,Y,C) :- Empty(X,Y), Bubble(X+2,Y,C,_).
+
+Connected(X,Y,X+1,Y+1,C) :- Bubble(X,Y,C,_), Bubble(X+1,Y+1,C,_).
+Connected(X,Y,X+1,Y-1,C) :- Bubble(X,Y,C,_), Bubble(X+1,Y-1,C,_).
+Connected(X,Y,X-1,Y+1,C) :- Bubble(X,Y,C,_), Bubble(X-1,Y+1,C,_).
+Connected(X,Y,X-1,Y-1,C) :- Bubble(X,Y,C,_), Bubble(X-1,Y-1,C,_).
+Connected(X,Y,X+2,Y,C) :- Bubble(X,Y,C,_), Bubble(X+2,Y,C,_).
+Connected(X,Y,X+2,Y,C) :- Bubble(X,Y,C,_), Bubble(X+2,Y,C,_).
+
+Connected(X,Y,M,N,C) :- Connected(X,Y,Z,V,C), Connected(Z,V,M,N,C).
+
+
+
+
+
+

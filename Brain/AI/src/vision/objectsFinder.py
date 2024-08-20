@@ -15,7 +15,7 @@ from AI.src.constants import SCREENSHOT_PATH
 
 class ObjectsFinder:
 
-    def __init__(self, screenshot, color=None, debug=False, threshold=0.8,validation=False ):
+    def __init__(self, screenshot, color=None, debug=False, threshold=0.8,validation=False):
         #
         # Use Matrix2.png for testing
         #
@@ -334,16 +334,18 @@ class ObjectsFinder:
                 x=int(center[0])
                 y=int(center[1])
                 r=int(r)
-                color = np.array(self.__blurred[y,x])
+                color = np.array(self.__blurred[int(y + r/4),x])
                 if self.debug and not self.validation:
-                    print(f"Found ball:({x}, {y}): {color}")
+                    #print(f"Found ball:({x}, {y}): {color}")
                 # draw the circle
-                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
-                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                    #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                    #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
+                    #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
+                    cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
                 balls.append([x, y, r,color.tolist()])
+                
             if self.debug and not self.validation:
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
                 plt.show()
