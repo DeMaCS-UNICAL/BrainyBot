@@ -1,25 +1,25 @@
-redVertical.png = 1
-orangeHorizontal.png = 0
-greenHorizontal.png = 0
-orangeBomb.png = 0
-red.png = 14
-orange.png = 11
-orangeVertical.png = 0
-green.png = 11
-redBomb.png = 0
 purpleHorizontal.png = 0
-greenBomb.png = 0
 blueVertical.png = 1
-purple.png = 9
-blueHorizontal.png = 0
-purpleVertical.png = 0
 redHorizontal.png = 1
 greenVertical.png = 0
-blueBomb.png = 0
-purpleBomb.png = 0
+greenBomb.png = 0
 colourB.png = 0
-blue.png = 7
+purpleBomb.png = 0
+blueBomb.png = 0
+orangeHorizontal.png = 0
+blueHorizontal.png = 0
 notTouch.png = 0
+orange.png = 11
+greenHorizontal.png = 0
+blue.png = 7
+orangeVertical.png = 0
+orangeBomb.png = 0
+purple.png = 9
+redBomb.png = 0
+green.png = 11
+purpleVertical.png = 0
+redVertical.png = 1
+red.png = 14
 cell(0,0,0,"green").
 cell(1,0,1,"red").
 cell(2,0,2,"blue").
