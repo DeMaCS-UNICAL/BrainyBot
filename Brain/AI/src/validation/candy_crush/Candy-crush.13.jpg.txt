@@ -11,13 +11,13 @@ colourB.png = 0
 orange.png = 4
 greenHorizontal.png = 0
 redVertical.png = 0
-red.png = 22
+red.png = 14
 orangeVertical.png = 0
-orangeBomb.png = 2
+orangeBomb.png = 1
 orangeHorizontal.png = 0
 blueHorizontal.png = 0
 purple.png = 9
-redBomb.png = 2
+redBomb.png = 1
 green.png = 11
 purpleVertical.png = 0
 cell(0,0,0,"purple").

@@ -19,7 +19,7 @@ redBomb.png = 0
 green.png = 11
 purpleVertical.png = 0
 redVertical.png = 1
-red.png = 14
+red.png = 9
 cell(0,0,0,"green").
 cell(1,0,1,"red").
 cell(2,0,2,"blue").

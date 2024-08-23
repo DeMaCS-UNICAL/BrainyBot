@@ -5,7 +5,7 @@ purpleBomb.png = 0
 notTouch.png = 0
 blueBomb.png = 0
 redHorizontal.png = 1
-blue.png = 11
+blue.png = 10
 greenBomb.png = 0
 colourB.png = 0
 purple.png = 9
@@ -17,7 +17,7 @@ purpleVertical.png = 0
 orangeHorizontal.png = 0
 blueHorizontal.png = 0
 redVertical.png = 0
-red.png = 18
+red.png = 9
 orangeVertical.png = 0
 orangeBomb.png = 0
 cell(0,0,0,"blue").
