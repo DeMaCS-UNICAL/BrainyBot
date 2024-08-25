@@ -10,7 +10,7 @@ from AI.src.constants import SCREENSHOT_PATH
 from AI.src.puzzle_bubble.constants import GRID_START_APPROXIMATION,GRID_END_APPROXIMATION,PLAYER_BUBBLE_END_APPROXIMATION,MAX_BUBBLES_PER_ROW
 from AI.src.puzzle_bubble.detect.constants import BACKGROUND_COLOR
 
-def distance_between_color(color1,color2, max_distance = 40):
+def distance_between_color(color1,color2, max_distance = 45):
 
     delta_r = color1[0] - color2[0]
     delta_g = color1[1] - color2[1]
@@ -87,8 +87,6 @@ class MatchingBubblePuzzle:
         for bubble in matrix:
             bubble[3] = [bubble[3][2],bubble[3][1],bubble[3][0]]
         
-        #TODO:fa la conversione solo delle bolle detectate, io invece voglio che avvenga su tutte, anche le non "detectate"
-        
         for bubble in player:
             bubble[3] = [bubble[3][2],bubble[3][1],bubble[3][0]]
         
@@ -129,6 +127,13 @@ class MatchingBubblePuzzle:
         #Debug purpose
         if self.debug:
             for i  in range(len(self.__exagonal_matrix)):
+                plusFactor = 2
+
+                if(len(self.__exagonal_matrix[i]) == MAX_BUBBLES_PER_ROW):
+                    column = 0
+                else :
+                    column = 1
+
                 for j in range(len(self.__exagonal_matrix[i])):
                     x=int(self.__exagonal_matrix[i][j][0])
                     y=int(self.__exagonal_matrix[i][j][1])
@@ -142,7 +147,10 @@ class MatchingBubblePuzzle:
                         cv2.circle(self.__image, (x, y), int(r/2), (0, 255, 0), 2)
                     # draw the circle
                     cv2.putText(self.__image, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-        
+                    #cv2.putText(self.__image, f"({column}, {i})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                
+                    column+=plusFactor
+                
             for bubble in (self.__player_bubbles):
                 x=int(bubble[0])
                 y=int(bubble[1])

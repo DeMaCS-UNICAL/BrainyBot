@@ -318,8 +318,6 @@ class ObjectsFinder:
         
         if self.debug and not self.validation:
             closed = cv2.cvtColor(closed, cv2.COLOR_GRAY2RGB)
-            #canny2 = canny.copy()
-            #canny3 = canny.copy()
             cv2.drawContours(closed, contours, -1, (255, 0, 0), 1)
             plt.imshow(closed)
             plt.show()
@@ -330,18 +328,19 @@ class ObjectsFinder:
                 (center),r = cv2.minEnclosingCircle(circle)
                 if r<min_radius:
                     continue
-                # get the color of pixel (x, y) form the blurred image
+                # get the color of pixel (x, y + r/4) from the blurred image
                 x=int(center[0])
                 y=int(center[1])
                 r=int(r)
-                color = np.array(self.__blurred[int(y + r/4),x])
+
+                if(y + r/4 < self.__blurred.shape[1]):
+                    color = np.array(self.__blurred[int(y + r/4),x])
+                else:
+                    color = np.array(self.__blurred[y,x])
+
                 if self.debug and not self.validation:
-                    #print(f"Found ball:({x}, {y}): {color}")
                 # draw the circle
                     cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                    #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
                     cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
                 balls.append([x, y, r,color.tolist()])

@@ -31,9 +31,7 @@ class DLVSolution:
             self.__variableInputProgram = ASPInputProgram()
             print (f"Created ASP program.")
             
-            # insert nodes from data structures to asp program
             for element in input:
-                #print(element)
                 self.__variableInputProgram.add_object_input(element)
             print (f"Created Inputs.")
             
@@ -44,10 +42,11 @@ class DLVSolution:
 
             move = None
             #We will need to set get_optimal_answer_sets() after adding weak constraints.
-            for answerSet in answerSets.get_answer_sets():
+            for answerSet in answerSets.get_optimal_answer_sets():
                 for obj in answerSet.get_atoms():
                     if isinstance(obj, Move):
-                        move = Move(obj.get_index(),obj.get_angle(),obj.get_row(),obj.get_col())
+                        move = Move(obj.get_index(),obj.get_angle(),obj.get_col(),obj.get_row())
+                        break
 
             self.__handler.remove_program_from_id(index)
             return move

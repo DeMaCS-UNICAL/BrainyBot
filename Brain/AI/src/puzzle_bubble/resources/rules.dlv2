@@ -1,37 +1,66 @@
-
-Path(3,8,30).
 %define ASP PROGRAM 
 
 %Guess
 
-Move(I,A,X,Y) | NotMove(I,A,X,Y) :- PlayerBubble(I,C), Empty(X,Y), Path(X,Y,A).
+Move(I,A,X,Y) | NotMove(I,A,X,Y) :- Empty(X,Y), PlayerBubble(I,C), Path(X,Y,A).
 
 %Check
 
 :- #count{I,A,X,Y : Move(I,A,X,Y)} != 1.
 
-:- Move(_,_,X,Y), #count{ Z,V : Neighbour(X,Y,Z,V)} < 1.
+:- Move(_,_,X,Y), #count{Z,V : Neighbour(X,Y,Z,V,_)} == 0.
 
 % Predicati ausiliari
+
+%Calcolo vicinato degli EmptySpot
 
 Neighbour(X,Y,X+1,Y+1,C) :- Empty(X,Y), Bubble(X+1,Y+1,C,_).
 Neighbour(X,Y,X+1,Y-1,C) :- Empty(X,Y), Bubble(X+1,Y-1,C,_).
 Neighbour(X,Y,X-1,Y+1,C) :- Empty(X,Y), Bubble(X-1,Y+1,C,_).
 Neighbour(X,Y,X-1,Y-1,C) :- Empty(X,Y), Bubble(X-1,Y-1,C,_).
 Neighbour(X,Y,X+2,Y,C) :- Empty(X,Y), Bubble(X+2,Y,C,_).
-Neighbour(X,Y,X-2,Y,C) :- Empty(X,Y), Bubble(X+2,Y,C,_).
+Neighbour(X,Y,X-2,Y,C) :- Empty(X,Y), Bubble(X-2,Y,C,_).
+
+%Calcolo bolle connesse del medesimo colore
 
 Connected(X,Y,X+1,Y+1,C) :- Bubble(X,Y,C,_), Bubble(X+1,Y+1,C,_).
 Connected(X,Y,X+1,Y-1,C) :- Bubble(X,Y,C,_), Bubble(X+1,Y-1,C,_).
 Connected(X,Y,X-1,Y+1,C) :- Bubble(X,Y,C,_), Bubble(X-1,Y+1,C,_).
 Connected(X,Y,X-1,Y-1,C) :- Bubble(X,Y,C,_), Bubble(X-1,Y-1,C,_).
 Connected(X,Y,X+2,Y,C) :- Bubble(X,Y,C,_), Bubble(X+2,Y,C,_).
-Connected(X,Y,X+2,Y,C) :- Bubble(X,Y,C,_), Bubble(X+2,Y,C,_).
+Connected(X,Y,X-2,Y,C) :- Bubble(X,Y,C,_), Bubble(X-2,Y,C,_).
 
 Connected(X,Y,M,N,C) :- Connected(X,Y,Z,V,C), Connected(Z,V,M,N,C).
+Connected(X,Y,Z,V,C) :- Move(I,A,M,N), PlayerBubble(I,C), Neighbour(M,N,X,Y,C), Neighbour(M,N,Z,V,C).
+Connected(Z,V,X,Y,C) :- Move(I,A,M,N), PlayerBubble(I,C), Neighbour(M,N,X,Y,C), Neighbour(M,N,Z,V,C).
+Connected(X,Y,X,Y,C) :- Bubble(X,Y,C,_).
 
+%Calcolo numero di bolle di Colore C connesse ad un EmptySpot
 
+ConnectedToEmpty(X,Y,C,L):- Neighbour(X,Y,Z,V,C), #count{M,N : Connected(Z,V,M,N,C)} = L.
 
+%Weak constraints
 
+%Pago se mando la mia bolla nei pressi di una bolla vortex e non vi sono almeno altre due dello stesso colore vicino al punto.
+
+:~ Move(I,_,X,Y), Neighbour(X,Y,Z,V,_), Bubble(Z,V,_,vortex), PlayerBubble(I,C), ConnectedToEmpty(X,Y,C,N), N < 2. [1@4,Z,V]
+
+%Pago se mando la mia bolla in punti in cui non vi è nessuna vicina del suo medesimo colore.
+
+:~ Move(I,_,X,Y), PlayerBubble(I,C), #count{Z,V : Neighbour(X,Y,Z,V,C)} < 1.[1@3]
+
+%Pago se la mossa scelta non massimizza il numero di bolle connesse del medesimo colore tra quelle che potevo scegliere
+
+:~ Move(I,_,X,Y), ConnectedToEmpty(X,Y,C,N), PlayerBubble(I,C), #max{M : ConnectedToEmpty(X1,Y1,C1,M), PlayerBubble(_,C1), Path(X1,Y1,_)} = L, L > N. [L-N@2]
+
+%Pago se esistono delle bolle che posso far scoppiare più in alto di dove ho fatto la mia mossa. 
+
+:~ Move(_,_,X,Y), Path(X1,Y1,_), Y1 < Y, PlayerBubble(_,C), ConnectedToEmpty(X1,Y1,C,N), N > 1. [2@2,Y1]
+
+%Pago per mossa fatta
+
+:~ Move(I,A,X,Y).[1@1,X,Y]
+
+#show Move/4.
 
 

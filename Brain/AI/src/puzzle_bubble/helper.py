@@ -9,13 +9,14 @@ from AI.src.abstraction.helpers import getImg
 from AI.src.constants import CLIENT_PATH, SCREENSHOT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.puzzle_bubble.detect.new_detect import MatchingBubblePuzzle
 from AI.src.puzzle_bubble.dlvsolution.dlvsolution import DLVSolution
-from AI.src.puzzle_bubble.dlvsolution.helpers import get_input_dlv_grid, get_input_dlv_player
+from AI.src.puzzle_bubble.dlvsolution.helpers import get_input_dlv_grid, get_input_dlv_path, get_input_dlv_player
 from AI.src.webservices.helpers import getScreenshot
 
 def asp_input(exagonal_matrix,player_bubbles):
     #call methods to return our list of ASP input class objects
     input = get_input_dlv_grid(exagonal_matrix)
     input.extend(get_input_dlv_player(player_bubbles))
+    input.extend(get_input_dlv_path(exagonal_matrix,player_bubbles))
     return input
 
 def Shoot_bubble(bubble_info,move):
@@ -27,19 +28,20 @@ def Shoot_bubble(bubble_info,move):
     SX1 = bubble_info[0]
     SY1 = bubble_info[1]
 
-    #swaps player bubble based on which bubble is used in the Move predicate
-    #da testare una volta collegato il cellulare
     TX1 = bubble_info[0]
     TY1 = bubble_info[1] + br * 4
 
-    for i in range(move.get_index()):
+    for _ in range(move.get_index()):
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {TX1} {TY1}'")
 
-    SY2 = bubble_info[1] - br * 3
-    SX2 = int(SX1 + ((SY1 - SY2) / math.tan(math.radians(move.get_angle()))))
+    clean_angle = move.get_angle().strip('"')
+    float_angle = float(clean_angle)
 
-    os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
-    time.sleep(2.5)
+    SY2 = math.floor(SY1 - SX1 * math.sin(float_angle))
+    SX2 = math.floor(SX1 + SX1 * math.cos(float_angle))
+
+    os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {SX2} {SY2}'")
+    time.sleep(3.5)
 
 def get_input(matcher):
     #Takes exagonal_matrix and player bubbles
@@ -52,17 +54,14 @@ def puzzle_bubble(screenshot, debug = False):
 
     exagonal_matrix,player_bubbles = get_input(matcher)
 
-    input = asp_input(exagonal_matrix,player_bubbles)
-
     #getting the player bubble coords and radius
     if(len(player_bubbles) > 0):
         bubble_info = player_bubbles[0]
     else:
         print("Error while recovering data about player bubbles, no player bubbles detected at the start?")
         return
-    
-    for element in input:
-        print(element, end="")
+
+    input = asp_input(exagonal_matrix,player_bubbles)
 
     #how the solution will be
     while(True):
@@ -79,9 +78,6 @@ def puzzle_bubble(screenshot, debug = False):
         if not getScreenshot():
             print("Screenshot Not Taken")
             return
-        
-        for element in input:
-            print(element)
 
         exagonal_matrix,player_bubbles = get_input(matcher)
         input = asp_input(exagonal_matrix,player_bubbles)

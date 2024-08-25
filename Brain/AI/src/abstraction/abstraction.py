@@ -289,7 +289,9 @@ class Abstraction:
             row_type,number_of_rows=self.compute_rows_exagonal_matrix(bubbles,radius,grid_data)
             currentRowY = bubbles[0][1]
 
-            if(row_type == grid_data[1]):
+            if(row_type is None):
+                return ExagonalMatrix
+            elif(row_type == grid_data[1]):
                 distance = radius
             else:
                 distance = 2*radius
