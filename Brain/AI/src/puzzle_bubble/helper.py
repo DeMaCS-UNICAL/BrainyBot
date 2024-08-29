@@ -57,13 +57,15 @@ def puzzle_bubble(screenshot, debug = False):
     #getting the player bubble coords and radius
     if(len(player_bubbles) > 0):
         bubble_info = player_bubbles[0]
+        if(len(exagonal_matrix[0]) == 0):
+            print("Error while recovering data about grid bubbles, no grid bubbles detected at the start?")
+            return
     else:
         print("Error while recovering data about player bubbles, no player bubbles detected at the start?")
         return
 
     input = asp_input(exagonal_matrix,player_bubbles)
 
-    #how the solution will be
     while(True):
         
         solution = DLVSolution()
@@ -80,5 +82,10 @@ def puzzle_bubble(screenshot, debug = False):
             return
 
         exagonal_matrix,player_bubbles = get_input(matcher)
+
+        if(len(exagonal_matrix[0]) < 1 or len(player_bubbles) < 1):
+            print("No bubbles detected in the grid or from the player.")
+            return
+
         input = asp_input(exagonal_matrix,player_bubbles)
 

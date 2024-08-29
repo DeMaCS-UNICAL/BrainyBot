@@ -233,12 +233,11 @@ def get_input_dlv_path(exagonal_grid,player_bubbles):
         for j in range(len(exagonal_grid[i])):
             if(get_bubble_spot_type(exagonal_grid[i][j][3]) != EMPTY_SPOT_TYPE): 
                 for angle in ANGLE_APPROX:
-                    returnedAngle = ExistPath(exagonal_grid,exagonal_grid[i][j],bubble_info,angle)
+                    returnedAngle = exist_direct_path(exagonal_grid,exagonal_grid[i][j],bubble_info,angle)
 
                     if(returnedAngle is not None):
                         #determines angle
                         if(angle == ANGLE_APPROX[0] or angle == ANGLE_APPROX[1] or angle == ANGLE_APPROX[2]):
-                                #when column + 1 above 20 not append
                                 input.append(Path(column+1,i+1,returnedAngle))
 
                         if(angle == ANGLE_APPROX[3] or angle == ANGLE_APPROX[4] or angle == ANGLE_APPROX[5]):
@@ -248,7 +247,7 @@ def get_input_dlv_path(exagonal_grid,player_bubbles):
 
     return input
 
-def checkCollisions(exagonal_grid,current_bubble,player_bubble,angle,raycast_offset = 22):
+def check_collisions(exagonal_grid,current_bubble,player_bubble,angle,raycast_offset = 22):
 
     radius_offset = player_bubble[2] + raycast_offset
 
@@ -269,9 +268,9 @@ def checkCollisions(exagonal_grid,current_bubble,player_bubble,angle,raycast_off
     return False
 
 
-def ExistPath(exagonal_grid,current_bubble,player_bubble,angle):
+def exist_direct_path(exagonal_grid,current_bubble,player_bubble,angle):
 
-    if(not checkCollisions(exagonal_grid,current_bubble,player_bubble,angle)):
+    if(not check_collisions(exagonal_grid,current_bubble,player_bubble,angle)):
 
         #calculate coords in respect of a new defined coords system based on the player_bubble
 

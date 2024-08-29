@@ -171,20 +171,20 @@ class Abstraction:
             stacks.append(stack)
         return stacks
 
-    def compute_rows_exagonal_matrix(self,bubbles:list,radius,grid_metadata):
+    def compute_rows_exagonal_matrix(self,bubbles:list,radius,grid_data):
         major_row=radius
         minor_row=2*radius
         row_type=None
 
         #search between the possible positions of a major_row or minor_row to determine which one is the first one
-        for _ in range(grid_metadata[1]):
+        for _ in range(grid_data[1]):
 
-            if(bubbles[0][0] >= major_row - grid_metadata[0] and bubbles[0][0] <= major_row + grid_metadata[0]):
-                row_type=grid_metadata[1]
+            if(bubbles[0][0] >= major_row - grid_data[0] and bubbles[0][0] <= major_row + grid_data[0]):
+                row_type=grid_data[1]
                 break
 
-            if(bubbles[0][0] >= minor_row - grid_metadata[0] and bubbles[0][0] <= minor_row + grid_metadata[0]):
-                row_type=grid_metadata[1]-1
+            if(bubbles[0][0] >= minor_row - grid_data[0] and bubbles[0][0] <= minor_row + grid_data[0]):
+                row_type=grid_data[1]-1
                 break
 
             minor_row+=2*radius
@@ -197,29 +197,29 @@ class Abstraction:
             number_of_rows = 1
 
         for i in range(len(bubbles)):
-            if( i < len(bubbles)-1 and bubbles[i+1][1] > bubbles[i][1] + grid_metadata[0]):
-                number_of_rows+= round((bubbles[i+1][1]-bubbles[i][1]) / grid_metadata[2])
+            if( i < len(bubbles)-1 and bubbles[i+1][1] > bubbles[i][1] + grid_data[0]):
+                number_of_rows+= round((bubbles[i+1][1]-bubbles[i][1]) / grid_data[2])
         
 
         return row_type,number_of_rows
     
-    def removing_false_matches(self,elements:list,radius,height_matching,grid_metadata):
+    def removing_false_matches(self,elements:list,radius,height_matching,grid_data):
         bubbles= []
         player_bubbles=[]
         #also changes the y value so that way there are no inconsistency with the y center of the bubbles on the same row
         #this is done to avoid problems when sorting the list based on the y values
         for bubble in range(len(elements)):
-            if(elements[bubble][2] >= radius - grid_metadata[0] and elements[bubble][2]<= radius + grid_metadata[0]):
+            if(elements[bubble][2] >= radius - grid_data[0] and elements[bubble][2]<= radius + grid_data[0]):
                 if(elements[bubble][1] > height_matching[0]) and (elements[bubble][1] < height_matching[1]):
                     skip=False
                     for existing in bubbles:
-                        if((elements[bubble][0] >= existing[0]-grid_metadata[0] and elements[bubble][0] <= existing[0] + grid_metadata[0]) and  
-                            (elements[bubble][1] >= existing[1]-grid_metadata[0] and elements[bubble][1] <= existing[1] + grid_metadata[0])):
+                        if((elements[bubble][0] >= existing[0]-grid_data[0] and elements[bubble][0] <= existing[0] + grid_data[0]) and  
+                            (elements[bubble][1] >= existing[1]-grid_data[0] and elements[bubble][1] <= existing[1] + grid_data[0])):
                             skip=True
                             break
                     if not skip:
                     #changes the value if the last bubble inserted has an y coord similar to yours
-                        if(len(bubbles) > 0 and (elements[bubble][1]  >= bubbles[-1][1] - grid_metadata[0] and elements[bubble][1] <= bubbles[-1][1] + grid_metadata[0])):
+                        if(len(bubbles) > 0 and (elements[bubble][1]  >= bubbles[-1][1] - grid_data[0] and elements[bubble][1] <= bubbles[-1][1] + grid_data[0])):
                             elements[bubble][1]=bubbles[-1][1]
                             
                         bubbles.append(elements[bubble])
@@ -227,8 +227,8 @@ class Abstraction:
                 elif(elements[bubble][1] > height_matching[1]) and (elements[bubble][1] < height_matching[2]):
                     skip=False
                     for existing in bubbles:
-                        if((elements[bubble][0] >= existing[0]-grid_metadata[0] and elements[bubble][0] <= existing[0] + grid_metadata[0]) and  
-                            (elements[bubble][1] >= existing[1]-grid_metadata[0] and elements[bubble][1] <= existing[1] + grid_metadata[0])):
+                        if((elements[bubble][0] >= existing[0]-grid_data[0] and elements[bubble][0] <= existing[0] + grid_data[0]) and  
+                            (elements[bubble][1] >= existing[1]-grid_data[0] and elements[bubble][1] <= existing[1] + grid_data[0])):
                             skip=True
                             break
                     
@@ -238,7 +238,7 @@ class Abstraction:
 
         return bubbles,sorted(player_bubbles,key = customExagonalSorter)
     
-    def AddRowsToExagonalGrid(self,exagonal_matrix,extra_rows,radius,grid_data):
+    def add_empty_rows_to_exagonal_grid(self,exagonal_matrix,extra_rows,radius,grid_data):
         
         row_type = len(exagonal_matrix[-1])
         currentRowY = exagonal_matrix[-1][0][1] + grid_data[2]
@@ -275,7 +275,7 @@ class Abstraction:
         
         return exagonal_matrix
 
-    def ExagonalGridToMatrix(self,bubbles:list,radius,grid_data):
+    def exagonal_grid_to_matrix(self,bubbles:list,radius,grid_data):
 
         #Sort and then construct
         ExagonalMatrix=[[]]
