@@ -237,43 +237,6 @@ class Abstraction:
 
 
         return bubbles,sorted(player_bubbles,key = customExagonalSorter)
-    
-    def add_empty_rows_to_exagonal_grid(self,exagonal_matrix,extra_rows,radius,grid_data):
-        
-        row_type = len(exagonal_matrix[-1])
-        currentRowY = exagonal_matrix[-1][0][1] + grid_data[2]
-
-        number_of_rows = len(exagonal_matrix)
-
-        if(row_type == grid_data[1]):
-            distance = 2*radius
-            row_type -= 1
-        else:
-            row_type += 1
-            distance = radius
-        
-        if(extra_rows > 0):
-            exagonal_matrix.append([])
-
-        for row in range(extra_rows):
-            for _ in range(row_type):
-                exagonal_matrix[number_of_rows + row].append([distance,currentRowY,radius,[0,0,0]])
-
-                distance+=2*radius
-
-            currentRowY += grid_data[2]      
-
-            if(row_type == grid_data[1]):
-                row_type -= 1
-                distance = 2*radius
-            else:
-                row_type += 1
-                distance = radius
-
-            if(row < extra_rows - 1):
-                exagonal_matrix.append([])
-        
-        return exagonal_matrix
 
     def exagonal_grid_to_matrix(self,bubbles:list,radius,grid_data):
 

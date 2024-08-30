@@ -343,7 +343,7 @@ class ObjectsFinder:
                     cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
                     cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-                balls.append([x, y, r,color.tolist()])
+                balls.append([x, y, r,color.tolist()[::-1]])
                 
             if self.debug and not self.validation:
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))

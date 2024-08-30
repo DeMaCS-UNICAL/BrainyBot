@@ -10,7 +10,7 @@ from AI.src.constants import SCREENSHOT_PATH
 from AI.src.puzzle_bubble.constants import GRID_START_APPROXIMATION,GRID_END_APPROXIMATION,PLAYER_BUBBLE_END_APPROXIMATION,MAX_BUBBLES_PER_ROW
 from AI.src.puzzle_bubble.detect.constants import BACKGROUND_COLOR
 
-def distance_between_color(color1,color2, max_distance = 45):
+def distance_between_color(color1,color2, max_distance = 40):
 
     delta_r = color1[0] - color2[0]
     delta_g = color1[1] - color2[1]
@@ -28,6 +28,7 @@ class MatchingBubblePuzzle:
         self.__player_bubbles = None
         self.__radius = None
         self.__bubble_offset = None
+        self.__distance_between_rows = None
 
     def convert_BGR2RGB(self,x,y):
         (blue, green, red) = self.__image[int(y),int(x)]
@@ -64,44 +65,77 @@ class MatchingBubblePuzzle:
         # https://www.redblobgames.com/grids/hexagons/
         # in our example the exagonal grid we show as feature from both the flat-top and the point-top implementation
         
-        distance_next_row = math.sqrt(3) * self.__radius
+        self.__distance_between_rows = math.sqrt(3) * self.__radius
         
         approximations = (start_approximation,end_approximation,player_bubbles_end_approximation)
-        grid_data = (self.__bubble_offset,MAX_BUBBLES_PER_ROW,distance_next_row)
+        grid_data = (self.__bubble_offset,MAX_BUBBLES_PER_ROW,self.__distance_between_rows)
 
         bubbles, player = data_structures.removing_false_matches(vision_output,self.__radius,approximations,grid_data)
-        bubbles, player = self.convert_color_data_structure(bubbles,player)
         
         exagonal_matrix = data_structures.exagonal_grid_to_matrix(bubbles,self.__radius,grid_data)
 
-        if(len(exagonal_matrix[0]) > 0):
-            last_row_Y = exagonal_matrix[-1][0][1]
-            extra_rows = int((end_approximation - last_row_Y) / distance_next_row) - 1
-
-            #adds extra rows to avoid not getting rows only composed of special bubbles not detected by vision
-            exagonal_matrix = data_structures.add_empty_rows_to_exagonal_grid(exagonal_matrix,extra_rows,self.__radius,grid_data)
-
         return exagonal_matrix,player
 
-    def convert_color_data_structure(self,matrix,player):
-        for bubble in matrix:
-            bubble[3] = [bubble[3][2],bubble[3][1],bubble[3][0]]
-        
-        for bubble in player:
-            bubble[3] = [bubble[3][2],bubble[3][1],bubble[3][0]]
-        
-        return matrix,player
+    def find_special_bubbles_via_color(self,exagonal_matrix):
 
-    def find_special_bubbles_via_color(self,matrix):
-        for row in range (len(matrix)):
-            for bubble in matrix[row]:
-                rgb = self.convert_BGR2RGB(bubble[0],bubble[1] + self.__radius/4)
+        if(len(exagonal_matrix[0]) > 0):
+            last_row_Y = exagonal_matrix[-1][0][1]
+            end_approximation = self.__image.shape[0] * GRID_END_APPROXIMATION
+            grid_data = (self.__bubble_offset,MAX_BUBBLES_PER_ROW,self.__distance_between_rows)
 
-                if(bubble[3] == [0,0,0] and distance_between_color(rgb,BACKGROUND_COLOR)):
-                    bubble[3] = rgb
-                    bubble[2] = self.__radius
+            extra_rows = int((end_approximation - last_row_Y) / self.__distance_between_rows) - 1
+
+            #adds extra rows to avoid not getting rows only composed of special bubbles not detected by vision
+            self.add_empty_rows_to_exagonal_grid(exagonal_matrix,extra_rows,self.__radius,grid_data)
+
+            for row in range (len(exagonal_matrix)):
+                for bubble in exagonal_matrix[row]:
+                    rgb = self.convert_BGR2RGB(bubble[0],bubble[1] + self.__radius/4)
+
+                    if(bubble[3] == [0,0,0] and distance_between_color(rgb,BACKGROUND_COLOR)):
+                        bubble[3] = rgb
+                        bubble[2] = self.__radius
+            
+            self.remove_extra_empty_rows(exagonal_matrix)
+
+    def add_empty_rows_to_exagonal_grid(self,exagonal_matrix,extra_rows,radius,grid_data):
+        
+        row_type = len(exagonal_matrix[-1])
+        currentRowY = exagonal_matrix[-1][0][1] + grid_data[2]
+
+        number_of_rows = len(exagonal_matrix)
+
+        if(row_type == grid_data[1]):
+            distance = 2*radius
+            row_type -= 1
+        else:
+            row_type += 1
+            distance = radius
+        
+        if(extra_rows > 0):
+            exagonal_matrix.append([])
+
+        for row in range(extra_rows):
+            for _ in range(row_type):
+                exagonal_matrix[number_of_rows + row].append([distance,currentRowY,radius,[0,0,0]])
+
+                distance+=2*radius
+
+            currentRowY += grid_data[2]      
+
+            if(row_type == grid_data[1]):
+                row_type -= 1
+                distance = 2*radius
+            else:
+                row_type += 1
+                distance = radius
+
+            if(row < extra_rows - 1):
+                exagonal_matrix.append([])
+
     
     def remove_extra_empty_rows(self,matrix):
+
         for row in range(len(matrix)-1,0,-1):
             counter_empty = 0
             for bubble in matrix[row]:
@@ -122,7 +156,6 @@ class MatchingBubblePuzzle:
 
         self.__exagonal_matrix, self.__player_bubbles = self.abstraction(self.vision())
         self.find_special_bubbles_via_color(self.__exagonal_matrix)
-        self.remove_extra_empty_rows(self.__exagonal_matrix)
 
         #Debug purpose
         if self.debug:

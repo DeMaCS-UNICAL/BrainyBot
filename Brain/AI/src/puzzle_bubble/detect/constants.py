@@ -13,12 +13,12 @@ BUBBLES_COLORS = {}
 #TODO: reimpostare per bene tutti colori delle bolle
 #Comprendere quale sia il punto migliore dove prendere il color delle bolle
 
-BUBBLES_COLORS["Blue"] = [27, 105, 209]#
-BUBBLES_COLORS["Red"] = [225, 38, 24]#
-BUBBLES_COLORS["Yellow"] = [239, 185, 37]#
-BUBBLES_COLORS["Purple"] = [130, 50, 223]#
+BUBBLES_COLORS["Blue"] = [36, 118, 218]#
+BUBBLES_COLORS["Red"] = [238, 50, 36]#
+BUBBLES_COLORS["Yellow"] = [242, 189, 41]#
+BUBBLES_COLORS["Purple"] = [140, 63, 231]#
 BUBBLES_COLORS["LightBlue"] = [3, 191, 207]#
-BUBBLES_COLORS["Green"] = [20, 187, 49]#
+BUBBLES_COLORS["Green"] = [20, 192, 49]#
 BUBBLES_COLORS["Rock_Gray"] = [120, 120, 130]#
 BUBBLES_COLORS["Vortex_Brown"] = [90, 48, 6]#
 BUBBLES_COLORS["Ice_Purple"] = [181, 95, 254]#
