@@ -19,14 +19,14 @@ BUBBLES_COLORS["Yellow"] = [242, 189, 41]#
 BUBBLES_COLORS["Purple"] = [140, 63, 231]#
 BUBBLES_COLORS["LightBlue"] = [3, 191, 207]#
 BUBBLES_COLORS["Green"] = [20, 192, 49]#
-BUBBLES_COLORS["Rock_Gray"] = [121, 121, 132]#
+BUBBLES_COLORS["Rock_Gray"] = [125, 125, 132]#
 BUBBLES_COLORS["Vortex_Brown"] = [90, 48, 6]#
-BUBBLES_COLORS["Ice_Purple"] = [181, 95, 254]#
+BUBBLES_COLORS["Ice_Purple"] = [178, 92, 255]#
 BUBBLES_COLORS["Ice_LightBlue"] = [49, 227, 253]#
-BUBBLES_COLORS["Ice_Green"] = [70, 225, 125]#
-BUBBLES_COLORS["Ice_Red"] = [254, 90, 120]#
+BUBBLES_COLORS["Ice_Green"] = [64, 218, 115]#
+BUBBLES_COLORS["Ice_Red"] = [250, 74, 91]#
 BUBBLES_COLORS["Ice_Yellow"] = [254, 221, 108]#
-BUBBLES_COLORS["Ice_Blue"] = [60, 131, 255]#
+BUBBLES_COLORS["Ice_Blue"] = [78, 144, 255]#
 
 
 

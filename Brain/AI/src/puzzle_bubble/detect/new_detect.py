@@ -8,9 +8,16 @@ from AI.src.abstraction.helpers import getImg
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.puzzle_bubble.constants import GRID_START_APPROXIMATION,GRID_END_APPROXIMATION,PLAYER_BUBBLE_END_APPROXIMATION,MAX_BUBBLES_PER_ROW
-from AI.src.puzzle_bubble.detect.constants import BACKGROUND_COLOR
+from AI.src.puzzle_bubble.detect.constants import BACKGROUND_COLOR,BUBBLES_COLORS
 
-def distance_between_color(color1,color2, max_distance = 39.5):
+def get_bubble_spot_type(bubble_color):
+    for key in BUBBLES_COLORS.keys():
+        if(not distance_between_color(bubble_color,BUBBLES_COLORS[key])):
+            return key
+    
+    return ""
+
+def distance_between_color(color1,color2, max_distance = 40):
 
     delta_r = color1[0] - color2[0]
     delta_g = color1[1] - color2[1]
@@ -179,7 +186,7 @@ class MatchingBubblePuzzle:
                         print(f"EMPTY BUBBLE SPOT : {x} {y}")
                         cv2.circle(self.__image, (x, y), int(r/2), (0, 255, 0), 2)
                     # draw the circle
-                    cv2.putText(self.__image, f"({(c)})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                    cv2.putText(self.__image, f"({get_bubble_spot_type(c)})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                     #cv2.putText(self.__image, f"({column}, {i})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 
                     column+=plusFactor
@@ -192,7 +199,7 @@ class MatchingBubblePuzzle:
                 print(f"FOUND PLAYER BUBBLE: {x} {y} {r} {c}")
                 # draw the circle
                 cv2.circle(self.__image, (x, y), r, (0, 0, 255), 2)
-                cv2.putText(self.__image, f"({(c)})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                cv2.putText(self.__image, f"({get_bubble_spot_type(c)})", (x - 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         
 
             plt.imshow(cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
