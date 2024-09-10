@@ -41,7 +41,7 @@ def Shoot_bubble(bubble_info,move):
     SX2 = math.floor(SX1 + SX1 * math.cos(float_angle))
 
     os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {SX2} {SY2}'")
-    time.sleep(3.5)
+    time.sleep(4)
 
 def get_input(matcher):
     #Takes exagonal_matrix and player bubbles
