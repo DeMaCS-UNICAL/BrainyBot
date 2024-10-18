@@ -317,3 +317,6 @@ class ObjectsFinder:
         #plt.figure(dpi=300)
         #return to_return,coordinates
         return to_return
+
+def find_templates(self, known_templates=[]):
+    pass
