@@ -32,6 +32,12 @@ class ObjectMatrix():
                 cells[i].append(ObjectCell(i*self.num_col+j,i,j,self.matrix[i][j], j*delta[0]+offset[0],i*delta[1]+offset[1]))
         return cells
     
+    def __eq__(self, other):
+        # Controllo se other è un'istanza di Persona
+        if isinstance(other, ObjectMatrix):
+            return self.cells == other.cells
+        return False
+        
 class ObjectCell(Predicate):
     predicate_name="cell"
 
@@ -68,6 +74,12 @@ class ObjectCell(Predicate):
     def set_value(self,value):
         self.__value = value
 
+    def __eq__(self, other):
+        # Controllo se other è un'istanza
+        if isinstance(other, ObjectCell):
+            return self.__id==other.__id and self.__i == other.__i and self.__j==other.__j and self.__value == other.__value
+        return False
+
 class TypeOf(Predicate):
     predicate_name = "type_of"
     def __init__(self,id,type):
@@ -86,3 +98,9 @@ class TypeOf(Predicate):
 
     def set_type(self,v):
         self.__type=v
+
+    def __eq__(self, other):
+        # Controllo se other è un'istanza di Persona
+        if isinstance(other, TypeOf):
+            return self.__id==other.__id and self.__type == other.__type
+        return False

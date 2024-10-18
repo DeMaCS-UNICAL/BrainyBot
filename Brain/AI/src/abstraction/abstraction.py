@@ -64,7 +64,8 @@ class Abstraction:
             all_coordinates[1].append(element.y)
         for i in range(2):
             all_coordinates[i].sort()
-            offset[i]=all_coordinates[i][0]
+            if len(all_coordinates[i])>0:
+                offset[i]=all_coordinates[i][0]
         for coordinate_index in range(len(all_coordinates[0])):
             for i in range(2):
                 if coordinate_index<len(all_coordinates[i])-1:
@@ -92,8 +93,10 @@ class Abstraction:
                     if r<len(matrix)-1 and matrix[r+1][c]!=None:
                         delta[1]+=matrix[r+1][c].y-matrix[r][c].y
                         cont[1]+=1
-        delta[0]//=cont[0]
-        delta[1]//=cont[1]
+        if(cont[0]!=0):
+            delta[0]//=cont[0]
+        if(cont[1]!=0):
+            delta[1]//=cont[1]
         return offset,delta
                 
                 

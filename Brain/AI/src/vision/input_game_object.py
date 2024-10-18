@@ -5,8 +5,9 @@ class Circle:
         self.canny_threshold=canny_threshold
 
 class TemplateMatch:
-    def __init__(self,templates:dict,find_all=True,regmax=True,grayscale=False):
+    def __init__(self,templates:dict,thresholds:dict, find_all=True,regmax=True,grayscale=False):
         self.templates=templates
+        self.threshold_dictionary = thresholds
         self.find_all=find_all
         self.regmax = regmax
         self.grayscale=grayscale

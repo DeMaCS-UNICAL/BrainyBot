@@ -61,34 +61,36 @@ class ObjectsFinder:
             
 
     def template_matching_worker_process(self,id,output_list,elements:list,regmax,img):
-        for pair in elements:
+        for (tm_name,tm_img,tm_threshold) in elements:
             previous_len=len(output_list)
-            output_list.extend(self.__find_matches(img,pair[0],pair[1],regmax))
-            print(pair[0],"=",len(output_list)-previous_len)
+            output_list.extend(self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax))
+            #print(tm_name,"=",len(output_list)-previous_len)
+            #print(tm_name,tm_threshold)
         #print(f"I'm done {id}")
 
         
 
 
-    def extract_tm_info(self, search_info):
+    def extract_tm_info(self, search_info:TemplateMatch):
         img = self.__img_matrix.copy()
         if search_info.grayscale:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         elements_to_find=search_info.templates
-        return img,elements_to_find
+        thresholds = search_info.threshold_dictionary
+        return img,elements_to_find,thresholds
     #def find_one_among(self,  elements_to_find:{}, request_regmax=True) -> list:
     def find_one_among(self,  search_info:TemplateMatch) -> list:
         objects_found=[]
-        img, elements_to_find = self.extract_tm_info(search_info)
+        img, elements_to_find,thresholds = self.extract_tm_info(search_info)
         for element in elements_to_find.keys():
-            objects_found = self.__find_matches(img,element,elements_to_find[element],search_info.regmax)
+            objects_found = self.__find_matches(img,element,elements_to_find[element],thresholds[element],search_info.regmax)
             if len(objects_found)>0:
                 break
         return objects_found
     
     #def find_all(self, elements_to_find:dict, request_regmax=True) -> dict:
     def __find_all(self, search_info:TemplateMatch) -> dict:
-        img, elements_to_find = self.extract_tm_info(search_info)
+        img, elements_to_find,thresholds = self.extract_tm_info(search_info)
         template_num=len(elements_to_find.keys())
         num_processes = min(multiprocessing.cpu_count(),template_num)
         template_per_process = template_num//num_processes
@@ -100,7 +102,7 @@ class ObjectsFinder:
             if count<limit:
                 if count==0:
                     templates_for_process.append([])
-                templates_for_process[-1].append((element,elements_to_find[element]))
+                templates_for_process[-1].append((element,elements_to_find[element],thresholds[element]))
                 count+=1
                 if count==limit:
                     if len(templates_for_process)==residual:
@@ -134,7 +136,7 @@ class ObjectsFinder:
             '''
             return main_list
     
-    def __find_matches(self, image,label, element_to_find, request_regmax=True) -> list:
+    def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
         
         objects_found=[]
         # execute template match
@@ -144,7 +146,7 @@ class ObjectsFinder:
             regMax = mahotas.regmax(res)
             res = res * regMax
         # modify this to change the algorithm precision
-        loc = np.where(res >= self.__threshold)
+        loc = np.where(res >= threshold)
         #objects_found = list(zip(*loc[::-1]))
         #print(f"Found {len(objects_found)} matches")
         # Combine coordinates (x, y) with corresponding res values

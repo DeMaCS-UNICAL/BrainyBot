@@ -75,8 +75,6 @@ class MatchingBalls:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show()
-            if not self.debug:
-                plt.pause(0.1)
 
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),gray=True)
         self.__output = self.__image.copy()  # Used to display the result

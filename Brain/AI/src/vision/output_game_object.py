@@ -15,6 +15,9 @@ class OutputTemplateMatch(OutputGameObject):
         self.label=label
         self.confidence=confidence
 
+    def __str__(self) -> str:
+        return self.label
+
 class OutputRectangle(OutputGameObject):
     def __init__(self,x,y,width,heigth):
         super().__init__(x,y)

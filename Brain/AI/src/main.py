@@ -1,7 +1,7 @@
 import argparse
 import os
 from AI.src.ball_sort.helper import ball_sort,check_if_to_revalidate
-from AI.src.candy_crush.helper import candy_crush
+from AI.src.candy_crush.helper import candy_crush, check_CCS
 from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
@@ -9,14 +9,15 @@ import constants
 import sys
 from contextlib import redirect_stdout
 gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048  }
-validationDictionary = { "ball_sort" : check_if_to_revalidate }
+validationDictionary = { "ball_sort" : check_if_to_revalidate , "candy_crush" : check_CCS}
 
 
 def Start(screenshot,args,iteration=0):
     validate=None
     if args.test!=None:
-        validate=os.path.join(VALIDATION_PATH,args.games,screenshot+".txt")
-    return gameDictionary[args.games](screenshot,args.debugVision,validate,iteration)
+        vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
+        abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
+    return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration)
 
 
 def validate_game(args):
@@ -24,6 +25,7 @@ def validate_game(args):
     last_distance=10000
     previous_threshold = 0
     it=0
+    validation_info = None 
     while(not_done):
         outputs=[]
         info=[]
@@ -36,12 +38,10 @@ def validate_game(args):
                 #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
                 
                 #print(f"Starting AI for game {args.games}")
-                with open(os.path.join(VALIDATION_PATH,"candy_crush",screenshot+'.txt'), 'w') as f:
-                    with redirect_stdout(f):
-                        outputs.append(Start(screenshot,args,it))
-                #outputs.append(Start(screenshot,args,it))
-        return
-        not_done,info=validationDictionary[args.games](outputs,info)
+                #with open(os.path.join(VALIDATION_PATH,"candy_crush",screenshot+'.txt'), 'w') as f:
+                 #   with redirect_stdout(f):
+                outputs.append(Start(screenshot,args,it))
+        not_done,validation_info=validationDictionary[args.games](outputs,validation_info)
         it+=1
 
 if __name__ == '__main__':

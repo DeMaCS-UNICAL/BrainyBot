@@ -22,7 +22,7 @@ def draw(matrixCopy, nodes, color):
     cv2.putText(matrixCopy,f"{nodes[ID]}",(nodes[PX],nodes[PY]),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
 
-def get_color(strg) -> ():
+def get_color(strg) -> tuple:
     # print(strg)
     name = None
     for color in [RED, BLUE, YELLOW, GREEN, PURPLE, ORANGE]:
@@ -38,7 +38,7 @@ def get_color(strg) -> ():
     return nameColor[RED]
 
 class MatchingCandy:
-    def __init__(self, screenshot,difference:(), debug=False,validation=None):
+    def __init__(self, screenshot,difference:tuple, thresholds:dict, debug=False,validation=False):
         #
         # Use Matrix2.png for testing
         #
@@ -49,9 +49,12 @@ class MatchingCandy:
         self.__graph=None
         self.__matrix=None
         self.validation=validation
+        self.threshold_dictionary=thresholds
+
+    
 
     def vision(self):
-        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78)
+        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78,validation=self.validation)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
         if self.validation==None:
             plt.imshow( self.__matrix)
@@ -59,7 +62,7 @@ class MatchingCandy:
             plt.show()
             if not self.debug:
                 plt.pause(0.1)
-        return finder.find(TemplateMatch(SPRITES))
+        return finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
     
     def abstraction(self,vision_output):
         gridifier = Abstraction()
@@ -98,10 +101,12 @@ class MatchingCandy:
         #return self.__graph
         return objectMatrix
     
-    def search(self) -> ObjectMatrix:
+    def search(self) -> tuple[list,ObjectMatrix]:
         #self.__graph = self.abstraction(self.vision())
         #return self.__graph
-        return self.abstraction(self.vision())
+        template_matches_list = self.vision()
+        matrix = self.abstraction(template_matches_list.copy())
+        return template_matches_list,matrix
 
     def get_matrix(self):
         return self.__matrix
