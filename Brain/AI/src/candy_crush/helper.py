@@ -20,11 +20,11 @@ from AI.src.candy_crush.constants import SRC_PATH
 from languages.asp.asp_mapper import ASPMapper
 class CCSValidation:
     def __init__(self):
-         self.current_distances={}
+         self.current_false_negative={}
+         self.current_false_positive={}
          self.current_thresholds=retrieve_config()
          self.previous_distances={}
          self.previous_thresholds={}
-         self.stable_templates=set()
 
 def asp_input(matrix):
     #to_return = get_input_dlv_nodes(graph)
@@ -36,28 +36,36 @@ def check_CCS(outputs,validationInfo:CCSValidation):
     print("checking")
     if validationInfo==None:
         validationInfo = CCSValidation()
-    if len(validationInfo.current_thresholds.keys())!=len(validationInfo.stable_templates):
-        total_distances={}
-        for out in outputs:
-            for key in out[0]:
-                if total_distances.get(key)==None:
-                    total_distances[key]=0
-                total_distances[key] = min(out[0][key],total_distances[key])
-        validationInfo.current_distances=total_distances
-        for key in validationInfo.current_distances:
-            if not (key in validationInfo.stable_templates):
-                if validationInfo.current_distances[key]>=0:
-                    validationInfo.stable_templates.add(key)
-                else:
-                    validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
-        update_config(validationInfo.current_thresholds)
-    fp=0
-    fn=0
+    total_fn={}
+    total_fp={}
     for out in outputs:
-        fp+=out[1][0]
-        fn+=out[1][1]
-    print("False positive:",fp,"False negative:",fn)
-    return len(validationInfo.current_thresholds.keys())!=len(validationInfo.stable_templates),validationInfo
+        for key in out[0][0]:
+            if total_fn.get(key)==None:
+                total_fn[key]=0
+            total_fn[key] += out[0][0][key]
+        for key in out[0][1]:
+            if total_fp.get(key)==None:
+                total_fp[key]=0
+            total_fp[key] += out[0][1][key]
+    validationInfo.current_false_negative=total_fn
+    validationInfo.current_false_positive=total_fp
+    print("Vision False negative:")
+    for key in validationInfo.current_false_negative:
+        validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
+        print(key,validationInfo.current_false_negative[key])
+    print("Vision False positive:")
+    for key in validationInfo.current_false_positive:
+        print(key,validationInfo.current_false_positive[key])
+
+
+    update_config(validationInfo.current_thresholds)
+    fp_a=0
+    fn_a=0
+    for out in outputs:
+        fp_a+=out[1][0]
+        fn_a+=out[1][1]
+    print("Abstraction ---- False positive:",fp_a,"False negative:",fn_a)
+    return len(validationInfo.current_false_negative.keys())>0,validationInfo
 
 def retrieve_config():
         result_dict={}
@@ -93,7 +101,6 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         #print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
     
-    
     if vision_validation!=None:
         validation_abstraction=[]
         abstraction_result=[]
@@ -109,7 +116,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
     #if(debug):
      #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
       #      print(validator.stringfy(objects_matrix),file=f)
-        return (validator.validate_matches(template_matches_list,validation_vision),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
+        return (validator.validate_matches(template_matches_list,validation_vision, spriteSize[0]*0.1),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
 
     while success:
         # recall ASP program
@@ -165,13 +172,13 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
             success,candyMatrix,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
 
 def read_validation_data(vision_validation, abstraction_validation):
-    validation_vision={}
+    validation_vision=[]
     validation_abstraction=[]
     with open(vision_validation,'r') as file:
             for line in file:
                 line=line.strip()
-                split = line.split(" = ")
-                validation_vision[split[0]] = int(split[1])
+                split = tuple(line.split())
+                validation_vision.append(((int(split[0]),int(split[1])),split[2]))
     with open(abstraction_validation,'r') as file:
             for line in file:
                 line=line.strip()

@@ -14,6 +14,7 @@ antlr4-python3-runtime = "==4.7.*"
 embasp = { path = "AI/src/resources/EmbASP-7.2.0-py2.py3-none-any.whl" }
 pytesseract = "*"
 pillow = "*"
+scipy = "*"
 
 [dev-packages]
 

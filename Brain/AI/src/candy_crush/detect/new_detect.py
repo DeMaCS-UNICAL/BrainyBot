@@ -86,6 +86,8 @@ class MatchingCandy:
                 if value != None:
                     color = get_color(value)
                     draw(matrix_copy , (cell.x,cell.y,value,cell.get_id()), color)
+                    #if self.validation:
+                     #   print(cell.x,cell.y,value)
                 #if not value in number_per_type.keys():
                 #    number_per_type[value] = 0
                 #number_per_type[value] = number_per_type[value]+1

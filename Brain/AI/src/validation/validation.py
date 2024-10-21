@@ -1,12 +1,12 @@
 import os
 from languages.asp.asp_input_program import ASPInputProgram
-from  numpy import array_equal
-
+import numpy as np
+from scipy.optimize import linear_sum_assignment
 from AI.src.constants import RESOURCES_PATH
 from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem
 
 from AI.src.abstraction.elementsStack import ElementsStacks
-
+from collections import defaultdict
 class Validation:
     def __init__(self):
         pass
@@ -40,29 +40,62 @@ class Validation:
         #print(fp,fn,tp)
         return fp,fn
 
+    def calculate_distance(self,coord1, coord2):
+        return np.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)
+
+    def create_cost_matrix(self,detected_objects, ground_truth, label_penalty=1000):
+        cost_matrix = np.zeros((len(detected_objects), len(ground_truth)))
+        for i, det in enumerate(detected_objects):
+            for j, gt in enumerate(ground_truth):
+                # Se le label non corrispondono, assegna un costo elevato (penalità)
+                if det[1] != gt[1]:
+                    cost_matrix[i, j] = label_penalty
+                else:
+                    # Usa la distanza euclidea come costo se le label corrispondono
+                    cost_matrix[i, j] = self.calculate_distance(det[0], gt[0])
+        return cost_matrix
     
-    def validate_matches(self,matches_list,validation:dict):
-        print("validating vision")
-        validation_result={}
-        count=0
-        current_match=""
-        for m in matches_list:
-            if current_match == "":
-                current_match=m.label
-            if m.label!=current_match:
-                validation_result[current_match]= count-validation[current_match]
-                count=1
-                current_match = m.label
+    def count_false_positives_negatives(self,detected_objects, ground_truth, distance_threshold=50):
+        cost_matrix = self.create_cost_matrix(detected_objects, ground_truth)
+
+        # Hungarian algorithm
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        #for i, j in zip(row_ind, col_ind):
+         #   print(f"Oggetto rilevato {i} abbinato all'oggetto ground truth {j} con costo {cost_matrix[i, j]}")
+          #  print(detected_objects[i],ground_truth[j])
+        false_positives_by_label = defaultdict(int)
+        false_negatives_by_label = defaultdict(int)
+
+        matched_detected = [False] * len(detected_objects)
+        matched_ground_truth = [False] * len(ground_truth)
+        
+        for i, j in zip(row_ind, col_ind):
+            if cost_matrix[i, j] > distance_threshold:  # Matching con distanza o label errata
+                false_positives_by_label[detected_objects[i][1]] += 1
+                false_negatives_by_label[ground_truth[j][1]] += 1
             else:
-                count+=1
-        if current_match != "":
-            validation_result[current_match]= count-validation[current_match]
-        for key in validation.keys():
-            if validation_result.get(key)==None:
-                validation_result[key]=-validation[key]
-            if validation_result[key]<0:
-                print(key,validation_result[key])
-        return validation_result
+                matched_detected[i] = True
+                matched_ground_truth[j] = True
+        
+        # Conta falsi positivi per label (oggetti rilevati non abbinati correttamente)
+        for i, matched in enumerate(matched_detected):
+            if not matched:
+                false_positives_by_label[detected_objects[i][1]] += 1
+        
+        # Conta falsi negativi per label (oggetti della ground truth non abbinati correttamente)
+        for j, matched in enumerate(matched_ground_truth):
+            if not matched:
+                false_negatives_by_label[ground_truth[j][1]] += 1
+
+        return false_negatives_by_label,false_positives_by_label
+    
+    def validate_matches(self,matches_list,validation:list,threshold=50):
+        print("validating vision")
+        matches=[]
+        for m in matches_list:
+                matches.append(((m.x,m.y),m.label))
+       
+        return self.count_false_positives_negatives(matches,validation,threshold)
 
 
     def levensthein(self,first,second):
