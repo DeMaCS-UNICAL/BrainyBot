@@ -12,6 +12,13 @@ class TemplateMatch:
         self.regmax = regmax
         self.grayscale=grayscale
 
+class SimplifiedTemplateMatch:
+    def __init__(self,templates:dict,size:tuple, grayscale=False):
+        self.templates=templates
+        self.grayscale=grayscale
+        self.width = size[0]
+        self.heigth = size[1]
+        
 class Rectangle:
     def __init__(self,hierarchy=False):
         self.hierarchy=hierarchy

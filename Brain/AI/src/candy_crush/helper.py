@@ -113,11 +113,14 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         validator = Validation()
         #validator.validate_matches(template_matches_list,validation_vision)
         #validator.validate_matrix(input,validation_abstraction)#TODO: ABSTRACTION VALIDATION
-    #if(debug):
-     #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
-      #      print(validator.stringfy(objects_matrix),file=f)
+        #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
         return (validator.validate_matches(template_matches_list,validation_vision, spriteSize[0]*0.1),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
-
+    if debug:
+        for r in candyMatrix.matrix:
+            for c in r:
+                print(c,end='\t')
+            print()
+        return
     while success:
         # recall ASP program
         solution = DLVSolution()

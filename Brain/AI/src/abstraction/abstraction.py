@@ -51,7 +51,10 @@ class Abstraction:
                         matrix[r][c]=matrix[r][c].label
                     else:
                         matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
-
+        for r in range(len(matrix)):
+            for c in range(len(matrix[r])):
+                print(matrix[r][c],end="\t")
+            print()
         #print(matrix)
         return matrix,offset,delta
 

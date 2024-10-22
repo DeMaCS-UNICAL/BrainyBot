@@ -47,11 +47,9 @@ class Validation:
         cost_matrix = np.zeros((len(detected_objects), len(ground_truth)))
         for i, det in enumerate(detected_objects):
             for j, gt in enumerate(ground_truth):
-                # Se le label non corrispondono, assegna un costo elevato (penalità)
                 if det[1] != gt[1]:
                     cost_matrix[i, j] = label_penalty
                 else:
-                    # Usa la distanza euclidea come costo se le label corrispondono
                     cost_matrix[i, j] = self.calculate_distance(det[0], gt[0])
         return cost_matrix
     
@@ -70,19 +68,17 @@ class Validation:
         matched_ground_truth = [False] * len(ground_truth)
         
         for i, j in zip(row_ind, col_ind):
-            if cost_matrix[i, j] > distance_threshold:  # Matching con distanza o label errata
+            if cost_matrix[i, j] > distance_threshold: 
                 false_positives_by_label[detected_objects[i][1]] += 1
                 false_negatives_by_label[ground_truth[j][1]] += 1
             else:
                 matched_detected[i] = True
                 matched_ground_truth[j] = True
         
-        # Conta falsi positivi per label (oggetti rilevati non abbinati correttamente)
         for i, matched in enumerate(matched_detected):
             if not matched:
                 false_positives_by_label[detected_objects[i][1]] += 1
-        
-        # Conta falsi negativi per label (oggetti della ground truth non abbinati correttamente)
+       
         for j, matched in enumerate(matched_ground_truth):
             if not matched:
                 false_negatives_by_label[ground_truth[j][1]] += 1

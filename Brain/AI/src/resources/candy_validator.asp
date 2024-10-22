@@ -1,1 +1,0 @@
-toPrint("all","good").

@@ -14,6 +14,8 @@ validationDictionary = { "ball_sort" : check_if_to_revalidate , "candy_crush" : 
 
 def Start(screenshot,args,iteration=0):
     validate=None
+    vision=None
+    abstraction=None
     if args.test!=None:
         vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
         abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")

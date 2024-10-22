@@ -12,6 +12,7 @@ from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
 from AI.src.vision.output_game_object import *
+from AI.src.abstraction.objectsMatrix import *
 class ObjectsFinder:
     def __init__(self, screenshot, color=None, debug=False, threshold=0.8,validation=False ):
         #
@@ -36,6 +37,44 @@ class ObjectsFinder:
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.debug=debug
+
+    def find_most_similar_image_template(self,target_image, image_list):
+        best_match_image = None
+        best_match_value = -float('inf')  # Minore è, meglio è per cv2.TM_SQDIFF
+        idx=-1
+        for i in range(len(image_list)):
+            # Usa il template matching
+            result = cv2.matchTemplate(image_list[i], target_image, self.__generic_object_method)
+            max_val, _, _, _ = cv2.minMaxLoc(result)
+            
+            if max_val>0.5 and max_val > best_match_value:
+                best_match_value = max_val
+                best_match_image = image_list[i]
+                idx=i
+        return idx
+
+    def find_from_existing_matrix(self,search_info:SimplifiedTemplateMatch,matrix:ObjectMatrix):
+        width = search_info.width
+        heigth = search_info.heigth
+        objects_found=[]
+        tm_labels = []
+        tm_imgs = []
+        for key in search_info.templates:
+            tm_labels.append(key)
+            tm_imgs.append(search_info.templates[key])
+        for i in range(matrix.num_row):
+            for j in range(len(matrix.matrix[i])):
+                x=matrix.get_cell(i,j).x
+                y=matrix.get_cell(i,j).y
+                img=self.extract_subimage(self.__img_matrix,OutputRectangle(x,y,width,heigth))
+                label_id = self.find_most_similar_image_template(img,tm_imgs)
+                if label_id!=-1:
+                    objects_found.append(OutputTemplateMatch(x,y,tm_labels[label_id],1))
+                else:
+                    objects_found.append(OutputTemplateMatch(x,y,"",1))
+                
+        return objects_found
+
 
     def find(self, search_info):
         return self.methods[type(search_info)](search_info)
@@ -78,7 +117,8 @@ class ObjectsFinder:
         elements_to_find=search_info.templates
         thresholds = search_info.threshold_dictionary
         return img,elements_to_find,thresholds
-    #def find_one_among(self,  elements_to_find:{}, request_regmax=True) -> list:
+
+
     def find_one_among(self,  search_info:TemplateMatch) -> list:
         objects_found=[]
         img, elements_to_find,thresholds = self.extract_tm_info(search_info)
