@@ -64,7 +64,7 @@ class DLVSolution:
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, feedback_on_color/4, wrongPlace/1, wrongs/1, freeToMove/1, singleColorTubeWithColorMax/3")
+        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, feedback_on_color/4, wrongPlace/1, wrongs/1, freeToMove/1, singleColorTubeWithColorMax/3, ball/2")
         self.__handler.add_option(option)
 
         moves = []
@@ -81,7 +81,6 @@ class DLVSolution:
             answer_sets = self.__handler.start_sync()
 
             self.__dinamic_facts.clear_all()
-
             print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
             assert_true(answer_sets is not None,"No solutions found for this level.")
             
@@ -89,7 +88,7 @@ class DLVSolution:
             #            "Found error:\n" + str(answer_sets.get_errors()))
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this level.")
             for answer_set in answer_sets.get_optimal_answer_sets():
-                #print(answer_set)
+                print(answer_set)
                 ans.append(answer_set)
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, Move):

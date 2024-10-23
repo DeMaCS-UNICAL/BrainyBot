@@ -109,11 +109,8 @@ class Validation:
         return dist[-1][-1]
 
 #TODO: fix here, validation file should be read by the specific game script
-    def validate_stacks(self, abstraction_result, validation_input):
-        validation=""
-        with open(validation_input) as file:
-            for line in file:
-                validation+=line
+    def validate_stacks(self, abstraction_result, validation):
+        
         abstraction=""
         for i in range(len(abstraction_result)):
             abstraction+=abstraction_result[i].custom_str()

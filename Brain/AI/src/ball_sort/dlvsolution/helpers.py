@@ -252,7 +252,7 @@ def get_colors(tubes: []):
     colors = set()
     for tube in tubes:
         for ball in tube.get_elements():
-            colors.add(Color.get_color(ball[3]))
+            colors.add(Color.get_color(ball.color))
     return list(colors)
 
 
@@ -265,7 +265,7 @@ def get_balls_and_tubes(tubes: []):
         tube.set_y(t.get_y())
         tube.set_id(t.get_id())
         for ball in t.get_elements():
-            b = Ball(Color.get_color(ball[3]).get_id())
+            b = Ball(Color.get_color(ball.color).get_id())
             balls.append(b)
             tube.add_ball(b)
         tube_list.append(tube)

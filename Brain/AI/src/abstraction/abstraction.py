@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 
 from matplotlib import pyplot as plt
-from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch
+from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch, OutputContainer, OutputCircle
 
 class Abstraction:
     
@@ -142,19 +142,19 @@ class Abstraction:
         [stack.set_y_coordinate() for stack in stacks]
         return stacks
 
-    def assign_to_container_as_stack(self, contained,containers,containers_coord)->dict:
+    def assign_to_container_as_stack(self, contained:list[OutputCircle],containers:list[OutputContainer])->dict:
         elements_per_container =[]
         for i in range(len(containers)):
             elements_per_container.append([])
-        contained.sort(reverse=True,key = lambda x: x[1])
+        contained.sort(reverse=True,key = lambda x: x.y)
         for obj in contained:
             for i in range(len(containers)):                
-                dist = cv2.pointPolygonTest(containers[i],(float(obj[0]),float(obj[1])),True)
+                dist = cv2.pointPolygonTest(containers[i].contour,(float(obj.x),float(obj.y)),True)
 
-                if  dist>0 and dist>obj[2]:
+                if  dist>0 and dist>obj.radius:
                     skip=False
                     for existing in elements_per_container[i]:
-                        if (existing[1] -obj[1])<existing[2]+obj[2]-(existing[2]+obj[2])*10/100:
+                        if (existing.y -obj.y)<existing.radius+obj.radius-(existing.radius+obj.radius)*10/100:
                             skip=True
                     if not skip:
                         elements_per_container[i].append(obj)
@@ -162,10 +162,11 @@ class Abstraction:
         empty=[]
         non_empty=[]
         for i in range(len(containers)):
+            container_coord = (containers[i].x,containers[i].y)
             if len(elements_per_container[i])==0:
-                empty.append(Stack(containers_coord[i]))
+                empty.append(Stack(container_coord))
             else:
-                non_empty.append(Stack(containers_coord[i]))
+                non_empty.append(Stack(container_coord))
                 non_empty[-1].add_elements(elements_per_container[i])
         self.assign_id_to_containers(empty,non_empty)
         return empty,non_empty

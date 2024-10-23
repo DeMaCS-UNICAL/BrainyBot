@@ -63,7 +63,7 @@ gameOver(S) :- fullTube(N), completed(N, S).
 %Non � possibile spostare una pallina in una boccetta piena allo step S
 :- step(S), move(B, T, S), size(T, S, N), tubeSize(M), N = M.
 :- step(S), move(B, T, S), completedTube(T1,S), onTop(B,T1,S).
-
+:- freeToMove(0), not gameOver(S+1), step(S).
 
 
 wrongPlace(B):-step(S), on(B,_,T,S+1), ball(B,C), not singleColorTubeWithColorMax(T, C, S+1).
@@ -73,15 +73,13 @@ wrongPlace(B):-step(S), on(B,_,T,S+1), ball(B,C), not singleColorTubeWithColorMa
 
 %:-move(B,T,S), B!=22.
 wrongs(N):- #count{B : wrongPlace(B)}=N.
-next_movable(B):-nextOnTop(B,T,S),nextOnTop(B1,T1,S), B!=B1, ball(B,C), ball(B1,C), size(T1,S,N), not tubeSize(N).
-next_movable(B):- nextOnTop(B,T,S), size(T1,S,0).
+next_movable(B):-nextOnTop(B,T,S),nextOnTop(B1,T1,S), B!=B1, ball(B,C), ball(B1,C), size(T1,S,N), not tubeSize(N), not ballMoved(B,S-1).
+next_movable(B):- nextOnTop(B,T,S), size(T1,S,0), not ballMoved(B,S-1).
 freeToMove(N):- #count{B : next_movable(B)}=N.
 %OPTIMIZE
-:~ #count{T:singleColorTubeWithColorMax(T, C, S)}=N,color(C), N>1. [N@10, N,C]
+:~ #count{T:singleColorTubeWithColorMax(T, C, S),step(S)}=N1, #count{T:singleColorTubeWithColorMax(T, C, S),not step(S)}=N2, color(C), N2>=N1. [N2-N1@10, N1,N2,C]
 :~ wrongs(N). [N@9,N]
 :~ freeToMove(N),tubeSize(M),fullTube(T). [T*M-N@8, N,M,T]
-
-
 
 %%%%%%%%%%%:~ move(B,T,S), move(B1,T1,S-1), T!=T1. [1@7, B,B1,T,T1,S]
 

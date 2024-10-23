@@ -13,6 +13,8 @@ from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_sort.dlvsolution.dlvsolution import Ball,Color,Tube,On
+from AI.src.vision.input_game_object import Circle,Container
+from AI.src.vision.output_game_object import OutputContainer
 
 
 class MatchingBalls:
@@ -21,7 +23,7 @@ class MatchingBalls:
     TUBES_DISTANCE_RATIO = 8
     RADIUS_RATIO = 60
 
-    def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
+    def __init__(self, screenshot_path, debug = False,validation=False,iteration=0):
         self.screenshot=screenshot_path
         self.debug=debug
         self.image = None
@@ -71,7 +73,7 @@ class MatchingBalls:
         
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
 
-        if self.debug and self.validation==None:
+        if self.debug and not self.validation:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show()
@@ -82,19 +84,19 @@ class MatchingBalls:
         self.__ball_chart.Clean()
         self.img_width = self.__image.shape[1]
         self.__balls = self.detect_balls()
-        template,containers,coordinates = self.detect_empty_tube()
-        return template,containers,coordinates
+        template,containers = self.detect_empty_tube()
+        return template,containers
             
     
     def abstraction(self,vision_output)->ElementsStacks:
         stacker = Abstraction()
         
-        empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1],vision_output[2]) 
+        empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1]) 
         matcher_width, matcher_height = vision_output[0].shape[::-1]
         self.__ball_chart.add_stacks(empty_stacks)
         # draw the empty tubes
         self.__ball_chart.add_stacks(non_empty_stacks)
-        if self.validation==None:
+        if not self.validation:
             balls_count = 0
             for l in non_empty_stacks:
                 balls_count+=len(l.get_elements())
@@ -111,21 +113,22 @@ class MatchingBalls:
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
         maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        self.balls = self.finder.__find_circles(minRadius,self.canny_threshold)
+        print(self.finder)
+        self.balls = self.finder.find(Circle(minRadius,self.canny_threshold))
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
 
-    def detect_empty_tube(self)->(int,list):
+    def detect_empty_tube(self)->tuple[int,list]:
         c=0
         for name in self.__tubeTemplates:
-            if self.validation==None:
+            if not self.validation:
                 print(f"Trying to detect empty tube {name}")
             #matches = self.finder.find_matches(cv2.cvtColor(self.__image, cv2.COLOR_RGB2GRAY),self.__tubeTemplates[name],False)
             #print(len(matches))
             #if len(matches) > 0:
-            actual_matches,coordinates = self.finder.detect_container(self.__tubeTemplates[name],self.proportion_tolerance,self.size_tolerance)
-            if len(actual_matches)>0:
-                return self.__tubeTemplates[name],actual_matches,coordinates
+            containers:list[OutputContainer] = self.finder.find(Container(self.__tubeTemplates[name],self.proportion_tolerance,self.size_tolerance))
+            if len(containers)>0:
+                return self.__tubeTemplates[name],containers
         #self.__ball_chart.setup_empty_stack(match)
         return None,[],[]
         
@@ -154,8 +157,11 @@ class MatchingBalls:
         img_copy=self.__output.copy()
         #cv.imwrite(os.path.join(SCREENSHOT_PATH, 'edges.png'), edges)
         for tube in self.__ball_chart.get_stacks():
-            for (x, y, r,c) in tube.get_elements():
-                    
+            for ball in tube.get_elements():
+                    x=ball.x
+                    y=ball.y
+                    r=ball.radius
+                    c=ball.color
                     # draw the circle
                     cv2.circle(img_copy, (x, y), r, (c[0],c[1],c[2]), 10)
                     cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)

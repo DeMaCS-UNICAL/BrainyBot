@@ -59,9 +59,15 @@ def persist_threshold(value):
     f.write(re.sub('CANNY_THRESHOLD=([^\n]+)', 'CANNY_THRESHOLD='+str(value), x,flags=re.M))
     print("threshold set to:", value)
 
+def read_validation_data(validation_input):
+    validation=""
+    with open(validation_input) as file:
+        for line in file:
+            validation+=line
+    return validation
 
-def ball_sort(screenshot, debug = False, validation=None,iteration=0):
-    matcher = MatchingBalls(screenshot,debug,validation,iteration)
+def ball_sort(screenshot, debug = False, vision_val=None, abstraction=None,iteration=0):
+    matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration)
     balls_chart = matcher.get_balls_chart()
     if balls_chart!=None:
         input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
@@ -69,11 +75,11 @@ def ball_sort(screenshot, debug = False, validation=None,iteration=0):
         input=[]
         tubes=[]
     distance=0
-    if validation!=None:
+    if vision_val!=None:
         validator = Validation()
         validate=[]
         validate.extend(tubes)
-        distance = validator.validate_stacks(validate,validation)
+        distance = validator.validate_stacks(validate,read_validation_data(vision_val))
     if(debug):
         return distance, matcher.canny_threshold
     recompute=True

@@ -18,11 +18,11 @@ class ObjectsFinder:
         #
         # Use Matrix2.png for testing
         #
-        self.methods = {TemplateMatch:self.template_matching,
+        self.methods = {TemplateMatch:self.__template_matching,
                         Circle:self.__find_circles,
-                        Container:self.detect_container,
-                        Rectangle:self.find_rectangles,
-                        TextRectangle:self.find_text_or_number}
+                        Container:self.__detect_container,
+                        Rectangle:self.__find_rectangles,
+                        TextRectangle:self.__find_text_or_number}
 
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
@@ -79,17 +79,17 @@ class ObjectsFinder:
     def find(self, search_info):
         return self.methods[type(search_info)](search_info)
 
-    def template_matching(self,search_info:TemplateMatch):
+    def __template_matching(self,search_info:TemplateMatch):
         if search_info.find_all:
                 return self.__find_all(search_info)
         return self.find_one_among(search_info)
     
-    def find_rectangles(self,search_info:Rectangle):
+    def __find_rectangles(self,search_info:Rectangle):
             if search_info.hierarchy:
                 return self.__find_boxes_and_hierarchy()
             return self.__find_boxes()
     
-    def find_text_or_number(self,search_info:TextRectangle):
+    def __find_text_or_number(self,search_info:TextRectangle):
             if search_info.numeric:
                 return self.__find_number(search_info)
             if search_info.dictionary!=None:
@@ -324,7 +324,7 @@ class ObjectsFinder:
 
     
     #def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
-    def detect_container(self,search_info:Container):
+    def __detect_container(self,search_info:Container):
         template=search_info.template
         rotate=search_info.rotate
         proportion_tolerance=search_info.proportion_tolerance
