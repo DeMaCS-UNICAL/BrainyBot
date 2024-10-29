@@ -14,7 +14,7 @@ from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_sort.dlvsolution.dlvsolution import Ball,Color,Tube,On
 from AI.src.vision.input_game_object import Circle,Container
-from AI.src.vision.output_game_object import OutputContainer
+from AI.src.vision.output_game_object import OutputContainer, OutputCircle
 
 
 class MatchingBalls:
@@ -32,7 +32,7 @@ class MatchingBalls:
         self.__ball_chart=None
         self.validation=validation
         self.__tubeTemplates = {}
-        self.__balls=[]
+        self.__balls:list[OutputCircle]=[]
         self.img_width = None
         self.canny_threshold,self.proportion_tolerance,self.size_tolerance = self.retrieve_config()
         self.canny_threshold = self.adjust_threshold(iteration)
@@ -84,13 +84,14 @@ class MatchingBalls:
         self.__ball_chart.Clean()
         self.img_width = self.__image.shape[1]
         self.__balls = self.detect_balls()
-        template,containers = self.detect_empty_tube()
+        template,containers = self.detect_tubes()
         return template,containers
             
     
     def abstraction(self,vision_output)->ElementsStacks:
         stacker = Abstraction()
-        
+        if vision_output[0] is None:
+            return self.__ball_chart
         empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1]) 
         matcher_width, matcher_height = vision_output[0].shape[::-1]
         self.__ball_chart.add_stacks(empty_stacks)
@@ -113,12 +114,11 @@ class MatchingBalls:
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
         minRadius=int(height / MatchingBalls.RADIUS_RATIO)
         maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        print(self.finder)
         self.balls = self.finder.find(Circle(minRadius,self.canny_threshold))
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
 
-    def detect_empty_tube(self)->tuple[int,list]:
+    def detect_tubes(self)->tuple[int,list]:
         c=0
         for name in self.__tubeTemplates:
             if not self.validation:
@@ -130,7 +130,7 @@ class MatchingBalls:
             if len(containers)>0:
                 return self.__tubeTemplates[name],containers
         #self.__ball_chart.setup_empty_stack(match)
-        return None,[],[]
+        return None,[]
         
     def Remove_False_Empty_Stack(self,full,empty, width, matcher_width):
         to_remove=[]

@@ -64,7 +64,7 @@ class DLVSolution:
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, feedback_on_color/4, wrongPlace/1, wrongs/1, freeToMove/1, singleColorTubeWithColorMax/3, ball/2")
+        option = OptionDescriptor("--filter=on/4, move/3, gameOver/1, feedback_on_color/4, wrongPlace/1, wrongs/1, freeToMove/1, singleColorTubeWithColorMax/3")
         self.__handler.add_option(option)
 
         moves = []

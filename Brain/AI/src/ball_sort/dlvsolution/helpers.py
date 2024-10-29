@@ -256,7 +256,7 @@ def get_colors(tubes: []):
     return list(colors)
 
 
-def get_balls_and_tubes(tubes: []):
+def get_balls_and_tubes(tubes: list):
     tube_list = []
     balls = []
     for t in tubes:
@@ -272,7 +272,7 @@ def get_balls_and_tubes(tubes: []):
     return tube_list, balls
 
 
-def get_balls_position(tubes: [Tube]):
+def get_balls_position(tubes: list[Tube]):
     on = []
     as_stacks=[]
     for tube in tubes:

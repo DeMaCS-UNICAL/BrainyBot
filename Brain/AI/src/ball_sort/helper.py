@@ -8,9 +8,10 @@ from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution,Ball,Color,Tube
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_sort.constants import SRC_PATH
-
+from AI.src.vision.output_game_object import OutputCircle
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
+
 
 
 def __get_ball_tube(ball, ons, step):
@@ -21,6 +22,7 @@ def __get_ball_tube(ball, ons, step):
 def asp_input(balls_chart):
     colors = get_colors(balls_chart.get_stacks())
     tubes, balls = get_balls_and_tubes(balls_chart.get_stacks())
+    
     input=colors.copy()
     input.extend(tubes)
     input.extend(balls)
@@ -36,7 +38,7 @@ def check_if_to_revalidate(output,last_output):
     threshold = output[0][1]
     for o in output:
         distance_sum+=o[0]
-    if len(last_output)==0:
+    if last_output==None or len(last_output)==0:
         last_output=[10000,0]
     last_distance_sum=last_output[0]
     last_threshold = last_output[1]
@@ -60,27 +62,62 @@ def persist_threshold(value):
     print("threshold set to:", value)
 
 def read_validation_data(validation_input):
-    validation=""
+    tubes={"empty":[],"no_empty":[]}
+    balls:list[OutputCircle]=[]
     with open(validation_input) as file:
         for line in file:
-            validation+=line
-    return validation
+            
+            if "empty" in line:
+                split=line.split()
+                if "not_empty" in line:
+                    tubes["no_empty"].append((split[0],split[1]))
+                else:
+                    tubes["empty"].append((split[0],split[1]))
+            else:
+                split_color = line.split("[")
+                print(split_color)
+                coord_radius = split_color[0]
+                split_color[1]=split_color[1].lstrip()
+                split_color[1]=split_color[1].lstrip("]")###################
+                color = split_color[1].split(",")
+                balls.append(OutputCircle(coord_radius[0],coord_radius[1],coord_radius[2],color))
+    for k in tubes.keys():
+        print(tubes[k])
+    for ball in balls:
+        print(ball.color)
+    return tubes,balls
 
 def ball_sort(screenshot, debug = False, vision_val=None, abstraction=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration)
     balls_chart = matcher.get_balls_chart()
+    balls : list[OutputCircle]=[]
+    
     if balls_chart!=None:
+        #'''TEMP
+        for tube in balls_chart.get_stacks():
+            print((int)(tube.get_x()),(int)(tube.get_y()),end=" ")
+            if len(tube.get_elements())==0:
+                print("Empty")
+            else:
+                print("Not_empty")
+                for ball in tube.get_elements():
+                    balls.append(ball)
+        for ball in balls:
+            print(ball.x,ball.y,ball.radius,ball.color)
+        #'''
         input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
     else:
         input=[]
         tubes=[]
     distance=0
     if vision_val!=None:
+        read_validation_data(vision_val)
+        '''
         validator = Validation()
         validate=[]
         validate.extend(tubes)
         distance = validator.validate_stacks(validate,read_validation_data(vision_val))
-    if(debug):
+        '''
         return distance, matcher.canny_threshold
     recompute=True
     while recompute:

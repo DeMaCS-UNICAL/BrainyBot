@@ -40,11 +40,11 @@ def validate_game(args):
                 #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
                 
                 #print(f"Starting AI for game {args.games}")
-                #with open(os.path.join(VALIDATION_PATH,"candy_crush","vision",screenshot+'.txt'), 'w') as f:
-                    #with redirect_stdout(f):
+                #with open(os.path.join(VALIDATION_PATH,"ball_sort","vision",screenshot+'.txt'), 'w') as f:
+                #    with redirect_stdout(f):
                 outputs.append(Start(screenshot,args,it))
-        not_done,validation_info=validationDictionary[args.games](outputs,validation_info)
-        #not_done=False
+        #not_done,validation_info=validationDictionary[args.games](outputs,validation_info)
+        not_done=False
         it+=1
 
 if __name__ == '__main__':
