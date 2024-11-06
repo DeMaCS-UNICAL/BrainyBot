@@ -13,6 +13,8 @@ from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
 from AI.src.vision.output_game_object import *
 from AI.src.abstraction.objectsMatrix import *
+
+
 class ObjectsFinder:
     def __init__(self, screenshot, color=None, debug=False, threshold=0.8,validation=False ):
         #
@@ -27,7 +29,7 @@ class ObjectsFinder:
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
         self.__output = self.__img_matrix.copy()  
-        self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
+        self.__blurred = cv2.medianBlur(self.__img_matrix,7)  # Used to find the color of the balls
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
@@ -197,30 +199,30 @@ class ObjectsFinder:
         #print(f"found {len(objects_found)} matches")
         return objects_found
 
-    def get_circle_shape(self):
-        center = (300, 300)
-        radius = 200
-        # Generate points around the circle
-        points = []
-        for angle in range(0, 360, 1):
-            x = int(center[0] + radius * np.cos(np.radians(angle)))
-            y = int(center[1] + radius * np.sin(np.radians(angle)))
-            points.append((x, y))
-        # Convert points to a numpy array
-        points = np.array(points)
-        # Create a contour from the points
-        return points.reshape((-1, 1, 2))
+    def is_circle(self,contour, circularity_threshold=0.85):
+        # Calcola l'area e il perimetro
+        area = cv2.contourArea(contour)
+        perimeter = cv2.arcLength(contour, True)
+        
+        # Evita di dividere per zero
+        if perimeter == 0:
+            return False
+        
+        # Calcola la circolarità
+        circularity = 4 * 3.14159 * area / (perimeter * perimeter)
+        
+        # Verifica se soddisfa i criteri di tolleranza e circolarità
+        return circularity >= circularity_threshold
 
     def __find_circles(self, search_info:Circle):
         canny_threshold = search_info.canny_threshold
         min_radius = search_info.min_radius
-        circle_shape = self.get_circle_shape()
         gray = self.__gray
         # threshold
         #blurred_img = cv2.blur(gray,ksize=(5,5))
         canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
+        circles = [cnt for cnt in contours if self.is_circle(cnt)]
         if self.debug and not self.validation:
             canny = cv2.cvtColor(canny, cv2.COLOR_GRAY2RGB)
             canny2 = canny.copy()
@@ -353,9 +355,9 @@ class ObjectsFinder:
             if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
                 continue
             to_return.append(OutputContainer(x,y,containers[i]))
-            #coordinates.append((x,y))
 
         # Show the image
         #plt.figure(dpi=300)
         #return to_return,coordinates
         return to_return
+    

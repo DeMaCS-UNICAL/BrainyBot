@@ -11,6 +11,8 @@ from AI.src.ball_sort.constants import SRC_PATH
 from AI.src.vision.output_game_object import OutputCircle
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
+from languages.asp.asp_mapper import ASPMapper
+from languages.predicate import Predicate
 
 
 
@@ -61,12 +63,11 @@ def persist_threshold(value):
     f.write(re.sub('CANNY_THRESHOLD=([^\n]+)', 'CANNY_THRESHOLD='+str(value), x,flags=re.M))
     print("threshold set to:", value)
 
-def read_validation_data(validation_input):
+def read_validation_data(vision_input,abstraction_input):
     tubes={"empty":[],"no_empty":[]}
     balls:list[OutputCircle]=[]
-    with open(validation_input) as file:
+    with open(vision_input) as file:
         for line in file:
-            
             if "empty" in line:
                 split=line.split()
                 if "not_empty" in line:
@@ -75,19 +76,17 @@ def read_validation_data(validation_input):
                     tubes["empty"].append((split[0],split[1]))
             else:
                 split_color = line.split("[")
-                print(split_color)
                 coord_radius = split_color[0]
-                split_color[1]=split_color[1].lstrip()
-                split_color[1]=split_color[1].lstrip("]")###################
-                color = split_color[1].split(",")
-                balls.append(OutputCircle(coord_radius[0],coord_radius[1],coord_radius[2],color))
-    for k in tubes.keys():
-        print(tubes[k])
-    for ball in balls:
-        print(ball.color)
-    return tubes,balls
+                color=split_color[1].rstrip(']\n')
+                color_list = color.split(",")
+                balls.append(OutputCircle(coord_radius[0],coord_radius[1],coord_radius[2],color_list))
+    facts=[]
+    with open(abstraction_input) as file:
+        for line in file:
+            facts.append(line.rstrip())
+    return tubes,balls,facts
 
-def ball_sort(screenshot, debug = False, vision_val=None, abstraction=None,iteration=0):
+def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration)
     balls_chart = matcher.get_balls_chart()
     balls : list[OutputCircle]=[]
@@ -103,21 +102,35 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction=None,itera
                 for ball in tube.get_elements():
                     balls.append(ball)
         for ball in balls:
-            print(ball.x,ball.y,ball.radius,ball.color)
+            rounded_color=[]
+            for x in ball.color:
+                rounded_color.append((x//5)*5)
+                if x%5>2:
+                    rounded_color[-1]+=5
+            print(ball.x,ball.y,ball.radius,rounded_color)
         #'''
         input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
+        '''
+        for i in input:
+            if isinstance(i,Predicate):
+                print(ASPMapper.get_instance().get_string(i))
+        '''
     else:
         input=[]
         tubes=[]
     distance=0
     if vision_val!=None:
-        read_validation_data(vision_val)
-        '''
+        for_val=[]
+        for i in input:
+            if isinstance(i,Predicate):
+                for_val.append(ASPMapper.get_instance().get_string(i))
+        vision_tubes,vision_balls,facts=read_validation_data(vision_val,abstraction_val)
         validator = Validation()
         validate=[]
-        validate.extend(tubes)
-        distance = validator.validate_stacks(validate,read_validation_data(vision_val))
-        '''
+        validate.extend(facts)
+        #distance = validator.validate_stacks(validate,read_validation_data(vision_val))
+        fp,fn = validator.validate_facts(for_val,validate)
+
         return distance, matcher.canny_threshold
     recompute=True
     while recompute:

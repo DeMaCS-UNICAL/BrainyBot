@@ -8,7 +8,8 @@ from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMat
 
 class Abstraction:
     
-    
+    def reset(self):
+        Cluster.clear_clusters()
     
     def ToGraph(self, elements:dict, distance:tuple)->ObjectGraph:
         graph = ObjectGraph(distance)
@@ -163,42 +164,36 @@ class Abstraction:
         non_empty=[]
         for i in range(len(containers)):
             container_coord = (containers[i].x,containers[i].y)
+            to_append = Stack(container_coord,containers[i].id)
             if len(elements_per_container[i])==0:
-                empty.append(Stack(container_coord))
+                empty.append(to_append)
             else:
-                non_empty.append(Stack(container_coord))
+                non_empty.append(to_append)
                 non_empty[-1].add_elements(elements_per_container[i])
         self.assign_id_to_containers(empty,non_empty)
+        
         return empty,non_empty
 
     def assign_id_to_containers(self, empty,non_empty):
-        l = []
+        l:list[Stack] = []
         l.extend(empty)
         l.extend(non_empty)
+        coordinates=[]
+        for container in l:
+            coordinates.append((container.get_x(),container.get_y()))
+        if len(Cluster.clusters)==0:
+            Cluster.generate_initial_clusters([x[0] for x in coordinates],"x")
+            Cluster.generate_initial_clusters([x[1] for x in coordinates],"y")
+            '''
+            for key in Cluster.clusters.keys():
+                print(key)
+                for cluster in Cluster.clusters[key]:
+                    print(cluster.cluster_id)
+            '''
         for i in range(len(l)):
-            l[i].set_id(int(str(int(l[i].get_x()))+str(int(l[i].get_y()))))
-        ''' NICE TRY!
-        
-        tuples_dictionary={}
-        for key in containers_dictionary.keys():
-            tuples_dictionary[key]=[]
-            for elem in containers_dictionary[key]:
-                tuples_dictionary[key].append((elem.get_x(),elem.get_y(),1))
-        containers_matrix,_,_ = self.ToMatrix(tuples_dictionary,(10,10), False)
-        for i in range(len(containers_matrix)):
-            for j in range(len(containers_matrix[0])):
-                if containers_matrix[i][j]!=None:
-                    for key in containers_dictionary.keys():
-                        found=False
-                        for elem in containers_dictionary[key]:
-                            if elem.get_x()==containers_matrix[i][j][0] and elem.get_y()==containers_matrix[i][j][1]:
-                                elem.set_id(int(str(i+1)+str(j+1)))
-                                print(elem.get_id())
-                                found=True
-                                break
-                        if found:
-                            break
-        '''
+            cluster_x_id = Cluster.find_or_add_cluster(l[i].get_x(),"x").cluster_id
+            cluster_y_id = Cluster.find_or_add_cluster(l[i].get_y(),"y").cluster_id
+            l[i].set_id(f"x{cluster_x_id}y{cluster_y_id}")
 
     def stack_no_duplicates(self, elements:dict)->list:
         stacks = []
@@ -212,4 +207,62 @@ class Abstraction:
             stacks.append(stack)
         return stacks
 
+
+class Cluster:
+    clusters = {}  # Lista statica per tenere traccia di tutti i cluster
+
+    def __init__(self, cluster_id, coordinates, cluster_threshold=10):
+        self.cluster_id = cluster_id
+        self.coordinates = coordinates  # Coordinate del cluster
+        self.cluster_threshold = cluster_threshold
+
+    @classmethod
+    def return_belonging_cluster(cls, coord, cluster_key):
+        # Cerca se c’è un cluster che contiene 'coord' entro la soglia
+        for cluster in cls.clusters[cluster_key]:
+                if all(abs(coord - c) <= cluster.cluster_threshold for c in cluster.coordinates):
+                    return cluster
+        return None
+
+    @classmethod
+    def find_or_add_cluster(cls, coord, cluster_key, cluster_threshold=10):
+        if cluster_key not in Cluster.clusters.keys():
+            cls.clusters[cluster_key]=[]
+        existing_cluster = cls.return_belonging_cluster(coord,cluster_key)
+        if existing_cluster:
+            existing_cluster.coordinates.append(coord)
+            return existing_cluster
+
+        # Crea un nuovo cluster se non ne esiste uno compatibile
+        new_cluster = Cluster(len(cls.clusters[cluster_key]) + 1, [coord], cluster_threshold)
+        cls.clusters[cluster_key].append(new_cluster)
+        cls.clusters[cluster_key].sort(key=lambda c: min(c.coordinates))
         
+        return new_cluster
+
+    @classmethod
+    def clear_clusters(cls):
+        cls.clusters = {}  # Resetta la lista dei cluster
+
+    @classmethod
+    def generate_initial_clusters(cls, coordinates, cluster_key, cluster_threshold=10):
+        if cluster_key not in cls.clusters.keys():
+                    cls.clusters[cluster_key]=[]
+        # Ordina le coordinate per un'assegnazione sequenziale dei cluster
+        sorted_coords = sorted(coordinates)
+        current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[], cluster_threshold=cluster_threshold)
+
+        for coord in sorted_coords:
+            # Se ogni elemento nel cluster corrente soddisfa la soglia, aggiungi `coord`
+            if all(abs(coord - c) <= cluster_threshold for c in current_cluster.coordinates):
+                current_cluster.coordinates.append(coord)
+            else:
+                # Se `coord` non rientra nel cluster corrente, aggiungi il cluster alla lista e creane uno nuovo
+                
+                cls.clusters[cluster_key].append(current_cluster)
+                current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[coord], cluster_threshold=cluster_threshold)
+
+        # Aggiungi l'ultimo cluster alla lista
+        cls.clusters[cluster_key].append(current_cluster)
+
+        return cls.clusters

@@ -67,13 +67,11 @@ class MatchingBalls:
         return self.abstraction(vision_output)
 
     def vision(self):
-        Ball.reset()
-        Tube.reset()
         self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)
         
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
 
-        if self.debug and not self.validation:
+        if not self.debug and not self.validation:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show()
@@ -88,8 +86,13 @@ class MatchingBalls:
         return template,containers
             
     
-    def abstraction(self,vision_output)->ElementsStacks:
+    def abstraction(self,vision_output,reset=True)->ElementsStacks:
         stacker = Abstraction()
+        if reset:
+            Ball.reset()
+            Tube.reset()
+            Color.reset()
+            stacker.reset()
         if vision_output[0] is None:
             return self.__ball_chart
         empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1]) 
@@ -97,7 +100,7 @@ class MatchingBalls:
         self.__ball_chart.add_stacks(empty_stacks)
         # draw the empty tubes
         self.__ball_chart.add_stacks(non_empty_stacks)
-        if not self.validation:
+        if  not self.validation:
             balls_count = 0
             for l in non_empty_stacks:
                 balls_count+=len(l.get_elements())
@@ -174,7 +177,8 @@ class MatchingBalls:
         result = np.concatenate((resized_input, resized_gray,resized_output), axis=1)
         plt.imshow(result)
         plt.title(f"vision+abstraction")
-        plt.show(block=False)
+        #plt.show(block=False)
+        plt.show()
         if not self.debug:
             plt.pause(0.1)
 

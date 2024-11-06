@@ -37,3 +37,7 @@ class OutputContainer(OutputGameObject):
     def __init__(self, x,y,contour):
         super().__init__(x,y)
         self.contour=contour
+        self.id=None
+    
+    def set_id(self,id):
+        self.id=id

@@ -1,11 +1,11 @@
 
 
 class Stack:
-    def __init__(self,t=(0,0)):
+    def __init__(self,t=(0,0),id=None):
         self.__x = t[0]
         self.__y = t[1]
         self.__elements = []
-        self.__id=None
+        self.__id=id
 
     def set_id(self, id):
         self.__id = id

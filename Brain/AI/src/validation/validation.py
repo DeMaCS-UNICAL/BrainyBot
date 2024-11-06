@@ -23,7 +23,7 @@ class Validation:
         return string
     
     def validate_facts(self, abstraction_result:list, validation_input:list):
-        print("validating abstraction")
+        #print("validating abstraction")
         real = set(validation_input)
         found = set(abstraction_result)
         fp=0
@@ -31,13 +31,15 @@ class Validation:
         tp=0
         for detected in found:
             if detected not in real:
+                #print("wrongly detected",detected)
                 fp += 1
             else:
                 tp+=1
         for existing in real:
             if existing not in found:
+                #print("missed",existing)
                 fn += 1
-        #print(fp,fn,tp)
+        #print("fp",fp,"fn",fn,"tp",tp)
         return fp,fn
 
     def calculate_distance(self,coord1, coord2):

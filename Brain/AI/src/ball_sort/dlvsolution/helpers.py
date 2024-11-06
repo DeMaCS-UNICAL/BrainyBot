@@ -1,87 +1,12 @@
 import os
 from itertools import count
-from math import sqrt
-
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
+from AI.src.asp_mapping.color import Color
 
 from AI.src.constants import DLV_PATH
-
-
-class Color(Predicate):
-    predicate_name = "color"
-
-    __ids = count(1, 1)
-    __colors = []
-    __MAX_DISTANCE = 40
-
-    def reset():
-        Color.__ids = count(1, 1)
-        Color.__colors = []
-        Color.__MAX_DISTANCE = 40
-
-    def __init__(self, bgr=None):
-        Predicate.__init__(self, [("id", int)])
-        #self.__id = next(Color.__ids)
-        self.__id = -1
-        self.__bgr = bgr
-
-    def get_id(self) -> int:
-        return self.__id
-
-    def set_id(self, id):
-        self.__id = id
-    
-    def incr_id(self):
-        self.__id+=1
-
-    def get_bgr(self) -> []:
-        return self.__bgr
-
-    def set_bgr(self, bgr: []):
-        self.__bgr = bgr
-
-    @staticmethod
-    def is_less_than(color1,color2):
-        if color1.__bgr[0]<color2.__bgr[0]:
-            return True
-        if color1.__bgr[0]-color2.__bgr[0]<10:
-            if color1.__bgr[1]<color2.__bgr[1]:
-                return True
-            if color1.__bgr[1]-color2.__bgr[1]<10:
-                if color1.__bgr[2]<color2.__bgr[2]:
-                    return True
-        return False
-
-    @staticmethod
-    def __euclidean_distance(color1, color2):
-        return sqrt(pow(color1[0] - color2[0], 2) + pow(color1[1] - color2[1], 2) + pow(color1[2] - color2[2], 2))
-
-    @staticmethod
-    def get_color(bgr: []):
-        for color in Color.__colors:
-            if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
-                return color
-        color = Color(bgr)
-        pos=0
-        for i in range(len(Color.__colors)):
-            if Color.is_less_than(color,Color.__colors[i]):
-                for j in range(i,len(Color.__colors)):
-                    Color.__colors[j].incr_id()
-                break
-            pos+=1
-        Color.__colors.insert(pos,color)
-        color.set_id(pos+1 )
-        return color
-    
-    @staticmethod
-    def get_bgr_by_id(id):
-        for color in Color.__colors:
-            if color.__id==id:
-                return color.__bgr
-
 
 class Ball(Predicate):
     predicate_name = "ball"
