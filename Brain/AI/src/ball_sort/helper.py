@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import re
+import numpy as np
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution,Ball,Color,Tube
@@ -93,6 +94,7 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
     
     if balls_chart!=None:
         #'''TEMP
+        radius = []
         for tube in balls_chart.get_stacks():
             print((int)(tube.get_x()),(int)(tube.get_y()),end=" ")
             if len(tube.get_elements())==0:
@@ -101,13 +103,14 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
                 print("Not_empty")
                 for ball in tube.get_elements():
                     balls.append(ball)
+                    radius.append(ball.radius)
         for ball in balls:
             rounded_color=[]
             for x in ball.color:
                 rounded_color.append((x//5)*5)
                 if x%5>2:
                     rounded_color[-1]+=5
-            print(ball.x,ball.y,ball.radius,rounded_color)
+            print(ball.x,ball.y,np.bincount(radius).argmax(),rounded_color)
         #'''
         input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
         '''
