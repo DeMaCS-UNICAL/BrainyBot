@@ -200,18 +200,14 @@ class ObjectsFinder:
         return objects_found
 
     def is_circle(self,contour, circularity_threshold=0.85):
-        # Calcola l'area e il perimetro
         area = cv2.contourArea(contour)
         perimeter = cv2.arcLength(contour, True)
         
-        # Evita di dividere per zero
         if perimeter == 0:
             return False
         
-        # Calcola la circolarità
         circularity = 4 * 3.14159 * area / (perimeter * perimeter)
         
-        # Verifica se soddisfa i criteri di tolleranza e circolarità
         return circularity >= circularity_threshold
 
     def __find_circles(self, search_info:Circle):

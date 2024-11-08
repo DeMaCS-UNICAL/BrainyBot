@@ -209,16 +209,14 @@ class Abstraction:
 
 
 class Cluster:
-    clusters = {}  # Lista statica per tenere traccia di tutti i cluster
-
+    clusters = {} 
     def __init__(self, cluster_id, coordinates, cluster_threshold=10):
         self.cluster_id = cluster_id
-        self.coordinates = coordinates  # Coordinate del cluster
+        self.coordinates = coordinates
         self.cluster_threshold = cluster_threshold
 
     @classmethod
     def return_belonging_cluster(cls, coord, cluster_key):
-        # Cerca se c’è un cluster che contiene 'coord' entro la soglia
         for cluster in cls.clusters[cluster_key]:
                 if all(abs(coord - c) <= cluster.cluster_threshold for c in cluster.coordinates):
                     return cluster
@@ -233,7 +231,6 @@ class Cluster:
             existing_cluster.coordinates.append(coord)
             return existing_cluster
 
-        # Crea un nuovo cluster se non ne esiste uno compatibile
         new_cluster = Cluster(len(cls.clusters[cluster_key]) + 1, [coord], cluster_threshold)
         cls.clusters[cluster_key].append(new_cluster)
         cls.clusters[cluster_key].sort(key=lambda c: min(c.coordinates))
@@ -242,27 +239,22 @@ class Cluster:
 
     @classmethod
     def clear_clusters(cls):
-        cls.clusters = {}  # Resetta la lista dei cluster
-
+        cls.clusters = {}
     @classmethod
     def generate_initial_clusters(cls, coordinates, cluster_key, cluster_threshold=10):
         if cluster_key not in cls.clusters.keys():
                     cls.clusters[cluster_key]=[]
-        # Ordina le coordinate per un'assegnazione sequenziale dei cluster
         sorted_coords = sorted(coordinates)
         current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[], cluster_threshold=cluster_threshold)
 
         for coord in sorted_coords:
-            # Se ogni elemento nel cluster corrente soddisfa la soglia, aggiungi `coord`
             if all(abs(coord - c) <= cluster_threshold for c in current_cluster.coordinates):
                 current_cluster.coordinates.append(coord)
             else:
-                # Se `coord` non rientra nel cluster corrente, aggiungi il cluster alla lista e creane uno nuovo
                 
                 cls.clusters[cluster_key].append(current_cluster)
                 current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[coord], cluster_threshold=cluster_threshold)
 
-        # Aggiungi l'ultimo cluster alla lista
         cls.clusters[cluster_key].append(current_cluster)
 
         return cls.clusters

@@ -1,8 +1,8 @@
-919 1082 Empty
-729 1081 Empty
-539 1082 Not_empty
-349 1081 Not_empty
-159 1082 Not_empty
+919 1082 empty
+729 1081 empty
+539 1082 not_empty
+349 1081 not_empty
+159 1082 not_empty
 539 1354 56 [0, 235, 95]
 539 1234 56 [0, 245, 255]
 539 1114 56 [0, 235, 95]

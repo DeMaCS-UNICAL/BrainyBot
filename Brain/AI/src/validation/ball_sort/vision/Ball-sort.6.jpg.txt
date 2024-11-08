@@ -1,10 +1,10 @@
-749 1423 Empty
-539 1423 Empty
-329 1423 Not_empty
-854 743 Not_empty
-644 744 Not_empty
-434 744 Not_empty
-224 743 Not_empty
+749 1423 empty
+539 1423 empty
+329 1423 not_empty
+854 743 not_empty
+644 744 not_empty
+434 744 not_empty
+224 743 not_empty
 329 1634 56 [0, 140, 240]
 329 1514 56 [0, 55, 225]
 329 1394 56 [0, 140, 240]

@@ -62,23 +62,20 @@ class Color(Predicate):
     
     @staticmethod
     def delta_e_2000(color1, color2):
-        # Converti i colori BGR in CIELAB
         color1_bgr = np.array([[color1]], dtype=np.uint8)
         color2_bgr = np.array([[color2]], dtype=np.uint8)
         color1_lab = cv2.cvtColor(color1_bgr, cv2.COLOR_BGR2LAB)[0][0]
         color2_lab = cv2.cvtColor(color2_bgr, cv2.COLOR_BGR2LAB)[0][0]
         
-        # Usa cdist con il parametro 'euclidean' per calcolare Delta E 2000
         delta_e = cdist([color1_lab], [color2_lab], metric='euclidean')[0][0]
         return delta_e
     
     def sort_colors_by_lab(colors_bgr):
         def lab_to_angle(lab):
             a, b = lab[1], lab[2]
-            return atan2(b, a)  # Calcola l'angolo in radianti
+            return atan2(b, a)
 
         
-        # Ordina gli oggetti in base all'angolo nel piano a-b
         sorted_color_objects = sorted(colors_bgr, key=lambda obj: lab_to_angle(cv2.cvtColor(np.uint8([[obj.__bgr]]), cv2.COLOR_BGR2LAB)[0][0]))
 
         return sorted_color_objects

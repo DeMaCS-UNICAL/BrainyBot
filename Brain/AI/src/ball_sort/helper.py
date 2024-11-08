@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import re
+from collections import Counter
 import numpy as np
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
@@ -93,31 +94,9 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
     balls : list[OutputCircle]=[]
     
     if balls_chart!=None:
-        #'''TEMP
-        radius = []
-        for tube in balls_chart.get_stacks():
-            print((int)(tube.get_x()),(int)(tube.get_y()),end=" ")
-            if len(tube.get_elements())==0:
-                print("Empty")
-            else:
-                print("Not_empty")
-                for ball in tube.get_elements():
-                    balls.append(ball)
-                    radius.append(ball.radius)
-        for ball in balls:
-            rounded_color=[]
-            for x in ball.color:
-                rounded_color.append((x//5)*5)
-                if x%5>2:
-                    rounded_color[-1]+=5
-            print(ball.x,ball.y,np.bincount(radius).argmax(),rounded_color)
-        #'''
+        #print_vision_validation_data(balls_chart, balls)
         input,colors,tubes,balls,on,on_feedback = asp_input(balls_chart)
-        '''
-        for i in input:
-            if isinstance(i,Predicate):
-                print(ASPMapper.get_instance().get_string(i))
-        '''
+        #print_abstraction_validation_data(input)
     else:
         input=[]
         tubes=[]
@@ -174,6 +153,42 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
                 break
             if i==len(moves)-1:
                 recompute=False
+
+def print_abstraction_validation_data(input):
+    for i in input:
+        if isinstance(i,Predicate):
+            print(ASPMapper.get_instance().get_string(i))
+
+def print_vision_validation_data(balls_chart, balls):
+    radius = []
+    colors=[]
+    for tube in balls_chart.get_stacks():
+        print((int)(tube.get_x()),(int)(tube.get_y()),end=" ")
+        if len(tube.get_elements())==0:
+            print("empty")
+        else:
+            print("not_empty")
+            for ball in tube.get_elements():
+                balls.append(ball)
+                radius.append(ball.radius)
+                    
+                rounded_color=[]
+                for x in ball.color:
+                    rounded_color.append((x//5)*5)
+                    if x%5>2:
+                        rounded_color[-1]+=5
+                ball.color=rounded_color
+                colors.append(ball.color)
+
+        
+    tuple_list = [tuple(lst) for lst in colors]
+    counter = Counter(tuple_list)
+    for element, count in counter.items():
+        print(f"{list(element)}: {count}")        
+
+
+    for ball in balls:
+        print(ball.x,ball.y,np.bincount(radius).argmax(),ball.color)
         
         
         
