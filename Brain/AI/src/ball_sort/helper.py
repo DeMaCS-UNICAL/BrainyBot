@@ -61,7 +61,7 @@ def persist_threshold(value):
 
 def ball_sort(screenshot, debug = False, validation=None,iteration=0):
     matcher = MatchingBalls(screenshot,debug,validation,iteration)
-    balls_chart = matcher.get_balls_chart()
+    balls_chart = matcher.get_balls_chart() #prende l'immagine e restituisce la lista di palle e container
     if balls_chart!=None:
         input,colors,tubes,balls,on = asp_input(balls_chart)
     else:

@@ -16,11 +16,13 @@ class Color(Predicate):
     __colors = []
     __MAX_DISTANCE = 40
 
-    def __init__(self, bgr=None):
+    def __init__(self, bgr=None, ball_type = None):
         Predicate.__init__(self, [("id", int)])
         self.__id = next(Color.__ids)
         self.__bgr = bgr
+        self.__ball_type = ball_type #solid o striped
 
+    
     def get_id(self) -> int:
         return self.__id
 
@@ -33,16 +35,20 @@ class Color(Predicate):
     def set_bgr(self, bgr: []):
         self.__bgr = bgr
 
-    @staticmethod
+    def get_ball_type(self) -> str:
+        return self.__ball_type
+
+    @staticmethod #statico perchè non dipende da nessuna istanza
     def __euclidean_distance(color1, color2): # indica la distanza euclidea tra due colori
-        return sqrt(pow(color1[0] - color2[0], 2) + pow(color1[1] - color2[1], 2) + pow(color1[2] - color2[2], 2))
+        return sqrt(sum(pow(color1[i] - color2[i], 2) for i in range(3)) )
 
     @staticmethod
     def get_color(bgr: []):
         for color in Color.__colors:
             if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
                 return color
-        color = Color(bgr)
+        ball_type = "solid" if len(Color.__colors) < 8 else "striped"
+        color = Color(bgr, ball_type)
         Color.__colors.append(color)
         return color
 
@@ -50,13 +56,13 @@ class Color(Predicate):
 class Ball(Predicate):
     predicate_name = "ball"
 
-    __ids = count(1, 1)
+    __ids = count(1, 1) # genera un id univoco per ogni palla, inizia da 1 e incrementa di 1
 
-    def __init__(self, btype : str, color=None):
+    def __init__(self, color: Color):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
-        self.__type = btype #piena o mezza
+        self.__type = color.get_ball_type()
 
     def get_id(self) -> int:
         return self.__id
@@ -75,14 +81,14 @@ class Ball(Predicate):
 
 
 
-class Hole(Predicate):
-    predicate_name = "tube"
+class Pocket(Predicate):
+    predicate_name = "pocket"
 
     __ids = count(1, 1)
 
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
-        self.__id = next(Hole.__ids)
+        self.__id = next(Pocket.__ids)
         self.__balls = []
         self.__x = x
         self.__y = y
@@ -105,7 +111,13 @@ class Hole(Predicate):
     def set_y(self, y):
         self.__y = int(y)
 
-class MoveAndShoot(Predicate):
+    def add_ball(self, ball):
+        self.__balls.append(ball)
+    
+    def contains_ball(self, ball):
+        return ball in self.__balls
+
+class MoveAndShoot(Predicate): #Da modificare
     predicate_name = "moveandshoot"
 
     def __init__(self, ball=None, tube=None, step=None):
@@ -131,6 +143,23 @@ class MoveAndShoot(Predicate):
 
     def set_step(self, step):
         self.__step = step
+
+class Game(Predicate):
+    def __init__(self):
+        self.current_player = 1
+        self.player_targets = {1: None, 2: None}
+        self.balls = []
+        self.pockets = []
+
+    def assign_targets(self,ball : Ball):
+        self.player_targets[self.current_player] = ball.get_type()
+
+    def check_target(self, ball: Ball):
+        return ball.get_type() == self.player_targets[self.current_player]
+    
+    def switch_player(self):
+        self.current_player = self.current_player % 2 + 1 
+
 
 class GameOver(Predicate):
     predicate_name = "gameOver"

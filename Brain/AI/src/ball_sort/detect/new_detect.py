@@ -15,11 +15,11 @@ from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_sort.dlvsolution.dlvsolution import Ball,Color,Tube,On
 
 
-class MatchingBalls:
+class MatchingBalls:  #classe che si occupa di trovare le palle e i container
 
-    BALLS_DISTANCE_RATIO = 30
-    TUBES_DISTANCE_RATIO = 8
-    RADIUS_RATIO = 60
+    BALLS_DISTANCE_RATIO = 30 #distanza minima tra le palle
+    TUBES_DISTANCE_RATIO = 8 # distanza minima tra i container
+    RADIUS_RATIO = 60 # rapporto tra il raggio della palla e l'altezza dell'immagine
 
     def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
         self.screenshot=screenshot_path
@@ -86,7 +86,7 @@ class MatchingBalls:
         return template,containers,coordinates
             
     
-    def abstraction(self,vision_output)->ElementsStacks:
+    def abstraction(self,vision_output)->ElementsStacks:  #serve per associare le palle ai container
         stacker = Abstraction()
         
         empty_stacks,non_empty_stacks = stacker.assign_to_container_as_stack(self.__balls.copy(),vision_output[1],vision_output[2]) 
