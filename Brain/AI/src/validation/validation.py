@@ -88,10 +88,11 @@ class Validation:
         return false_negatives_by_label,false_positives_by_label
     
     def validate_matches(self,matches_list,validation:list,threshold=50):
-        print("validating vision")
+        #print("validating vision")
         matches=[]
         for m in matches_list:
                 matches.append(((m.x,m.y),m.label))
+        #print(matches)
        
         return self.count_false_positives_negatives(matches,validation,threshold)
 

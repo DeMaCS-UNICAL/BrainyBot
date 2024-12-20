@@ -11,6 +11,8 @@ class ObjectMatrix():
             if len(i)>self.num_col:
                 self.num_col=len(i)
         self.cells = self.to_cells(offset,delta)
+        self.offset=offset
+        self.delta=delta
 
     def set_cell(self,i,j,value):
         self.cells[i][j]=value

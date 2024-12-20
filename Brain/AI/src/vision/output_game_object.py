@@ -10,10 +10,12 @@ class OutputCircle(OutputGameObject):
         self.color=color
 
 class OutputTemplateMatch(OutputGameObject):
-    def __init__(self,x,y,label,confidence):
+    def __init__(self,x,y,width,heigth,label,confidence):
         super().__init__(x,y)
         self.label=label
         self.confidence=confidence
+        self.template_width=width
+        self.template_heigth=heigth
 
     def __str__(self) -> str:
         return self.label

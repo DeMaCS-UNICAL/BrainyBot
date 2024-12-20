@@ -95,7 +95,6 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         plt.ion()
 
     template_matches_list,candyMatrix = matchingCandy.search()
-   
     input = asp_input(candyMatrix)
     #for e in input:
         #print(ASPMapper.get_instance().get_string(e) + ".")

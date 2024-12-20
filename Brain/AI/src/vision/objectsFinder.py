@@ -7,7 +7,7 @@ import pytesseract as ts
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
-
+from sklearn.cluster import DBSCAN
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
@@ -104,7 +104,9 @@ class ObjectsFinder:
     def template_matching_worker_process(self,id,output_list,elements:list,regmax,img):
         for (tm_name,tm_img,tm_threshold) in elements:
             previous_len=len(output_list)
-            output_list.extend(self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax))
+            #output_list.extend(self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax))
+            self.__find_matches_by_features(img,tm_name,tm_img)
+
             #print(tm_name,"=",len(output_list)-previous_len)
             #print(tm_name,tm_threshold)
         #print(f"I'm done {id}")
@@ -165,7 +167,6 @@ class ObjectsFinder:
 
             for process in processes:
                 process.join()
-
             main_list=[]
             for l in output_lists:
                 main_list.extend(l)
@@ -177,12 +178,131 @@ class ObjectsFinder:
                 objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
             '''
             return main_list
+    def detect_and_compute_keypoints(self,image, detector):
+        """
+        Rileva i keypoint e calcola i descrittori dell'immagine usando il detector fornito.
+        """
+        keypoints, descriptors = detector.detectAndCompute(image, None)
+        return keypoints, descriptors
+
+    def match_features(self,descriptors_main, descriptors_template):
+        """
+        Esegue il matching tra i descrittori dell'immagine principale e del template usando FLANNMatcher.
+        """
+        index_params = dict(algorithm=1, trees=5)  # KDTree
+        search_params = dict(checks=50)  # Controlla 50 vicini
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+        
+        matches = flann.knnMatch(descriptors_template, descriptors_main, k=2)
+        
+        # Applica il rapporto Lowe per filtrare i match
+        good_matches = []
+        for m, n in matches:
+            if m.distance < 0.7 * n.distance:
+                good_matches.append(m)
+        return good_matches
     
+    def cluster_matches_by_distance(self,main_keypoints, good_matches, tolerance=50):
+            # Ottieni le coordinate dei keypoint corrispondenti nei match
+        main_points = np.float32([main_keypoints[m.trainIdx].pt for m in good_matches])
+        
+        # Ordina i punti per coordinata X
+        sorted_indices = np.argsort(main_points[:, 0])
+        main_points_sorted = main_points[sorted_indices]
+        matches_sorted = [good_matches[i] for i in sorted_indices]
+        
+        clusters = []
+        current_cluster = [matches_sorted[0]]
+        last_point = main_points_sorted[0]
+
+        for i, match in enumerate(matches_sorted[1:], start=1):
+            current_point = main_points_sorted[i]
+            # Controlla la distanza euclidea con l'ultimo punto del cluster corrente
+            if np.linalg.norm(current_point - last_point) <= tolerance:
+                current_cluster.append(match)
+            else:
+                clusters.append(current_cluster)
+                current_cluster = [match]
+            last_point = current_point
+
+        # Aggiungi l'ultimo cluster
+        if current_cluster:
+            clusters.append(current_cluster)
+        return clusters
+
+    def find_occurrences_per_cluster_by_distance(self,main_keypoints, template_keypoints, clusters):
+        """
+        Trova le occorrenze del template per ogni cluster basato sulla distanza.
+        """
+        occurrences = []
+        for cluster_id, matches in enumerate(clusters):
+            main_points = np.float32([main_keypoints[m.trainIdx].pt for m in matches]).reshape(-1, 2)
+            template_points = np.float32([template_keypoints[m.queryIdx].pt for m in matches]).reshape(-1, 2)
+
+            if len(main_points) >= 4:  # L'omografia richiede almeno 4 punti
+                H, _ = cv2.findHomography(template_points, main_points, cv2.RANSAC, 5.0)
+                occurrences.append(H)
+        return occurrences
+    def draw_occurrences(self,image, template, clusters, main_keypoints):
+        # Ottieni le dimensioni del template
+        h, w = template.shape[:2]
+
+        # Crea una copia dell'immagine per disegnare
+        output_image = image.copy()
+
+        # Per ogni cluster di match
+        for cluster in clusters:
+            # Calcoliamo la posizione media dei keypoints nel cluster
+            cluster_pts = []
+
+            for match in cluster:
+                img_idx = match.trainIdx  # Indice del keypoint nell'immagine grande
+                # Salviamo la posizione del keypoint dell'immagine grande
+                cluster_pts.append(main_keypoints[img_idx].pt)
+
+            # Calcola la posizione media del cluster (centro del rettangolo)
+            mean_pt = np.mean(cluster_pts, axis=0)
+            
+            # Calcola le coordinate per il rettangolo
+            pt1 = (int(mean_pt[0] - w / 2), int(mean_pt[1] - h / 2))
+            pt2 = (int(pt1[0] + w), int(pt1[1] + h))
+
+            # Disegna un rettangolo che rappresenta l'occorrenza
+            cv2.rectangle(output_image, pt1, pt2, (0, 255, 0), 2)  # Verde con spessore 2
+        plt.imshow(output_image)
+        plt.show()
+
+    def __find_matches_by_features(self, image_or,label, element_to_find):
+        image=image_or.copy()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        element_to_find = cv2.cvtColor(element_to_find,cv2.COLOR_BGR2GRAY)
+        sift = cv2.SIFT_create()
+        main_keypoints, main_descriptors = self.detect_and_compute_keypoints(image, sift)
+        template_keypoints, template_descriptors = self.detect_and_compute_keypoints(element_to_find, sift)
+
+        # 4. Esegui il matching
+        good_matches = self.match_features(main_descriptors, template_descriptors)
+        if len(good_matches)==0:
+            return
+        # 5. Clusterizza i match per trovare più occorrenze
+        clusters = self.cluster_matches_by_distance(main_keypoints, good_matches)
+        print(label,len(clusters))
+        # 6. Trova le occorrenze del template in ciascun cluster
+        occurrences = self.find_occurrences_per_cluster_by_distance(main_keypoints, template_keypoints, clusters)
+
+        # 7. Disegna i match
+        for idx, H in enumerate(occurrences):
+            print(f"Occorrenza {idx + 1}: Trasformazione trovata:\n", H)
+        if label == "blue.png":
+            # 6. Disegna i match
+            self.draw_occurrences(image_or.copy(),element_to_find,clusters,main_keypoints)
+        
     def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
         
         objects_found=[]
         # execute template match
         res = cv2.matchTemplate(image, element_to_find, self.__generic_object_method)
+        template_height, template_width = element_to_find.shape[:2]
         # find regional maxElem
         if request_regmax:
             regMax = mahotas.regmax(res)
@@ -195,7 +315,7 @@ class ObjectsFinder:
         for pt in zip(*loc[::-1]):
             x, y = pt
             confidence = res[y, x]  # Extract the confidence value at the corresponding position
-            objects_found.append(OutputTemplateMatch(x,y,label,confidence))
+            objects_found.append(OutputTemplateMatch(x+template_width//2,y+template_height//2,template_width,template_height,label,confidence))
         #print(f"found {len(objects_found)} matches")
         return objects_found
 

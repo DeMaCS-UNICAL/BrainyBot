@@ -8,18 +8,20 @@ from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE, ID
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.validation.validation import Validation
 from AI.src.abstraction.objectsMatrix import ObjectMatrix
-from AI.src.candy_crush.detect.constants import SPRITES
+from AI.src.candy_crush.detect.constants import SPRITES,DISTANCE
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 from AI.src.vision.input_game_object import TemplateMatch, SimplifiedTemplateMatch
+from AI.src.vision.output_game_object import OutputTemplateMatch
 
+def draw(matrixCopy, center,id,width,height, color):
+    top_left = (center[0] - width // 2, center[1] - height // 2)
+    bottom_right = (center[0] + width // 2, center[1] + height // 2)
 
-def draw(matrixCopy, nodes, color):
-    width, height = 110, 110
-    cv2.rectangle(matrixCopy, (nodes[PX], nodes[PY]), (nodes[PX] + width, nodes[PY] + height), color, 10)
-    cv2.putText(matrixCopy,f"{nodes[ID]}",(nodes[PX],nodes[PY]),cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+    cv2.rectangle(matrixCopy, top_left,bottom_right, color, 10)
+    cv2.putText(matrixCopy,f"{id}",center,cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
 
 def get_color(strg) -> tuple:
@@ -44,7 +46,8 @@ class MatchingCandy:
         #
         self.screenshot=screenshot
         self.debug=debug
-        self.__difference = difference
+        #self.__difference = difference
+        self.__difference = DISTANCE
         self.image = None
         self.__graph=None
         self.__matrix=None
@@ -60,14 +63,26 @@ class MatchingCandy:
         self.first=False
         finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78,validation=self.validation)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
-        if not self.validation:
+        if  not self.validation:
             plt.imshow( self.__matrix)
             plt.title(f"Screenshot")
             plt.show()
             if not self.debug:
                 plt.pause(0.1)
         if grid_changed:
-            return finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
+            to_return = finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
+            matrix_copy=self.__matrix.copy()
+            if  not self.validation:
+                for match in to_return:
+                    if isinstance(match,OutputTemplateMatch):
+                        draw(matrix_copy, (match.x,match.y),f"{match.x}_{match.y}",match.template_width,match.template_heigth,get_color(match.label))
+                plt.imshow( matrix_copy)
+                plt.title(f"VISION")
+                plt.show()
+                if not self.debug:
+                    plt.pause(0.1)
+
+            return to_return
         else:
             return finder.find_from_existing_matrix(SimplifiedTemplateMatch(SPRITES,self.__difference),self.object_matrix)
     
@@ -79,23 +94,16 @@ class MatchingCandy:
 
         number_per_type={}
         matrix_copy=self.__matrix.copy()
+        width,heigth = objectMatrix.delta[0], objectMatrix.delta[1]
         for row in objectMatrix.get_cells():
             for cell in row:
                 value=cell.get_value()
                 if value != None:
                     color = get_color(value)
-                    draw(matrix_copy , (cell.x,cell.y,value,cell.get_id()), color)
-                    #if self.debug:
-                      #  print(cell.x,cell.y,value)
-                #if not value in number_per_type.keys():
-                #    number_per_type[value] = 0
-                #number_per_type[value] = number_per_type[value]+1
-        #for type in number_per_type.keys():
-         #   print(f"{type[0:-4]}:{number_per_type[type]}",file=sys.stderr,end='\t')
-        #print("",file=sys.stderr)
+                    draw(matrix_copy , (cell.x,cell.y),cell.get_id(),width,heigth, color)
         if not self.validation:
             plt.imshow(matrix_copy)
-            plt.title(f"Matching")
+            plt.title(f"ABSTRACTION")
             plt.show()
             if not self.debug: 
                 plt.pause(0.5)
