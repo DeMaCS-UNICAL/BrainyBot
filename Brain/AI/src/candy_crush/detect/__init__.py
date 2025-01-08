@@ -1,7 +1,7 @@
 import os
 import cv2
 import sys
-
+from matplotlib import pyplot as plt
 from AI.src.candy_crush.constants import SPRITE_PATH
 from AI.src.candy_crush.detect.constants import SPRITES,DISTANCE
 from AI.src.abstraction.helpers import getImg

@@ -47,7 +47,7 @@ class MatchingCandy:
         self.screenshot=screenshot
         self.debug=debug
         #self.__difference = difference
-        self.__difference = DISTANCE
+        self.__distance = DISTANCE
         self.image = None
         self.__graph=None
         self.__matrix=None
@@ -61,7 +61,7 @@ class MatchingCandy:
     def vision(self, grid_changed=True):
         grid_changed=self.first
         self.first=False
-        finder = ObjectsFinder(self.screenshot,cv2.COLOR_BGR2RGB, self.debug, threshold=0.78,validation=self.validation)
+        finder = ObjectsFinder(self.screenshot,color=cv2.COLOR_BGR2RGB, debug=self.debug, threshold=0.78,validation=self.validation)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
         if  not self.validation:
             plt.imshow( self.__matrix)
@@ -71,25 +71,16 @@ class MatchingCandy:
                 plt.pause(0.1)
         if grid_changed:
             to_return = finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
-            matrix_copy=self.__matrix.copy()
-            if  not self.validation:
-                for match in to_return:
-                    if isinstance(match,OutputTemplateMatch):
-                        draw(matrix_copy, (match.x,match.y),f"{match.x}_{match.y}",match.template_width,match.template_heigth,get_color(match.label))
-                plt.imshow( matrix_copy)
-                plt.title(f"VISION")
-                plt.show()
-                if not self.debug:
-                    plt.pause(0.1)
 
             return to_return
         else:
-            return finder.find_from_existing_matrix(SimplifiedTemplateMatch(SPRITES,self.__difference),self.object_matrix)
+            print("Looking for existing matrix")
+            return finder.find_from_existing_matrix(SimplifiedTemplateMatch(SPRITES,self.__distance),self.object_matrix)
     
     def abstraction(self,vision_output):
         gridifier = Abstraction()
         #self.__graph = gridifier.ToGraph(vision_output,self.__difference)
-        matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__difference)
+        matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__distance)
         objectMatrix = ObjectMatrix(matrix_rep,offset,delta)
 
         number_per_type={}
@@ -109,6 +100,7 @@ class MatchingCandy:
                 plt.pause(0.5)
         #return self.__graph
         self.object_matrix=objectMatrix
+        self.__distance=objectMatrix.delta
         return objectMatrix
     
     def search(self) -> tuple[list,ObjectMatrix]:

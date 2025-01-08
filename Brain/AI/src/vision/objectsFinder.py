@@ -7,7 +7,7 @@ import pytesseract as ts
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
-from sklearn.cluster import DBSCAN
+
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
@@ -20,11 +20,11 @@ class ObjectsFinder:
         #
         # Use Matrix2.png for testing
         #
-        self.methods = {TemplateMatch:self.__template_matching,
-                        Circle:self.__find_circles,
-                        Container:self.__detect_container,
-                        Rectangle:self.__find_rectangles,
-                        TextRectangle:self.__find_text_or_number}
+        self.methods = {TemplateMatch:self._template_matching,
+                        Circle:self._find_circles,
+                        Container:self._detect_container,
+                        Rectangle:self._find_rectangles,
+                        TextRectangle:self._find_text_or_number}
 
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
@@ -39,21 +39,44 @@ class ObjectsFinder:
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.debug=debug
-
+    
     def find_most_similar_image_template(self,target_image, image_list):
         best_match_image = None
-        best_match_value = -float('inf')  # Minore è, meglio è per cv2.TM_SQDIFF
+        best_match_value = -float('inf')
         idx=-1
         for i in range(len(image_list)):
-            # Usa il template matching
-            result = cv2.matchTemplate(image_list[i], target_image, self.__generic_object_method)
-            max_val, _, _, _ = cv2.minMaxLoc(result)
-            
+            result = cv2.matchTemplate(target_image, image_list[i], self.__generic_object_method)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
             if max_val>0.5 and max_val > best_match_value:
                 best_match_value = max_val
                 best_match_image = image_list[i]
                 idx=i
         return idx
+
+    def process_cell(self, args):
+        i, j, matrix, tm_imgs, tm_labels, width, height = args
+        x = matrix.get_cell(i, j).x
+        y = matrix.get_cell(i, j).y
+        img = self.extract_subimage(self.__img_matrix, OutputRectangle(x-width//2, y-height//2, width, height))
+        label_id = self.find_most_similar_image_template(img, tm_imgs)
+        if label_id != -1:
+            return OutputTemplateMatch(x, y,width, height, tm_labels[label_id], 1)
+        else:
+            return OutputTemplateMatch(x, y,width, height, "", 1)
+
+    def process_matrix_parallel(self,matrix, tm_imgs, tm_labels, width, height):
+        objects_found = []
+        tasks = [
+            (i, j, matrix, tm_imgs, tm_labels, width, height)
+            for i in range(matrix.num_row)
+            for j in range(len(matrix.matrix[i]))
+        ]
+        num_processes = min(multiprocessing.cpu_count()//2, len(tasks)) 
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            results = pool.map(self.process_cell, tasks)
+
+        objects_found.extend(results)
+        return objects_found
 
     def find_from_existing_matrix(self,search_info:SimplifiedTemplateMatch,matrix:ObjectMatrix):
         width = search_info.width
@@ -61,37 +84,29 @@ class ObjectsFinder:
         objects_found=[]
         tm_labels = []
         tm_imgs = []
+        cont=0
         for key in search_info.templates:
             tm_labels.append(key)
             tm_imgs.append(search_info.templates[key])
-        for i in range(matrix.num_row):
-            for j in range(len(matrix.matrix[i])):
-                x=matrix.get_cell(i,j).x
-                y=matrix.get_cell(i,j).y
-                img=self.extract_subimage(self.__img_matrix,OutputRectangle(x,y,width,heigth))
-                label_id = self.find_most_similar_image_template(img,tm_imgs)
-                if label_id!=-1:
-                    objects_found.append(OutputTemplateMatch(x,y,tm_labels[label_id],1))
-                else:
-                    objects_found.append(OutputTemplateMatch(x,y,"",1))
-                
+            cont+=1
+        objects_found = self.process_matrix_parallel(matrix,tm_imgs,tm_labels,width,heigth)
         return objects_found
 
 
     def find(self, search_info):
         return self.methods[type(search_info)](search_info)
 
-    def __template_matching(self,search_info:TemplateMatch):
+    def _template_matching(self,search_info:TemplateMatch):
         if search_info.find_all:
                 return self.__find_all(search_info)
         return self.find_one_among(search_info)
     
-    def __find_rectangles(self,search_info:Rectangle):
+    def _find_rectangles(self,search_info:Rectangle):
             if search_info.hierarchy:
                 return self.__find_boxes_and_hierarchy()
             return self.__find_boxes()
     
-    def __find_text_or_number(self,search_info:TextRectangle):
+    def _find_text_or_number(self,search_info:TextRectangle):
             if search_info.numeric:
                 return self.__find_number(search_info)
             if search_info.dictionary!=None:
@@ -101,12 +116,10 @@ class ObjectsFinder:
             return self.__find_text(search_info)
             
 
-    def template_matching_worker_process(self,id,output_list,elements:list,regmax,img):
+    def template_matching_worker_process(self,elements:list,regmax,img):
         for (tm_name,tm_img,tm_threshold) in elements:
-            previous_len=len(output_list)
-            #output_list.extend(self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax))
-            self.__find_matches_by_features(img,tm_name,tm_img)
-
+            #previous_len=len(output_list)
+            return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)
             #print(tm_name,"=",len(output_list)-previous_len)
             #print(tm_name,tm_threshold)
         #print(f"I'm done {id}")
@@ -132,6 +145,32 @@ class ObjectsFinder:
                 break
         return objects_found
     
+    
+    def process_template(self,args):
+        element, template, threshold, regmax, img = args
+        return self.template_matching_worker_process( [(element, template, threshold)], regmax, img
+        )
+
+    def __find_all(self, search_info: TemplateMatch) -> dict:
+        # Estrai le informazioni necessarie
+        img, elements_to_find, thresholds = self.extract_tm_info(search_info)
+        
+        # Prepara i dati come tuple (self, element, template, threshold, regmax, img)
+        templates = [
+            ( element, elements_to_find[element], thresholds[element], search_info.regmax, img)
+            for element in elements_to_find.keys()
+        ]
+        
+        # Usa un Pool per parallelizzare il lavoro sui template
+        num_processes = min(multiprocessing.cpu_count()//2, len(templates))
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            results = pool.map(self.process_template, templates)
+        
+        # Raccogli tutti i risultati in una lista
+        main_list = [item for sublist in results for item in sublist]
+        return main_list
+
+    '''
     #def find_all(self, elements_to_find:dict, request_regmax=True) -> dict:
     def __find_all(self, search_info:TemplateMatch) -> dict:
         img, elements_to_find,thresholds = self.extract_tm_info(search_info)
@@ -167,136 +206,19 @@ class ObjectsFinder:
 
             for process in processes:
                 process.join()
+
             main_list=[]
             for l in output_lists:
                 main_list.extend(l)
             #print("All processes have finished.")
-            '''
+            
             objects_found={}
             for element in elements_to_find.keys():
                 #print(f"{element} ")
                 objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
-            '''
-            return main_list
-    def detect_and_compute_keypoints(self,image, detector):
-        """
-        Rileva i keypoint e calcola i descrittori dell'immagine usando il detector fornito.
-        """
-        keypoints, descriptors = detector.detectAndCompute(image, None)
-        return keypoints, descriptors
-
-    def match_features(self,descriptors_main, descriptors_template):
-        """
-        Esegue il matching tra i descrittori dell'immagine principale e del template usando FLANNMatcher.
-        """
-        index_params = dict(algorithm=1, trees=5)  # KDTree
-        search_params = dict(checks=50)  # Controlla 50 vicini
-        flann = cv2.FlannBasedMatcher(index_params, search_params)
-        
-        matches = flann.knnMatch(descriptors_template, descriptors_main, k=2)
-        
-        # Applica il rapporto Lowe per filtrare i match
-        good_matches = []
-        for m, n in matches:
-            if m.distance < 0.7 * n.distance:
-                good_matches.append(m)
-        return good_matches
-    
-    def cluster_matches_by_distance(self,main_keypoints, good_matches, tolerance=50):
-            # Ottieni le coordinate dei keypoint corrispondenti nei match
-        main_points = np.float32([main_keypoints[m.trainIdx].pt for m in good_matches])
-        
-        # Ordina i punti per coordinata X
-        sorted_indices = np.argsort(main_points[:, 0])
-        main_points_sorted = main_points[sorted_indices]
-        matches_sorted = [good_matches[i] for i in sorted_indices]
-        
-        clusters = []
-        current_cluster = [matches_sorted[0]]
-        last_point = main_points_sorted[0]
-
-        for i, match in enumerate(matches_sorted[1:], start=1):
-            current_point = main_points_sorted[i]
-            # Controlla la distanza euclidea con l'ultimo punto del cluster corrente
-            if np.linalg.norm(current_point - last_point) <= tolerance:
-                current_cluster.append(match)
-            else:
-                clusters.append(current_cluster)
-                current_cluster = [match]
-            last_point = current_point
-
-        # Aggiungi l'ultimo cluster
-        if current_cluster:
-            clusters.append(current_cluster)
-        return clusters
-
-    def find_occurrences_per_cluster_by_distance(self,main_keypoints, template_keypoints, clusters):
-        """
-        Trova le occorrenze del template per ogni cluster basato sulla distanza.
-        """
-        occurrences = []
-        for cluster_id, matches in enumerate(clusters):
-            main_points = np.float32([main_keypoints[m.trainIdx].pt for m in matches]).reshape(-1, 2)
-            template_points = np.float32([template_keypoints[m.queryIdx].pt for m in matches]).reshape(-1, 2)
-
-            if len(main_points) >= 4:  # L'omografia richiede almeno 4 punti
-                H, _ = cv2.findHomography(template_points, main_points, cv2.RANSAC, 5.0)
-                occurrences.append(H)
-        return occurrences
-    def draw_occurrences(self,image, template, clusters, main_keypoints):
-        # Ottieni le dimensioni del template
-        h, w = template.shape[:2]
-
-        # Crea una copia dell'immagine per disegnare
-        output_image = image.copy()
-
-        # Per ogni cluster di match
-        for cluster in clusters:
-            # Calcoliamo la posizione media dei keypoints nel cluster
-            cluster_pts = []
-
-            for match in cluster:
-                img_idx = match.trainIdx  # Indice del keypoint nell'immagine grande
-                # Salviamo la posizione del keypoint dell'immagine grande
-                cluster_pts.append(main_keypoints[img_idx].pt)
-
-            # Calcola la posizione media del cluster (centro del rettangolo)
-            mean_pt = np.mean(cluster_pts, axis=0)
             
-            # Calcola le coordinate per il rettangolo
-            pt1 = (int(mean_pt[0] - w / 2), int(mean_pt[1] - h / 2))
-            pt2 = (int(pt1[0] + w), int(pt1[1] + h))
-
-            # Disegna un rettangolo che rappresenta l'occorrenza
-            cv2.rectangle(output_image, pt1, pt2, (0, 255, 0), 2)  # Verde con spessore 2
-        plt.imshow(output_image)
-        plt.show()
-
-    def __find_matches_by_features(self, image_or,label, element_to_find):
-        image=image_or.copy()
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        element_to_find = cv2.cvtColor(element_to_find,cv2.COLOR_BGR2GRAY)
-        sift = cv2.SIFT_create()
-        main_keypoints, main_descriptors = self.detect_and_compute_keypoints(image, sift)
-        template_keypoints, template_descriptors = self.detect_and_compute_keypoints(element_to_find, sift)
-
-        # 4. Esegui il matching
-        good_matches = self.match_features(main_descriptors, template_descriptors)
-        if len(good_matches)==0:
-            return
-        # 5. Clusterizza i match per trovare più occorrenze
-        clusters = self.cluster_matches_by_distance(main_keypoints, good_matches)
-        print(label,len(clusters))
-        # 6. Trova le occorrenze del template in ciascun cluster
-        occurrences = self.find_occurrences_per_cluster_by_distance(main_keypoints, template_keypoints, clusters)
-
-        # 7. Disegna i match
-        for idx, H in enumerate(occurrences):
-            print(f"Occorrenza {idx + 1}: Trasformazione trovata:\n", H)
-        if label == "blue.png":
-            # 6. Disegna i match
-            self.draw_occurrences(image_or.copy(),element_to_find,clusters,main_keypoints)
-        
+            return main_list
+    '''
     def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
         
         objects_found=[]
@@ -319,18 +241,23 @@ class ObjectsFinder:
         #print(f"found {len(objects_found)} matches")
         return objects_found
 
+
     def is_circle(self,contour, circularity_threshold=0.85):
+        # Calcola l'area e il perimetro
         area = cv2.contourArea(contour)
         perimeter = cv2.arcLength(contour, True)
         
+        # Evita di dividere per zero
         if perimeter == 0:
             return False
         
+        # Calcola la circolarità
         circularity = 4 * 3.14159 * area / (perimeter * perimeter)
         
+        # Verifica se soddisfa i criteri di tolleranza e circolarità
         return circularity >= circularity_threshold
 
-    def __find_circles(self, search_info:Circle):
+    def _find_circles(self, search_info:Circle):
         canny_threshold = search_info.canny_threshold
         min_radius = search_info.min_radius
         gray = self.__gray
@@ -442,7 +369,7 @@ class ObjectsFinder:
 
     
     #def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
-    def __detect_container(self,search_info:Container):
+    def _detect_container(self,search_info:Container):
         template=search_info.template
         rotate=search_info.rotate
         proportion_tolerance=search_info.proportion_tolerance
