@@ -1,11 +1,8 @@
-import multiprocessing.managers
 import os
 import sys
 import cv2
 import numpy as np
 import mahotas
-import multiprocessing
-from time import time
 import pytesseract as ts
 import multiprocessing
 from time import time
@@ -13,17 +10,26 @@ from matplotlib import pyplot as plt
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
+from AI.src.vision.input_game_object import *
+from AI.src.vision.output_game_object import *
+from AI.src.abstraction.objectsMatrix import *
+
 
 class ObjectsFinder:
-
     def __init__(self, screenshot, color=None, debug=False, threshold=0.8,validation=False ):
         #
         # Use Matrix2.png for testing
         #
+        self.methods = {TemplateMatch:self._template_matching,
+                        Circle:self._find_circles,
+                        Container:self._detect_container,
+                        Rectangle:self._find_rectangles,
+                        TextRectangle:self._find_text_or_number}
+
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
         self.__output = self.__img_matrix.copy()  
-        self.__blurred = cv2.medianBlur(self.__img_matrix,5)  # Used to find the color of the balls
+        self.__blurred = cv2.medianBlur(self.__img_matrix,7)  # Used to find the color of the balls
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
@@ -37,118 +43,173 @@ class ObjectsFinder:
     def get_image(self):
         return self.__img_matrix
 
+    
     def get_image_width(self):
         return self.__img_matrix.shape[1]
     
     def get_image_height(self):
         return self.__img_matrix.shape[0]
+    
+    def find_most_similar_image_template(self,target_image, image_list):
+        best_match_image = None
+        best_match_value = -float('inf')
+        idx=-1
+        for i in range(len(image_list)):
+            result = cv2.matchTemplate(target_image, image_list[i], self.__generic_object_method)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            if max_val>0.5 and max_val > best_match_value:
+                best_match_value = max_val
+                best_match_image = image_list[i]
+                idx=i
+        return idx
 
+    def process_cell(self, args):
+        i, j, matrix, tm_imgs, tm_labels, width, height = args
+        x = matrix.get_cell(i, j).x
+        y = matrix.get_cell(i, j).y
+        img = self.extract_subimage(self.__img_matrix, OutputRectangle(x-width//2, y-height//2, width, height))
+        label_id = self.find_most_similar_image_template(img, tm_imgs)
+        if label_id != -1:
+            return OutputTemplateMatch(x, y,width, height, tm_labels[label_id], 1)
+        else:
+            return OutputTemplateMatch(x, y,width, height, "", 1)
 
-    def worker_process(self,id,dictionary,elements:list,regmax):
-        for pair in elements:
-            print(f"Looking for {pair[0]}: ",end='')
-            dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
-        #print(f"I'm done {id}")
+    def process_matrix_parallel(self,matrix, tm_imgs, tm_labels, width, height):
+        objects_found = []
+        tasks = [
+            (i, j, matrix, tm_imgs, tm_labels, width, height)
+            for i in range(matrix.num_row)
+            for j in range(len(matrix.matrix[i]))
+        ]
+        num_processes = min(multiprocessing.cpu_count()//2, len(tasks)) 
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            results = pool.map(self.process_cell, tasks)
 
-    def find_one_among(self,  elements_to_find:{}, request_regmax=True) -> list:
+        objects_found.extend(results)
+        return objects_found
+
+    def find_from_existing_matrix(self,search_info:SimplifiedTemplateMatch,matrix:ObjectMatrix):
+        width = search_info.width
+        heigth = search_info.heigth
         objects_found=[]
+        tm_labels = []
+        tm_imgs = []
+        cont=0
+        for key in search_info.templates:
+            tm_labels.append(key)
+            tm_imgs.append(search_info.templates[key])
+            cont+=1
+        objects_found = self.process_matrix_parallel(matrix,tm_imgs,tm_labels,width,heigth)
+        return objects_found
+
+
+    def find(self, search_info):
+        return self.methods[type(search_info)](search_info)
+
+    def _template_matching(self,search_info:TemplateMatch):
+        if search_info.find_all:
+                return self.__find_all(search_info)
+        return self.find_one_among(search_info)
+    
+    def _find_rectangles(self,search_info:Rectangle):
+            if search_info.hierarchy:
+                return self.__find_boxes_and_hierarchy()
+            return self.__find_boxes()
+    
+    def _find_text_or_number(self,search_info:TextRectangle):
+            if search_info.numeric:
+                return self.__find_number(search_info)
+            if search_info.dictionary!=None:
+                return self.__find_text_from_dictionary(search_info)
+            if search_info.regex!=None:
+                return self.__find_text_from_regex(search_info)
+            return self.__find_text(search_info)
+            
+
+    def template_matching_worker_process(self,elements:list,regmax,img):
+        for (tm_name,tm_img,tm_threshold) in elements:
+            return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)     
+
+
+    def extract_tm_info(self, search_info:TemplateMatch):
+        img = self.__img_matrix.copy()
+        if search_info.grayscale:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        elements_to_find=search_info.templates
+        thresholds = search_info.threshold_dictionary
+        return img,elements_to_find,thresholds
+
+
+    def find_one_among(self,  search_info:TemplateMatch) -> list:
+        objects_found=[]
+        img, elements_to_find,thresholds = self.extract_tm_info(search_info)
         for element in elements_to_find.keys():
-            objects_found = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
+            objects_found = self.__find_matches(img,element,elements_to_find[element],thresholds[element],search_info.regmax)
             if len(objects_found)>0:
                 break
         return objects_found
+    
+    
+    def process_template(self,args):
+        element, template, threshold, regmax, img = args
+        return self.template_matching_worker_process( [(element, template, threshold)], regmax, img
+        )
 
-    def find_one_among_gray_scale(self, elements_to_find:{}, request_regmax:True)->list:
-        image_gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)
-        objects_found = self.find_one_among(image_gray,elements_to_find,request_regmax)
-        return objects_found
-
-    def find_all(self, elements_to_find:dict, request_regmax=True) -> dict:
-        template_num=len(elements_to_find.keys())
-        num_processes = min(multiprocessing.cpu_count(),template_num)
-        template_per_process = template_num//num_processes
-        count=0
-        templates_for_process=[]
-        for element in elements_to_find.keys():
-            if count<template_per_process or len(templates_for_process)==num_processes:
-                if count==0:
-                    templates_for_process.append([])
-                templates_for_process[-1].append((element,elements_to_find[element]))
-                count+=1
-                if count==template_per_process and len(templates_for_process)<num_processes:
-                    count=0
-                    
-        processes = []
+    def __find_all(self, search_info: TemplateMatch) -> dict:
+        # Estrai le informazioni necessarie
+        img, elements_to_find, thresholds = self.extract_tm_info(search_info)
         
-        with multiprocessing.Manager() as manager:
-        # Create a shared dictionary
-            shared_dict = manager.dict()
-            for i in range(num_processes):
-                #print(f"Starting process number {i}")
-                process = multiprocessing.Process(target=self.worker_process, args=(i,shared_dict,templates_for_process[i],request_regmax))
-                processes.append(process)
-                process.start()
+        # Prepara i dati come tuple (self, element, template, threshold, regmax, img)
+        templates = [
+            ( element, elements_to_find[element], thresholds[element], search_info.regmax, img)
+            for element in elements_to_find.keys()
+        ]
+        
+        # Usa un Pool per parallelizzare il lavoro sui template
+        num_processes = min(multiprocessing.cpu_count()//2, len(templates))
+        with multiprocessing.Pool(processes=num_processes) as pool:
+            results = pool.map(self.process_template, templates)
+        
+        # Raccogli tutti i risultati in una lista
+        main_list = [item for sublist in results for item in sublist]
+        return main_list
 
-            for process in processes:
-                process.join()
-
-            #print("All processes have finished.")
-            '''
-            objects_found={}
-            for element in elements_to_find.keys():
-                #print(f"{element} ")
-                objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
-            '''
-            return dict(shared_dict)
-
-    def find_all_gray_scale(self, elements_to_find:{}, request_regmax:True)->dict:
-        image_gray = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2GRAY)
-        objects_found = self.find_all(image_gray,elements_to_find,request_regmax)
-        return objects_found
-
-    def find_matches(self, image, element_to_find, request_regmax=True) -> list:
+    def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
         
         objects_found=[]
         # execute template match
         res = cv2.matchTemplate(image, element_to_find, self.__generic_object_method)
-        # find regional maxElem
+        template_height, template_width = element_to_find.shape[:2]
         if request_regmax:
             regMax = mahotas.regmax(res)
             res = res * regMax
-        # modify this to change the algorithm precision
-        loc = np.where(res >= self.__threshold)
-        #objects_found = list(zip(*loc[::-1]))
-        #print(f"Found {len(objects_found)} matches")
-        # Combine coordinates (x, y) with corresponding res values
+        loc = np.where(res >= threshold)
         for pt in zip(*loc[::-1]):
             x, y = pt
             confidence = res[y, x]  # Extract the confidence value at the corresponding position
-            objects_found.append((x, y, confidence))
-        print(f"found {len(objects_found)} matches")
+            objects_found.append(OutputTemplateMatch(x+template_width//2,y+template_height//2,template_width,template_height,label,confidence))
         return objects_found
 
-    def get_circle_shape(self):
-        center = (300, 300)
-        radius = 200
-        # Generate points around the circle
-        points = []
-        for angle in range(0, 360, 1):
-            x = int(center[0] + radius * np.cos(np.radians(angle)))
-            y = int(center[1] + radius * np.sin(np.radians(angle)))
-            points.append((x, y))
-        # Convert points to a numpy array
-        points = np.array(points)
-        # Create a contour from the points
-        return points.reshape((-1, 1, 2))
 
-    def find_circles(self, min_radius,canny_threshold):
-        circle_shape = self.get_circle_shape()
+    def is_circle(self,contour, circularity_threshold=0.85):
+        area = cv2.contourArea(contour)
+        perimeter = cv2.arcLength(contour, True)
+        
+        if perimeter == 0:
+            return False
+        circularity = 4 * 3.14159 * area / (perimeter * perimeter)
+        
+        return circularity >= circularity_threshold
+
+    def _find_circles(self, search_info:Circle):
+        canny_threshold = search_info.canny_threshold
+        min_radius = search_info.min_radius
         gray = self.__gray
         # threshold
         #blurred_img = cv2.blur(gray,ksize=(5,5))
         canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
         contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        circles = [cnt for cnt in contours if cv2.matchShapes(cnt,circle_shape,1,0.0)<0.05]
+        circles = [cnt for cnt in contours if self.is_circle(cnt)]
         if self.debug and not self.validation:
             canny = cv2.cvtColor(canny, cv2.COLOR_GRAY2RGB)
             canny2 = canny.copy()
@@ -176,49 +237,23 @@ class ObjectsFinder:
                 #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
                 #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
                 cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                balls.append([x, y, r,color.tolist()])
+                balls.append(OutputCircle(x,y,r,color.tolist()))
             if self.debug and not self.validation:
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
                 plt.show()
                 cv2.waitKey(0)
         return balls
     
-    def find_circles_old(self, balls_min_distance, balls_min_radius, balls_max_radius) -> list:
-        gray = self.__gray.copy()  # Used to find the balls
-        gray = cv2.medianBlur(gray, 5)
-        gray = cv2.Canny(gray,1,150)
-        gray = cv2.dilate(gray, None, iterations=1)
-        if not self.validation:
-            plt.imshow(gray, cmap="gray")
-            plt.show()
-            cv2.waitKey(0)
-        circles = cv2.HoughCircles(gray, self.__hough_circles_method, dp=1, minDist=balls_min_distance,param1= 100, param2=15, minRadius=balls_min_radius,     maxRadius=balls_max_radius)
-        balls = []
-        if circles is not None:
-            circles = np.round(circles[0, :]).astype("int")
-            # loop over the (x, y) coordinates and radius of the circles
-            for (x, y, r) in circles:
-                # get the color of pixel (x, y) form the blurred image
-                color = np.array(self.__blurred[y, x])
-                if not self.validation:
-                    print(f"Found ball:({x}, {y}): {color}")
-                    # draw the circle
-                    cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                    #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                    #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
-                    cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                balls.append([x, y, r,color.tolist()])
-            if not self.validation:
-                plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
-                plt.show()
-                cv2.waitKey(0)
-        return balls
-        
-
     
-    def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
+    def extract_subimage(self, img,rectangle):
+        return img[rectangle.y:rectangle.y+rectangle.heigth, rectangle.x:rectangle.x+rectangle.width]
 
+  
+    def _detect_container(self,search_info:Container):
+        template=search_info.template
+        rotate=search_info.rotate
+        proportion_tolerance=search_info.proportion_tolerance
+        size_tolerance=search_info.size_tolerance
         # Convert to grayscale and apply edge detection
         tem_gray = template.copy()
         gray = self.__gray.copy()
@@ -242,12 +277,9 @@ class ObjectsFinder:
                 continue
             if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
                 continue
-            to_return.append(containers[i])
-            coordinates.append((x,y))
+            to_return.append(OutputContainer(x,y,containers[i]))
 
-        # Show the image
-        #plt.figure(dpi=300)
-        return to_return,coordinates
+        return to_return
       
     def find_boxes(self) -> list:
         contour = cv2.Canny(self.__img_matrix, 25, 80)
