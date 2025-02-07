@@ -39,6 +39,16 @@ class ObjectsFinder:
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
         self.__hough_circles_method = eval(self.__hough_circles_method_name)
         self.debug=debug
+
+    def get_image(self):
+        return self.__img_matrix
+
+    
+    def get_image_width(self):
+        return self.__img_matrix.shape[1]
+    
+    def get_image_height(self):
+        return self.__img_matrix.shape[0]
     
     def find_most_similar_image_template(self,target_image, image_list):
         best_match_image = None
@@ -118,13 +128,7 @@ class ObjectsFinder:
 
     def template_matching_worker_process(self,elements:list,regmax,img):
         for (tm_name,tm_img,tm_threshold) in elements:
-            #previous_len=len(output_list)
-            return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)
-            #print(tm_name,"=",len(output_list)-previous_len)
-            #print(tm_name,tm_threshold)
-        #print(f"I'm done {id}")
-
-        
+            return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)     
 
 
     def extract_tm_info(self, search_info:TemplateMatch):
@@ -170,91 +174,31 @@ class ObjectsFinder:
         main_list = [item for sublist in results for item in sublist]
         return main_list
 
-    '''
-    #def find_all(self, elements_to_find:dict, request_regmax=True) -> dict:
-    def __find_all(self, search_info:TemplateMatch) -> dict:
-        img, elements_to_find,thresholds = self.extract_tm_info(search_info)
-        template_num=len(elements_to_find.keys())
-        num_processes = min(multiprocessing.cpu_count(),template_num)
-        template_per_process = template_num//num_processes
-        residual = template_num % num_processes
-        count=0
-        limit = template_per_process+ (1 if residual>0 else 0)
-        templates_for_process=[]
-        for element in elements_to_find.keys():
-            if count<limit:
-                if count==0:
-                    templates_for_process.append([])
-                templates_for_process[-1].append((element,elements_to_find[element],thresholds[element]))
-                count+=1
-                if count==limit:
-                    if len(templates_for_process)==residual:
-                        limit=template_per_process
-                    count=0
-                    
-        processes = []
-        
-        with multiprocessing.Manager() as manager:
-        # Create a shared dictionary
-            output_lists=manager.list()
-            for i in range(num_processes):
-                output_list = manager.list()
-                output_lists.append(output_list)
-                process = multiprocessing.Process(target=self.template_matching_worker_process, args=(i,output_list,templates_for_process[i],search_info.regmax,img))
-                processes.append(process)
-                process.start()
-
-            for process in processes:
-                process.join()
-
-            main_list=[]
-            for l in output_lists:
-                main_list.extend(l)
-            #print("All processes have finished.")
-            
-            objects_found={}
-            for element in elements_to_find.keys():
-                #print(f"{element} ")
-                objects_found[element] = self.find_matches(self.__img_matrix,elements_to_find[element],request_regmax)
-            
-            return main_list
-    '''
     def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
         
         objects_found=[]
         # execute template match
         res = cv2.matchTemplate(image, element_to_find, self.__generic_object_method)
         template_height, template_width = element_to_find.shape[:2]
-        # find regional maxElem
         if request_regmax:
             regMax = mahotas.regmax(res)
             res = res * regMax
-        # modify this to change the algorithm precision
         loc = np.where(res >= threshold)
-        #objects_found = list(zip(*loc[::-1]))
-        #print(f"Found {len(objects_found)} matches")
-        # Combine coordinates (x, y) with corresponding res values
         for pt in zip(*loc[::-1]):
             x, y = pt
             confidence = res[y, x]  # Extract the confidence value at the corresponding position
             objects_found.append(OutputTemplateMatch(x+template_width//2,y+template_height//2,template_width,template_height,label,confidence))
-        #print(f"found {len(objects_found)} matches")
         return objects_found
 
 
     def is_circle(self,contour, circularity_threshold=0.85):
-        # Calcola l'area e il perimetro
         area = cv2.contourArea(contour)
         perimeter = cv2.arcLength(contour, True)
         
-        # Evita di dividere per zero
         if perimeter == 0:
             return False
-        
-        # Calcola la circolarità
         circularity = 4 * 3.14159 * area / (perimeter * perimeter)
         
-        # Verifica se soddisfa i criteri di tolleranza e circolarità
         return circularity >= circularity_threshold
 
     def _find_circles(self, search_info:Circle):
@@ -300,7 +244,44 @@ class ObjectsFinder:
                 cv2.waitKey(0)
         return balls
     
-            
+    
+    def extract_subimage(self, img,rectangle):
+        return img[rectangle.y:rectangle.y+rectangle.heigth, rectangle.x:rectangle.x+rectangle.width]
+
+  
+    def _detect_container(self,search_info:Container):
+        template=search_info.template
+        rotate=search_info.rotate
+        proportion_tolerance=search_info.proportion_tolerance
+        size_tolerance=search_info.size_tolerance
+        # Convert to grayscale and apply edge detection
+        tem_gray = template.copy()
+        gray = self.__gray.copy()
+        #edges = cv2.Canny(gray, 50, 150)
+        ret, edges = cv2.threshold(gray, 127, 255, 0)
+        #tem_edges = cv2.Canny(tem_gray, 50, 150)
+        ret, tem_edges = cv2.threshold(tem_gray, 127, 255, 0)
+        # Find contours
+        tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        tem_cnt = tem_contours[0]
+        _,tem_axis,tem_a = cv2.fitEllipse(tem_cnt)
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,3,0.0)<0.02]
+        coordinates = []
+        to_return=[]
+        for i in range(len(containers)):
+            (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
+            if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
+                    continue
+            if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
+                continue
+            if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
+                continue
+            to_return.append(OutputContainer(x,y,containers[i]))
+
+        return to_return
+    
+              
     def __find_boxes(self) -> list:
         contour = cv2.Canny(self.__img_matrix, 25, 80)
         contour = cv2.dilate(contour, None, iterations=1)
@@ -333,9 +314,6 @@ class ObjectsFinder:
         elem = ts.image_to_string(img, config='--psm 8 --oem 3') 
         return elem if elem != '' else None
 
-    def extract_subimage(self, img,rectangle):
-        return img[rectangle.y:rectangle.y+rectangle.heigth, rectangle.x:rectangle.x+rectangle.width]
-
     def __find_number(self, search_info:TextRectangle) -> int:
         rectangle=search_info.rectangle
         img = self.extract_subimage(self.__img_matrix,rectangle).copy()
@@ -367,40 +345,4 @@ class ObjectsFinder:
         else:
             return None        
 
-    
-    #def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
-    def _detect_container(self,search_info:Container):
-        template=search_info.template
-        rotate=search_info.rotate
-        proportion_tolerance=search_info.proportion_tolerance
-        size_tolerance=search_info.size_tolerance
-        # Convert to grayscale and apply edge detection
-        tem_gray = template.copy()
-        gray = self.__gray.copy()
-        #edges = cv2.Canny(gray, 50, 150)
-        ret, edges = cv2.threshold(gray, 127, 255, 0)
-        #tem_edges = cv2.Canny(tem_gray, 50, 150)
-        ret, tem_edges = cv2.threshold(tem_gray, 127, 255, 0)
-        # Find contours
-        tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        tem_cnt = tem_contours[0]
-        _,tem_axis,tem_a = cv2.fitEllipse(tem_cnt)
-        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,3,0.0)<0.02]
-        coordinates = []
-        to_return=[]
-        for i in range(len(containers)):
-            (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
-            if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
-                    continue
-            if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
-                continue
-            if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
-                continue
-            to_return.append(OutputContainer(x,y,containers[i]))
-
-        # Show the image
-        #plt.figure(dpi=300)
-        #return to_return,coordinates
-        return to_return
     
