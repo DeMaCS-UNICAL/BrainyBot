@@ -37,12 +37,6 @@ class ObjectsFinder:
     def get_image(self):
         return self.__img_matrix
 
-
-    def worker_process(self,id,dictionary,elements:list,regmax):
-        for pair in elements:
-            dictionary[pair[0]]=self.find_matches(self.__img_matrix,pair[1],regmax)
-        #print(f"I'm done {id}")
-
     def get_image_width(self):
         return self.__img_matrix.shape[1]
     
@@ -220,7 +214,41 @@ class ObjectsFinder:
                 plt.show()
                 cv2.waitKey(0)
         return balls
-            
+        
+
+    
+    def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
+
+        # Convert to grayscale and apply edge detection
+        tem_gray = template.copy()
+        gray = self.__gray.copy()
+        #edges = cv2.Canny(gray, 50, 150)
+        ret, edges = cv2.threshold(gray, 127, 255, 0)
+        #tem_edges = cv2.Canny(tem_gray, 50, 150)
+        ret, tem_edges = cv2.threshold(tem_gray, 127, 255, 0)
+        # Find contours
+        tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        tem_cnt = tem_contours[0]
+        _,tem_axis,tem_a = cv2.fitEllipse(tem_cnt)
+        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,3,0.0)<0.02]
+        coordinates = []
+        to_return=[]
+        for i in range(len(containers)):
+            (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
+            if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
+                    continue
+            if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
+                continue
+            if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
+                continue
+            to_return.append(containers[i])
+            coordinates.append((x,y))
+
+        # Show the image
+        #plt.figure(dpi=300)
+        return to_return,coordinates
+      
     def find_boxes(self) -> list:
         contour = cv2.Canny(self.__img_matrix, 25, 80)
         contour = cv2.dilate(contour, None, iterations=1)
@@ -323,37 +351,4 @@ class ObjectsFinder:
         try:
             return int(elem)
         except:
-            return None     
-
-    
-    def detect_container(self,template,proportion_tolerance=0,size_tolerance=0,rotate=False):
-
-        # Convert to grayscale and apply edge detection
-        tem_gray = template.copy()
-        gray = self.__gray.copy()
-        #edges = cv2.Canny(gray, 50, 150)
-        ret, edges = cv2.threshold(gray, 127, 255, 0)
-        #tem_edges = cv2.Canny(tem_gray, 50, 150)
-        ret, tem_edges = cv2.threshold(tem_gray, 127, 255, 0)
-        # Find contours
-        tem_contours, _ = cv2.findContours(tem_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        tem_cnt = tem_contours[0]
-        _,tem_axis,tem_a = cv2.fitEllipse(tem_cnt)
-        contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,3,0.0)<0.02]
-        coordinates = []
-        to_return=[]
-        for i in range(len(containers)):
-            (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
-            if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
-                    continue
-            if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
-                continue
-            if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
-                continue
-            to_return.append(containers[i])
-            coordinates.append((x,y))
-
-        # Show the image
-        #plt.figure(dpi=300)
-        return to_return,coordinates
+            return None   
