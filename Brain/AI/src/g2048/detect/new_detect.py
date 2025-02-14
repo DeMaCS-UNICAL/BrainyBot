@@ -1,23 +1,26 @@
 from AI.src.vision.objectsFinder import ObjectsFinder
 import cv2
+import numpy as np
 from math import sqrt
 from AI.src.vision.input_game_object import Rectangle,TextRectangle, OutputRectangle
 
 class Matching2048:
     def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
-        self.__image = cv2.imread(screenshot_path)
         self.__finder = ObjectsFinder(screenshot_path)
         self.__debug = debug
         self.__matrix = None
         self.__numbers_boxes = None
+        self.__blank_box_color = None
         self.__calculate_metadata()
-
-    def get_image(self):
-        return self.__image
+    
+    def get_image_width(self):
+        return self.__finder.get_image_width()
+    
+    def get_image_height(self):
+        return self.__finder.get_image_height()
     
     def set_image(self, screenshot_path, recalculate_metadata = False):
-        self.__image = cv2.imread(screenshot_path)
-        self.__finder.change_image(screenshot_path)
+        self.__finder = ObjectsFinder(screenshot_path)
         if recalculate_metadata:
             self.__calculate_metadata()
 
@@ -77,27 +80,17 @@ class Matching2048:
                     numbers.append(int(number))
         return numbers
 
-    def __cut_image_to_matrix(self):
-        x, y, w, h = self.__matrix
-        return self.__image[y:y+h, x:x+w].copy()
-
-    def get_output(self, i):
-        output = self.__image.copy()
-        numbers = []
-        
-        if self.__matrix != None:
-            x, y, w, h = self.__matrix
-            cv2.rectangle(output, (x, y), (x + w, y + h), (255, 0, 0), 2)
-            if self.__numbers_boxes != None:
-                for box in self.__numbers_boxes:
-                    x, y, w, h = box
-                    number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
-                    if number == None:
-                        numbers.append(0)
-                    else:
-                        numbers.append(number)
-                    cv2.rectangle(output, (x, y), (x + w, y + h), (0, 0, 255), 2)
-                    cv2.putText(output, str(number) if number != None else "0" , (x+10, y+30), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX, 1, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.imwrite(f'output/output{i}.png', output)
+    
+    def find_numbers_with_cache(self, cache, only_first=True):
+        numbers = cache
+        for i in range(len(numbers)):
+            if numbers[i] == 0:
+                x, y, w, h = self.__numbers_boxes[i]
+                if np.array_equal(self.__finder.get_image()[y+h//2, x+w//2], self.__blank_box_color):
+                    continue
+                number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
+                if number != None:
+                    numbers[i] = int(number)
+                    if only_first:
+                        return numbers
         return numbers
-        
