@@ -127,6 +127,7 @@ class MatchingBalls:  #classe che si occupa di trovare le palle e i container
             if len(actual_matches)>0:
                 return self.__tubeTemplates[name],actual_matches,coordinates
         #self.__ball_chart.setup_empty_stack(match)
+        
         return None,[],[]
         
     def Remove_False_Empty_Stack(self,full,empty, width, matcher_width):
