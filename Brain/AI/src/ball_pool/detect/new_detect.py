@@ -32,7 +32,7 @@ class MatchingBalls:
         self.__balls = []
         self.__balls_pocketed = []
         self.img_width = None
-        self.canny_threshold,self.proportion_tolerance,self.size_tolerance = self.retrieve_config()
+        self.canny_threshold, self.proportion_tolerance, self.size_tolerance = self.retrieve_config()
         self.canny_threshold = self.adjust_threshold(iteration)
         
         '''
@@ -53,13 +53,17 @@ class MatchingBalls:
     def adjust_threshold(self,iteration):
         if iteration==0:
             return self.canny_threshold
-        return self.canny_threshold+iteration*10
+        return self.canny_threshold + iteration*10
 
     def detect_balls(self) -> list: #chiamato da vision per identificare le palle nell'immagine usando rilevamento di cerchi
+        """
+        Rileva le palline tramite il rilevamento di cerchi.
+        Si assume che il metodo find_circles di ObjectsFinder restituisca una lista di cerchi 
+        nel formato [x, y, r, bgr].
+        """
+
         height = self.image.shape[0] 
-        min_dist = int(height / self.BALLS_DISTANCE_RATIO) # distanza minima tra le palle basato sull'altezza dell'immagine
         min_radius = int(height / self.RAIUS_RATIO) # raggio minimo delle palle
-        max_radius = int(height / self.RAIUS_RATIO)
         self.balls = self.finder.find_circles(min_radius, self.canny_threshold)
         return self.balls
     
@@ -67,6 +71,7 @@ class MatchingBalls:
     def vision(self): #elabora l'immagine e restituisce le palle 
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validationField)
         self.__image= getImg(os.path.join(SCREENSHOT_PATH,self.screenshot))
+
         if self.debug:
             plt.imshow(cv2.cvtColor(self.__image, cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
@@ -75,27 +80,45 @@ class MatchingBalls:
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH,self.screenshot),gray=True)
         self.__output = self.__image.copy()
         #self.img_width = self.__image.shape[1]
-        self.__balls = self.detect_balls()
+        self.detect_balls()
 
         return self.__balls
 
 
     def abstraction(self, vision_output):#converte l'output della visione in un formato strutturato
+        """
+        Converte l'output grezzo della visione (lista di [x, y, r, bgr]) in una struttura organizzata.
+        Per ogni palla rilevata:
+          - Vengono estratte le coordinate e il raggio.
+          - Viene creato un oggetto Ball usando Color.get_color().
+        """
+
         ball_chart = []
-        for ball in self.__balls:
-            ball_chart.append({"x": ball[0], "y": ball[1], "r": ball[2]})
+        for ball in vision_output:
+            if len(ball) < 4 :   
+                continue
+
+            x,y,r,bgr = ball[0], ball[1], ball[2], ball[3]
+            ball_obj = Ball(Color.get_color(bgr))
+            # Creiamo un oggetto Ball utilizzando la logica di Color per determinare tipo e colore
+            ball_chart.append({"x": x, "y": y, "r": r, "ball_obj": ball_obj})
         return ball_chart
 
     def __show_result(self):
+        """
+        Mostra l'immagine di output con i cerchi (palline) disegnati e le relative coordinate.
+        """
         width = int(self.__image.shape[1] * 0.3)
         height = int(self.__image.shape[0] * 0.3)
         dim = (width, height)
         img_copy = self.__output.copy()
-        for(x,y,r) in self.__balls:
-            cv2.circle(img_copy, (x,y), r, (255,0,0), 3)
-            cv2.circle(img_copy, (x,y), 6, (0,0,0), -1)
-            cv2.putText(img_copy, f"({x},{y})", (x+10,y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), -1)
         
+        for ball in self.__balls:
+            x,y,r = ball[0], ball[1], ball[2]
+            cv2.circle(img_copy, (x, y), r, (255, 0, 3), 3)
+            cv2.circle(img_copy, (x, y), 6, (0, 0, 0), -1)
+            cv2.putText(img_copy, f"({x},{y})", (x+10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), -1)
+
         resized_output = cv2.resize(img_copy, dim, interpolation = cv2.INTER_AREA)
         plt.imshow(cv2.cvtColor(resized_output, cv2.COLOR_BGR2RGB))
         plt.show()
@@ -113,7 +136,7 @@ class MatchingBalls:
 
     def get_balls_chart(self):
         vision_output = self.vision()
-        if len(vision_output[1]) == 0:
+        if len(vision_output) == 0:
             return None
         return self.abstraction(vision_output)
     

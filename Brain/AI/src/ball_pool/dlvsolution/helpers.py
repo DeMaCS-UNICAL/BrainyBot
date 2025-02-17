@@ -38,16 +38,22 @@ class Color(Predicate):
     def get_ball_type(self) -> str:
         return self.__ball_type
 
-    @staticmethod #statico perchè non dipende da nessuna istanza
+    @staticmethod           #statico perchè non dipende da nessuna istanza
     def __euclidean_distance(color1, color2): # indica la distanza euclidea tra due colori
-        return sqrt(sum(pow(color1[i] - color2[i], 2) for i in range(3)) )
+        return sqrt(
+            sum(
+                pow(color1[i] - color2[i], 2) for i in range(3)
+                ) 
+        )
 
     @staticmethod
     def get_color(bgr: []):
         for color in Color.__colors:
             if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
                 return color
-        ball_type = "solid" if len(Color.__colors) < 8 else "striped"
+            
+        # Assumiamo che le prime 7 siano "solid", poi "striped".
+        ball_type = "solid" if len(Color.__colors) < 7 else "striped"
         color = Color(bgr, ball_type)
         Color.__colors.append(color)
         return color
@@ -89,7 +95,7 @@ class Pocket(Predicate):
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
         self.__id = next(Pocket.__ids)
-        self.__balls = []
+        self.__balls = []   # Palline imbucate
         self.__x = x
         self.__y = y
 
@@ -120,10 +126,10 @@ class Pocket(Predicate):
 class MoveAndShoot(Predicate): #Da modificare
     predicate_name = "moveandshoot"
 
-    def __init__(self, ball=None, tube=None, step=None):
-        Predicate.__init__(self, [("ball", int), ("tube", int), ("step", int)])
+    def __init__(self, ball=None, pocket=None, step=None):
+        Predicate.__init__(self, [("ball", int), ("pocket", int), ("step", int)])
         self.__ball = ball
-        self.__tube = tube
+        self.__pocket = pocket
         self.__step = step
 
     def get_ball(self) -> int:
@@ -132,17 +138,18 @@ class MoveAndShoot(Predicate): #Da modificare
     def set_ball(self, ball):
         self.__ball = ball
 
-    def get_tube(self) -> int:
-        return self.__tube
+    def get_pocket(self):
+        return self.__pocket
 
-    def set_tube(self, tube):
-        self.__tube = tube
+    def set_pocket(self, pocket):
+        self.__pocket = pocket
 
     def get_step(self) -> int:
         return self.__step
 
     def set_step(self, step):
         self.__step = step
+
 
 class Game(Predicate):
     def __init__(self):
@@ -152,14 +159,16 @@ class Game(Predicate):
         self.pockets = []
 
     def assign_targets(self,ball : Ball):
+        # Al primo tiro, il giocatore sceglie il target in base al tipo (solid o striped)
         self.player_targets[self.current_player] = ball.get_type()
 
     def check_target(self, ball: Ball):
+        # Controlla se la pallina colpita corrisponde al target del giocatore corrente
         return ball.get_type() == self.player_targets[self.current_player]
     
     def switch_player(self):
         self.current_player = self.current_player % 2 + 1 
-
+    
 
 class GameOver(Predicate):
     predicate_name = "gameOver"
@@ -190,7 +199,20 @@ def choose_dlv_system() -> DesktopHandler:
         print(e)
 
 
-def get_colors(tubes: []):
+
+def init_pockets(pockets_cords: list):
+        """
+        pockets_coordinates è una lista di tuple (x, y) che indicano
+        le posizioni delle pocket sul tavolo.
+        """
+        pockets = []
+        for cords in pockets_cords:
+            p = Pocket(x=cords[0], y=cords[1])
+            pockets.append(p)
+        return pockets
+
+
+def get_colors(tubes: list):
     colors = set()
     for tube in tubes:
         for ball in tube.get_elements():
@@ -198,19 +220,18 @@ def get_colors(tubes: []):
     return list(colors)
 
 
-def get_balls_and_tubes(tubes: []):
-    tube_list = []
+def get_balls_from_detect(detect_balls: list):
+    """
+    Assume detected_balls come una lista con il formato [x, y, r, bgr]
+    e restituisce una lista di oggetti Ball.
+    """
     balls = []
-    for t in tubes:
-        tube = Tube()
-        tube.set_x(t.get_x())
-        tube.set_y(t.get_y())
-        for ball in t.get_elements():
-            b = Ball(Color.get_color(ball[3]).get_id())
-            balls.append(b)
-            tube.add_ball(b)
-        tube_list.append(tube)
-    return tube_list, balls
+    for ball_data in detect_balls:
+        color = Color.get_color(ball_data[3])
+        b = Ball(color)
+        balls.append(b)
+    return balls
+
 
 
 def get_balls_position(tubes: [Tube]):
