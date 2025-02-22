@@ -39,10 +39,10 @@ class MatchingBallPool:
     BALL_RADIUS_RATIO = 20
 
     #Valori range campo
-    X_MIN = 544
-    Y_MIN = 270
-    X_MAX = 1500
-    Y_MAX = 710
+    X_MIN = 535
+    Y_MIN = 266
+    X_MAX = 1440
+    Y_MAX = 712
 
     MIN_DIST = 1         # distanza minima tra i cerchi
     MIN_RADIUS = 14       # raggio minimo in pixel

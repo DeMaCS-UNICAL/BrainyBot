@@ -53,18 +53,22 @@ class Color(Predicate):
                 return color
         # Se non esiste, determina il tipo di palla in base al colore
         avg = sum(bgr) / 3.0
-        # Heuristica per riconoscere bianca e nera
+        # Heuristica per distinguere i tipi:
         if avg > 240:
-            ball_type = "bianca"   # Cue ball
+            # Molto brillante: probabilmente la cue ball (bianca)
+            ball_type = "bianca"
         elif avg < 30:
-            ball_type = "nera"     # 8-ball
+            # Molto scuro: ad esempio la 8-ball (nera)
+            ball_type = "nera"
         else:
-            # Per le altre palline, alterna fra "piena" e "mezza"
-            non_special = [c for c in Color.__colors if c.get_ball_type() not in ("bianca", "nera")]
-            if len(non_special) < 7:
-                ball_type = "piena"
-            else:
+            # Per le altre, utilizza una soglia per determinare quanto siano "bianche"
+            # Se l'intensità media è elevata (ma non troppo), indica una presenza maggiore di bianco: palla "mezza"
+            # Altrimenti, se è più bassa, la palla ha più del suo colore: palla "piena"
+            if avg > 180:
                 ball_type = "mezza"
+            else:
+                ball_type = "piena"
+        
         color = Color(bgr, ball_type)
         Color.__colors.append(color)
         return color
