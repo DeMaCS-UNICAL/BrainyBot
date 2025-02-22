@@ -1,1 +1,5 @@
-Arguments to dlv are --filter=on/4, move/3, gameOver/1, size/3 /home/musalee/BrainyBot/Brain/AI/src/ball_sort/resources/ballSort.asp --stdin
+Arguments to dlv are --filter=moveandshoot/3, gameOver/1 /home/musalee/BrainyBot/Brain/AI/src/ball_pool/resources/ballPool.asp --stdin
+
+Warning during parsing: --> Provided a not supported directive. It will be ignored: #const max_steps = 20.
+/home/musalee/BrainyBot/Brain/AI/src/ball_pool/resources/ballPool.asp: line 21: syntax error, unexpected SYMBOLIC_CONSTANT, expecting NUMBER.
+Aborting due to parser errors.

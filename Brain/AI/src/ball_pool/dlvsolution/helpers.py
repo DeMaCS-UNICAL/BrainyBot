@@ -38,26 +38,36 @@ class Color(Predicate):
     def get_ball_type(self) -> str:
         return self.__ball_type
 
-    @staticmethod           #statico perchè non dipende da nessuna istanza
-    def __euclidean_distance(color1, color2): # indica la distanza euclidea tra due colori
-        return sqrt(
-            sum(
-                pow(color1[i] - color2[i], 2) for i in range(3)
-                ) 
-        )
 
     @staticmethod
-    def get_color(bgr: []):
+    def __euclidean_distance(color1, color2):
+        return sqrt(pow(color1[0] - color2[0], 2) +
+                    pow(color1[1] - color2[1], 2) +
+                    pow(color1[2] - color2[2], 2))
+
+    @staticmethod
+    def get_color(bgr: list):
+        # Verifica se esiste già un oggetto Color simile
         for color in Color.__colors:
             if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
                 return color
-            
-        # Assumiamo che le prime 7 siano "solid", poi "striped".
-        ball_type = "solid" if len(Color.__colors) < 7 else "striped"
+        # Se non esiste, determina il tipo di palla in base al colore
+        avg = sum(bgr) / 3.0
+        # Heuristica per riconoscere bianca e nera
+        if avg > 240:
+            ball_type = "bianca"   # Cue ball
+        elif avg < 30:
+            ball_type = "nera"     # 8-ball
+        else:
+            # Per le altre palline, alterna fra "piena" e "mezza"
+            non_special = [c for c in Color.__colors if c.get_ball_type() not in ("bianca", "nera")]
+            if len(non_special) < 7:
+                ball_type = "piena"
+            else:
+                ball_type = "mezza"
         color = Color(bgr, ball_type)
         Color.__colors.append(color)
         return color
-
 
 class Ball(Predicate):
     predicate_name = "ball"
@@ -68,7 +78,8 @@ class Ball(Predicate):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
-        self.__type = color.get_ball_type()
+        self.__x = None
+        self.__y = None
 
     def get_id(self) -> int:
         return self.__id
@@ -81,9 +92,29 @@ class Ball(Predicate):
 
     def set_color(self, color):
         self.__color = color
+    
+    def get_x(self) -> int:
+        return self.__x
+
+    def set_x(self, x):
+        self.__x = int(x)
+    
+    def get_y(self) -> int:
+        return self.__y
+    
+    def set_y(self, y):
+        self.__y = int(y)
+        
+    def get_r(self) -> int:
+        return self.__r
+    
+    def set_r(self, r):
+        self.__r = int(r)
 
     def get_type(self) -> str:
-        return self.__type
+        return self.__color.get_ball_type()
+        
+        
 
 
 
@@ -199,46 +230,41 @@ def choose_dlv_system() -> DesktopHandler:
         print(e)
 
 
-
-def init_pockets(pockets_cords: list):
-        """
-        pockets_coordinates è una lista di tuple (x, y) che indicano
-        le posizioni delle pocket sul tavolo.
-        """
-        pockets = []
-        for cords in pockets_cords:
-            p = Pocket(x=cords[0], y=cords[1])
-            pockets.append(p)
-        return pockets
-
-
-def get_colors(tubes: list):
+def get_colors(detections: list):
+    """
+    L'input è una lista di rilevamenti [x, y, r, bgr].
+    Restituisce la lista dei colori distinti (con il relativo ball_type).
+    """
     colors = set()
-    for tube in tubes:
-        for ball in tube.get_elements():
-            colors.add(Color.get_color(ball[3]))
+    #print("Detections:", detections.__str__())
+    for detection in detections:
+        # detection[3] contiene il BGR
+        colors.add(Color.get_color(detection.get_color().get_bgr()))
     return list(colors)
 
 
-def get_balls_from_detect(detect_balls: list):
+def get_balls_and_pockets(detections: list):
     """
-    Assume detected_balls come una lista con il formato [x, y, r, bgr]
-    e restituisce una lista di oggetti Ball.
+    Converte i rilevamenti in oggetti Ball e inizializza le Pocket.
+    - detections: lista di [x, y, r, bgr]
+    - Restituisce una tupla (lista_pockets, lista_balls).
+    Le Pocket vengono inizializzate con coordinate fisse (da adattare al tavolo reale).
     """
-    balls = []
-    for ball_data in detect_balls:
-        color = Color.get_color(ball_data[3])
-        b = Ball(color)
-        balls.append(b)
-    return balls
+    ball_list = []
+    for ball in detections:
+        color_obj = Color.get_color(ball.get_color().get_bgr())
 
+        b = Ball(color_obj)
+        ball_list.append(b)
+    # Definizione delle Pocket (coordinate da adattare)
+    pockets = []
+    
+    pockets.append(Pocket(x=100, y=50))   # Pocket p1
+    pockets.append(Pocket(x=500, y=50))   # Pocket p2
+    pockets.append(Pocket(x=900, y=50))   # Pocket p3
+    pockets.append(Pocket(x=100, y=400))  # Pocket p4
+    pockets.append(Pocket(x=500, y=400))  # Pocket p5
+    pockets.append(Pocket(x=900, y=400))  # Pocket p6
 
+    return pockets, ball_list
 
-def get_balls_position(tubes: [Tube]):
-    on = []
-    for tube in tubes:
-        ball_below = 0
-        for ball in tube.get_balls():
-            on.append(On(ball.get_id(), ball_below, tube.get_id(), 1))
-            ball_below = ball.get_id()
-    return on

@@ -11,11 +11,15 @@ import constants
 import sys
 
 '''
+T1
 cd Brain
 export PYTHONPATH=.
 pipenv shell
-python3 AI/src/main.py -g ball_sort
+python3 AI/src/main.py -g ball_pool
 
+
+T2
+cd tappy-server
 sudo npm start -- --hardware=headless
 
 '''

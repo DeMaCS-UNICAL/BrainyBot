@@ -35,6 +35,7 @@ class MatchingBalls:  #classe che si occupa di trovare le palle e i container
         self.canny_threshold,self.proportion_tolerance,self.size_tolerance = self.retrieve_config()
         self.canny_threshold = self.adjust_threshold(iteration)
         
+        
         for file in os.listdir(SPRITE_PATH):
             if file.endswith('.png') or file.endswith('.jpg'):
                 fullname = os.path.join(SPRITE_PATH,file)
@@ -42,6 +43,7 @@ class MatchingBalls:  #classe che si occupa di trovare le palle e i container
                     print(f"Found Tube sprite {fullname}")
                 img = getImg(fullname,gray=True)
                 self.__tubeTemplates[fullname]  = img
+        
 
     def adjust_threshold(self,iteration):
         if iteration==0:

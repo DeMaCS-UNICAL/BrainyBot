@@ -7,7 +7,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
 from AI.src.ball_pool.dlvsolution.helpers import get_colors, get_balls_and_pockets
-from AI.src.ball_pool.detect.new_detect import MatchingBalls
+from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
 from AI.src.vision.feedback import Feedback
@@ -18,11 +18,45 @@ from AI.src.vision.feedback import Feedback
 def asp_input(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
-    colors = get_colors(balls_chart.get_balls())  
-    pockets, balls = get_balls_and_pockets(balls_chart.get_balls())
+    detections = balls_chart["balls"]
+    colors = get_colors(detections)  
+    pockets, balls = get_balls_and_pockets(detections)
+
+    # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
+    print("Balls:", len(balls))
+    piena = 0
+    nera = 0
+    mezza = 0
+    bianca = 0
+
+    for ball in balls:
+        if ball.get_type() == "piena":
+            piena += 1
+        elif ball.get_type() == "nera":
+            nera += 1
+        
+        elif ball.get_type() == "mezza":
+            mezza += 1
+        
+        elif ball.get_type() == "bianca":
+            bianca += 1
+        
+        #print(f"x = {ball.get_x()}, y = {ball.get_y()}")
+        
+    
+    print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
+   
+    print("Pockets:", len(pockets))
+    
+
     facts = colors.copy()
     facts.extend(pockets)
     facts.extend(balls)
+
+    """
+    print("Colors:", [str(c) for c in colors])
+    """
+
     return facts, colors, pockets, balls
 
 
@@ -57,58 +91,62 @@ def persist_threshold(value):
     print("threshold set to:", value)
 
 
-def ball_pool(screenshot, debug = False, validation=None,iteration=0):
-    matcher = MatchingBalls(screenshot, debug, validation,iteration)
-    pool_table = matcher.get_balls_chart()
-    # è una lista di dizionari del tipo:
-    # { "x": x, "y": y, "r": r, "ball_obj": <Ball> }
 
+def ball_pool(screenshot, debug=False, validation=None, iteration=0):
+    table_area =  (546, 272, 1972, 970)
 
-    if pool_table is not None:
-        facts,colors,pockets,balls = asp_input(pool_table)
+    matcher = MatchingBallPool(screenshot, debug, validation, iteration, True)
+    balls_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
+    #print("Balls chart:", balls_chart)
+
+    if balls_chart is not None:
+        facts, colors, pockets, balls = asp_input(balls_chart)
     else:
         facts = []
-        colors = []
         pockets = []
         balls = []
+        colors = []
     
     if debug:
         return matcher.canny_threshold
-    
-    solution = DLVSolution()
-    # Si suppone che la soluzione restituisca una lista di mosse (MoveAndShoot)
-    moves = solution.call_asp(facts, colors, pockets, balls)
-    moves.sort(key=lambda x: x.get_step())
 
+    solution = DLVSolution()
+    try:
+        moves = solution.call_asp(colors, balls, pockets)
+    except ValueError as e:
+        # In caso di errore (ad es. nessun answer set ottimale), mostra il risultato della visione
+        # Nota: per accedere a __show_result, puoi usare il nome _MatchingBallPool__show_result
+        matcher._MatchingBallPool__show_result()
+        raise e
+    moves.sort(key=lambda x: x.get_step())
+ 
     os.chdir(CLIENT_PATH)
     coordinates = []
     if len(moves) == 0:
-        print("No moves found")
-
+        print("No moves found.")
+        return
     feedback = Feedback()
     for move in moves:
         # Per ogni mossa, estraiamo l'ID della pallina da colpire e della pocket di destinazione
         ball_id = move.get_ball()
         pocket_id = move.get_pocket()
-        x1,y1 = 0,0
-        x2,y2 = 0,0
-
+        x1, y1 = 0, 0
+        x2, y2 = 0, 0
+        # Otteniamo le coordinate della pallina
         for ball in balls:
             if ball.get_id() == ball_id:
                 x1 = ball.get_x()
                 y1 = ball.get_y()
                 break
-        
+        # Otteniamo le coordinate della pocket
         for pocket in pockets:
             if pocket.get_id() == pocket_id:
                 x2 = pocket.get_x()
                 y2 = pocket.get_y()
                 break
-        
         coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
         time.sleep(0.25)
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
     
-
     return coordinates

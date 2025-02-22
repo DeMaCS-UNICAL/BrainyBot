@@ -21,7 +21,7 @@ class DLVSolution:
         except Exception as e:
             print(str(e))
 
-    def __init_static_facts(self, colors: [], balls: [], pockets: []):
+    def __init_static_facts(self, colors: list, balls: list, pockets: list):
         for color in colors:
             self.__static_facts.add_object_input(color)
 
@@ -31,7 +31,14 @@ class DLVSolution:
         for pocket in pockets:
             self.__static_facts.add_object_input(pocket)
         
-        self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
+        #self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
+
+    """
+        print("Colors:", [str(c) for c in colors])
+        print("Balls:", [str(b) for b in balls])
+        print("Pockets:", [str(p) for p in pockets])
+    """
+
 
 
     def __init_dinamic_facts(self, dynamic_facts: list):
@@ -39,9 +46,9 @@ class DLVSolution:
             self.__dinamic_facts.add_object_input(facts)
 
     def __init_fixed(self):
-        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.txt"))
+        self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.asp"))
 
-    def call_asp(self, colors: list, balls:list, pockets: list):
+    def call_asp(self, colors, balls, pockets):
 
         ASPMapper.get_instance().register_class(Color)
         ASPMapper.get_instance().register_class(Ball)
@@ -60,6 +67,15 @@ class DLVSolution:
         option = OptionDescriptor("--filter=moveandshoot/3, gameOver/1")
         self.__handler.add_option(option)
 
+        """
+        print("Static facts:")
+        print(self.__static_facts.get_program_string())  # se il metodo esiste, oppure un modo per ottenere la stringa
+        print("Dinamic facts:")
+        print(self.__dinamic_facts.get_program_string())
+        print("Fixed program:")
+        print(self.__fixed_input_program.get_program_string())
+        """
+
         moves = []
         game_over = False
         step = 1
@@ -74,6 +90,7 @@ class DLVSolution:
 
             print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
             assert_true(answer_sets is not None,"No solutions found for this match.")
+            print(f"Answer sets: {answer_sets}")
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this match.")
 
             for answer_set in answer_sets.get_optimal_answer_sets():
