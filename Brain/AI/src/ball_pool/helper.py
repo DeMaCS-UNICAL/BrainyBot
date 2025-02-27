@@ -18,9 +18,9 @@ from AI.src.vision.feedback import Feedback
 def asp_input(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
-    detections = balls_chart["balls"]
-    colors = get_colors(detections)  
-    pockets, balls = get_balls_and_pockets(detections)
+    balls = balls_chart["balls"]
+    pockets = balls_chart["pockets"]
+    facts = []
 
     # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
     print("Balls:", len(balls))
@@ -30,13 +30,16 @@ def asp_input(balls_chart):
     bianca = 0
 
     for ball in balls:
+        print(f"Ball in loop{ball}")
         if ball.get_type() == "piena":
             piena += 1
+            
+        elif ball.get_type() == "mezza":
+            mezza += 1
+
         elif ball.get_type() == "nera":
             nera += 1
         
-        elif ball.get_type() == "mezza":
-            mezza += 1
         
         elif ball.get_type() == "bianca":
             bianca += 1
@@ -46,18 +49,14 @@ def asp_input(balls_chart):
     
     print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
    
-    print("Pockets:", len(pockets))
+    #print(f"Pockets:, {len(pockets)}, {[p.get_x() for p in pockets]}")
     
-
-    facts = colors.copy()
-    facts.extend(pockets)
-    facts.extend(balls)
 
     """
     print("Colors:", [str(c) for c in colors])
     """
 
-    return facts, colors, pockets, balls
+    return balls,pockets
 
 
 def check_if_to_revalidate(output, last_output):
@@ -92,27 +91,26 @@ def persist_threshold(value):
 
 
 
-def ball_pool(screenshot, debug=False, validation=None, iteration=0):
-    table_area =  (546, 272, 1972, 970)
+def ball_pool(screenshot, debug=True, validation=None, iteration=0):
 
     matcher = MatchingBallPool(screenshot, debug, validation, iteration, True)
-    balls_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
-    #print("Balls chart:", balls_chart)
+    pool_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
+    #balls_chart = {"balls": [], "pockets": []}
 
-    if balls_chart is not None:
-        facts, colors, pockets, balls = asp_input(balls_chart)
+    if pool_chart is not None:
+        balls,pockets = asp_input(pool_chart)
     else:
         facts = []
         pockets = []
         balls = []
-        colors = []
+
     
     if debug:
         return matcher.canny_threshold
 
     solution = DLVSolution()
     try:
-        moves = solution.call_asp(colors, balls, pockets)
+        moves = solution.call_asp(balls, pockets)
     except ValueError as e:
         # In caso di errore (ad es. nessun answer set ottimale), mostra il risultato della visione
         # Nota: per accedere a __show_result, puoi usare il nome _MatchingBallPool__show_result

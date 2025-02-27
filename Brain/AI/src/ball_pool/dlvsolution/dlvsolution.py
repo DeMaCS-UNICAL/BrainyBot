@@ -48,7 +48,7 @@ class DLVSolution:
     def __init_fixed(self):
         self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.asp"))
 
-    def call_asp(self, colors, balls, pockets):
+    def call_asp(self, balls, pockets):
 
         ASPMapper.get_instance().register_class(Color)
         ASPMapper.get_instance().register_class(Ball)
@@ -56,7 +56,7 @@ class DLVSolution:
         ASPMapper.get_instance().register_class(MoveAndShoot)
         ASPMapper.get_instance().register_class(GameOver)
 
-        self.__init_static_facts(colors, balls, pockets)
+        self.__init_static_facts( [], balls, pockets)
         self.__init_dinamic_facts([]) #TO REVIEW
         self.__init_fixed()
 

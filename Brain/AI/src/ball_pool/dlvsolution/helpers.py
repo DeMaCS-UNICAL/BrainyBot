@@ -1,6 +1,8 @@
 import os
 from itertools import count
 from math import sqrt
+import numpy as np
+
 
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
@@ -46,32 +48,50 @@ class Color(Predicate):
                     pow(color1[2] - color2[2], 2))
 
     @staticmethod
-    def get_color(bgr: list):
-        # Verifica se esiste già un oggetto Color simile
-        for color in Color.__colors:
-            if Color.__euclidean_distance(color.__bgr, bgr) < Color.__MAX_DISTANCE:
-                return color
-        # Se non esiste, determina il tipo di palla in base al colore
-        avg = sum(bgr) / 3.0
-        # Heuristica per distinguere i tipi:
-        if avg > 240:
-            # Molto brillante: probabilmente la cue ball (bianca)
-            ball_type = "bianca"
-        elif avg < 30:
-            # Molto scuro: ad esempio la 8-ball (nera)
-            ball_type = "nera"
+    def get_color(patch):
+        import numpy as np
+        # Se patch è già un'istanza di Color, restituiscila direttamente.
+        if isinstance(patch, Color):
+            return patch
+
+        # Se patch non è un array NumPy, convertilo.
+        if not isinstance(patch, np.ndarray):
+            patch = np.array(patch)
+        # Se il patch non ha 3 dimensioni, rimodellalo in (1, 1, -1)
+        if patch.ndim < 3:
+            try:
+                patch = patch.reshape((1, 1, -1))
+            except Exception as e:
+                patch = np.array([[[0, 0, 0]]], dtype=np.float32)
+        # Se il patch risulta vuoto, utilizza un fallback.
+        if patch.size == 0:
+            mean_color = np.array([0, 0, 0], dtype=np.float32)
+            std_color = np.array([0, 0, 0], dtype=np.float32)
         else:
-            # Per le altre, utilizza una soglia per determinare quanto siano "bianche"
-            # Se l'intensità media è elevata (ma non troppo), indica una presenza maggiore di bianco: palla "mezza"
-            # Altrimenti, se è più bassa, la palla ha più del suo colore: palla "piena"
-            if avg > 180:
+            mean_color = np.mean(patch, axis=(0, 1))
+            std_color = np.std(patch, axis=(0, 1))
+        avg = np.mean(mean_color)
+        
+        # Heuristica per determinare il tipo di palla:
+        if avg > 240:
+            ball_type = "bianca"  # Cue ball
+        elif avg < 30:
+            ball_type = "nera"    # 8-ball
+        else:
+            if np.mean(std_color) > 30:  # soglia da calibrare
                 ball_type = "mezza"
             else:
                 ball_type = "piena"
-        
-        color = Color(bgr, ball_type)
+        # Verifica se esiste già un oggetto Color simile
+        for color in Color.__colors:
+            if Color.__euclidean_distance(color.__bgr, mean_color) < Color.__MAX_DISTANCE:
+                return color
+        color = Color(mean_color, ball_type)
         Color.__colors.append(color)
         return color
+
+
+
 
 class Ball(Predicate):
     predicate_name = "ball"
@@ -118,8 +138,6 @@ class Ball(Predicate):
     def get_type(self) -> str:
         return self.__color.get_ball_type()
         
-        
-
 
 
 class Pocket(Predicate):
@@ -151,6 +169,12 @@ class Pocket(Predicate):
 
     def set_y(self, y):
         self.__y = int(y)
+
+    def get_r(self) -> int:
+        return self.__r
+    
+    def set_r(self, r):
+        self.__r = int(r)
 
     def add_ball(self, ball):
         self.__balls.append(ball)
@@ -260,15 +284,9 @@ def get_balls_and_pockets(detections: list):
 
         b = Ball(color_obj)
         ball_list.append(b)
+        print(f"Ball: {b.get_type()}")
     # Definizione delle Pocket (coordinate da adattare)
     pockets = []
-    
-    pockets.append(Pocket(x=100, y=50))   # Pocket p1
-    pockets.append(Pocket(x=500, y=50))   # Pocket p2
-    pockets.append(Pocket(x=900, y=50))   # Pocket p3
-    pockets.append(Pocket(x=100, y=400))  # Pocket p4
-    pockets.append(Pocket(x=500, y=400))  # Pocket p5
-    pockets.append(Pocket(x=900, y=400))  # Pocket p6
 
     return pockets, ball_list
 
