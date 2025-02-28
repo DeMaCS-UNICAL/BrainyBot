@@ -2,6 +2,7 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 import cv2
 import numpy as np
 from math import sqrt
+from AI.src.vision.input_game_object import Rectangle,TextRectangle, OutputRectangle
 
 class Matching2048:
     def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
@@ -24,21 +25,18 @@ class Matching2048:
             self.__calculate_metadata()
 
     def __calculate_metadata(self):
-        boxes, hierarchy = self.__finder.find_boxes_and_hierarchy()
+        boxes, hierarchy = self.__finder.find(Rectangle(True))
         matrix_index = self.__find_matrix(boxes, hierarchy)
         if matrix_index == None:
             return False
         self.__matrix = cv2.boundingRect(boxes[matrix_index])
         self.__numbers_boxes = self.__find_numbers_boxes(boxes, hierarchy, matrix_index)
-        out = self.find_numbers_multithread()
-        print(out)
-        for i in range(len(out)):
-            if out[i] == 0:
-                x, y, w, h = self.__numbers_boxes[i]
-                self.__blank_box_color = self.__finder.get_image()[y+h//2, x+w//2]
-                print(self.__blank_box_color)
-                break
-        return True
+
+    def get_numbers(self):
+        for i in range(len(self.__numbers_boxes)):
+            x, y, w, h = self.__numbers_boxes[i]
+            elem = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
+
 
     def __find_matrix(self, boxes, hierarchy):
         dictionary = {}
@@ -75,18 +73,13 @@ class Matching2048:
         if self.__numbers_boxes != None:
             for box in self.__numbers_boxes:
                 x, y, w, h = box
-                number = self.__finder.find_number(x, y, w, h)
+                number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
                 if number == None:
                     numbers.append(0)
                 else:
                     numbers.append(int(number))
         return numbers
-    
-    def find_numbers_multithread(self):
-        numbers = []
-        if self.__numbers_boxes != None:
-            numbers = self.__finder.find_numbers_multithread(self.__numbers_boxes)
-        return numbers
+
     
     def find_numbers_with_cache(self, cache, only_first=True):
         numbers = cache
@@ -95,7 +88,7 @@ class Matching2048:
                 x, y, w, h = self.__numbers_boxes[i]
                 if np.array_equal(self.__finder.get_image()[y+h//2, x+w//2], self.__blank_box_color):
                     continue
-                number = self.__finder.find_number(x, y, w, h)
+                number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
                 if number != None:
                     numbers[i] = int(number)
                     if only_first:

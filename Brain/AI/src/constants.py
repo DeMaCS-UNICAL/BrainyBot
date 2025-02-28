@@ -3,6 +3,7 @@ import os
 SRC_PATH = os.path.dirname(__file__)  # Where your .py file is located
 RESOURCES_PATH = os.path.join(SRC_PATH, 'resources')
 SCREENSHOT_PATH = os.path.join(RESOURCES_PATH, 'screenshot')
+VALIDATION_PATH = os.path.join(SRC_PATH, 'validation')
 SCREENSHOT_FILENAME = 'screenshot.png'
 SCREENSHOT_FULLPATH = os.path.join(SCREENSHOT_PATH, SCREENSHOT_FILENAME)
 CLIENT_PATH = os.path.join(SRC_PATH, '../../../tappy-client/clients/python')

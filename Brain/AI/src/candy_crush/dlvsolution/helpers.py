@@ -3,10 +3,13 @@ import re
 
 from languages.predicate import Predicate
 from AI.src.abstraction.object_graph import ObjectGraph
+from AI.src.abstraction.objectsMatrix import ObjectMatrix, TypeOf
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
 from AI.src.candy_crush.object_graph.constants import TYPE, ID
 from AI.src.constants import DLV_PATH
+from AI.src.abstraction import mappers
 
 
 class Connect:
@@ -172,6 +175,41 @@ def chooseDLVSystem() -> DesktopHandler:
     except Exception as e:
         print(e)
 
+def chooseClingo()->DesktopHandler:
+    try:
+        return DesktopHandler(
+                ClingoDesktopService("/usr/bin/clingo"))
+    except Exception as e:
+        print(e)
+
+def get_input_dlv_cells(matrix: ObjectMatrix) -> list:
+    cells = []
+    for row in matrix.get_cells():
+        cells.extend(row)
+    for row in matrix.get_cells():
+        for cell in row:
+            if cell.get_value()!="":
+                result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", cell.get_value())
+                candyType = result.groups()[0]
+                special = None
+                # checks if the node2 is not swappable
+                if "notTouch" in candyType:
+                    continue
+
+                if "Bomb" in candyType:
+                    special="bomb"            
+
+                if "Horizontal" in candyType:
+                    special="horizontal"
+
+                if "Vertical" in candyType:
+                    special="vertical"
+
+                if special!=None:
+                    cells.append(TypeOf(cell.get_id(),special))
+                result = re.search(r"^([a-z]+)[A-Z]?.*$",candyType)
+                cell.set_value(result.groups()[0])
+    return cells
 
 def get_input_dlv_nodes(graph: ObjectGraph) -> []:
     nodesAndInformation = []

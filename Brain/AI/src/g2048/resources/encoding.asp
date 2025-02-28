@@ -102,14 +102,14 @@ mapChanged :- inMerge(Node1, Node2).
 
 % Weak Constraints
 %% Preferisco le mosse che aumentino il numero di celle vuote
-:~ output(Node, Value). [1@4, Node]
+:~ output(Node, Value). [1@3, Node]
 
 %% In caso di pareggio, preferisco le mosse che contribuiscono alla monotonicità della griglia
-:~ output(Node1, Value1), output(Node2, Value2), sorted(Node1, PosR1, r), sorted(Node2, PosR2, r), sorted(Node1, PosC1, c), sorted(Node2, PosC2, c), Pos1 = PosR1 + PosC1, Pos2 = PosR2 + PosC2, Pos1 < Pos2, Value1 > Value2. [1@3, Node1, Node2]
+:~ output(Node1, Value1), output(Node2, Value2), sorted(Node1, PosR1, r), sorted(Node2, PosR2, r), sorted(Node1, PosC1, c), sorted(Node2, PosC2, c), Pos1 = PosR1 + PosC1, Pos2 = PosR2 + PosC2, Pos1 < Pos2, Value1 > Value2. [1@2, Node1, Node2]
 
 %% In caso di pareggio, preferisco le mosse che creino celle con lo stesso valore adiacenti
-:~ output(Node1, Value1), output(Node2, Value2), superior(Node1, Node2), Value1 != Value2. [1@2, Node1, Node2]
-:~ output(Node1, Value1), output(Node2, Value2), left(Node1, Node2), Value1 != Value2. [1@2, Node1, Node2]
+:~ output(Node1, Value1), output(Node2, Value2), superior(Node1, Node2), Value1 != Value2. [1@1, Node1, Node2]
+:~ output(Node1, Value1), output(Node2, Value2), left(Node1, Node2), Value1 != Value2. [1@1, Node1, Node2]
 
 %% In caso di pareggio evito di andare in alto.
-:~ direction(1). [1@1]
+:~ direction(1). [1@4]

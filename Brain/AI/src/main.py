@@ -1,18 +1,51 @@
 import argparse
 import os
-from AI.src.ball_sort.helper import ball_sort
-from AI.src.candy_crush.helper import candy_crush
+from AI.src.ball_sort.helper import ball_sort,check_if_to_revalidate
+from AI.src.candy_crush.helper import candy_crush, check_CCS
 from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
-from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME
+from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
 import constants
 import sys
+from contextlib import redirect_stdout
+gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048  }
+validationDictionary = { "ball_sort" : check_if_to_revalidate , "candy_crush" : check_CCS}
 
-gameDictionary = { "ball_sort" : ball_sort, "candy_crush" : candy_crush, "2048" : g2048 }
 
-def Start(screenshot,args):
-    print(f"Starting AI for game {args.games}")
-    gameDictionary[args.games](screenshot,args.debugVision)
+def Start(screenshot,args,iteration=0):
+    validate=None
+    vision=None
+    abstraction=None
+    if args.test!=None:
+        vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
+        abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
+    return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration)
+
+
+def validate_game(args):
+    not_done=True
+    last_distance=10000
+    previous_threshold = 0
+    it=0
+    validation_info = None 
+    while(not_done):
+        outputs=[]
+        info=[]
+        for filename in os.listdir(constants.SCREENSHOT_PATH):
+            if filename.startswith(args.test):
+                screenshot = filename
+                print(f"{screenshot}")
+                #print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
+                #with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
+                #  print(f"{screenshot.split('.')[1]}\t",end='',file=f)
+                
+                #print(f"Starting AI for game {args.games}")
+                with open(os.path.join(VALIDATION_PATH,"candy_crush","vision",screenshot+'.txt'), 'w') as f:
+                    with redirect_stdout(f):
+                        outputs.append(Start(screenshot,args,it))
+        #not_done,validation_info=validationDictionary[args.games](outputs,validation_info)
+        not_done=False
+        it+=1
 
 if __name__ == '__main__':
     msg = "Description"
@@ -32,34 +65,24 @@ if __name__ == '__main__':
 
     if args.test == None:
         screenshot = constants.SCREENSHOT_FILENAME
-        if not args.debugVision:
-            server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
-            try:
-                if getScreenshot(server_ip, port):
-                    print("SCREENSHOT TAKEN.")
-                else:
-                    exit(1)
-            except Exception as e:
-                print(e)
-                exit(1)
-        else:
-            screenshot=""
-            if args.screenshot == None:
-                screenshot = args.games+"Test.jpg"
+           
+        if args.screenshot!=None:
+            screenshot = args.screenshot
+        
+        server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
+        try:
+            if getScreenshot(server_ip, port):
+                print("SCREENSHOT TAKEN.")
             else:
-                screenshot = args.screenshot
-            print("DEBUG MODE ON")   
-            print(screenshot)
+                exit(1)
+        except Exception as e:
+            print(e)
+            exit(1)
         Start(screenshot,args)
     else:
-        if args.games == "ball_sort":
-            print("Screenshot\t#FullTubes\t#EmptyTubes\t#Balls\t#Colors", file=sys.stderr)
-        for filename in os.listdir(constants.SCREENSHOT_PATH):
-            if filename.startswith(args.test):
-                screenshot = filename
-                print(f"{screenshot}")
-                print(f"{screenshot.split('.')[1]}\t",end='',file=sys.stderr)
-                Start(screenshot,args)
+        validate_game(args)
+        
+
     
     
 
