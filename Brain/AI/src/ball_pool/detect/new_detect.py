@@ -163,6 +163,22 @@ class MatchingBallPool:
     
     def detect_balls_circles(self, detection_gray):
         """
+        Rileva i cerchi (palline) sfruttando il metodo find() dell'ObjectsFinder.
+        Per fare ciò, creiamo un oggetto Circle con i parametri necessari e lo passiamo a finder.find().
+        """
+        # In questo esempio usiamo self.canny_threshold e BALLS_MIN_RADIUS definiti in MatchingBallPool
+        # per configurare il rilevamento. Se necessario, puoi adattare o calcolare altri parametri,
+        # ad esempio in base alle dimensioni dell'immagine.
+        circle_search_info = Circle(canny_threshold=self.canny_threshold, min_radius=self.BALLS_MIN_RADIUS)
+        
+        # Chiamando finder.find() con l'oggetto Circle verrà invocato il metodo _find_circles all'interno di ObjectsFinder
+        balls = self.finder.find(circle_search_info)
+        
+        return balls
+
+
+    def detect_balls_circles(self, detection_gray):
+        """
         Esegue HoughCircles per rilevare i cerchi (palline).
         Ritorna una struttura circles (x, y, r).
         """

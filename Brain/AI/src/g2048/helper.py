@@ -8,12 +8,13 @@ from AI.src.webservices.helpers import getScreenshot
 from time import sleep
 from math import sqrt
 
-def g2048(screenshot, debug = False, validation=None,iteration=0):
+def g2048(screenshot, debug = False, vision_validation=None, abstraction_validation=None, iteration=0):
     print("START 2048")
-    matcher = Matching2048(screenshot,debug,validation,iteration)
+    matcher = Matching2048(screenshot,debug,vision_validation,iteration)
     cx = matcher.get_image_width() // 2
     cy = matcher.get_image_height() // 2
-    l = matcher.find_numbers_multithread()
+    l = matcher.find_numbers()
+    print(l)
     n = int(sqrt(len(l)))
     g = Graph2048(n)
     solver = DLVSolution()
@@ -28,6 +29,7 @@ def g2048(screenshot, debug = False, validation=None,iteration=0):
             return
         matcher.set_image(screenshot)
         l = matcher.find_numbers_with_cache(cache)
+        print(l)
         value = g.get_value(l)
         sw, output = solver.recall_asp(value)
         if solver.isGameOver():

@@ -2,13 +2,16 @@ from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.abstraction.stack import Stack
 import numpy as np
 import cv2
-
+from sklearn.cluster import AgglomerativeClustering
 from matplotlib import pyplot as plt
+from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch, OutputContainer, OutputCircle
+
 class Abstraction:
     
+    def reset(self):
+        Cluster.clear_clusters()
     
-    
-    def ToGraph(self, elements:dict, distance:())->ObjectGraph:
+    def ToGraph(self, elements:dict, distance:tuple)->ObjectGraph:
         graph = ObjectGraph(distance)
         main_id=9
         for label in sorted(elements.keys()):
@@ -19,75 +22,104 @@ class Abstraction:
                 graph.add_another_node(match[0], match[1], label,int(str(main_id)+str(sub_id)))
         return graph
 
-    def ToMatrix(self, elements:dict, distance:())->[]:
-        offset, delta = self.compute_offest_delta_dict(elements, distance)
-        max=[0,0]
-        for label in elements.keys():            
-            for match in elements[label]:
+    #elements.values are OutputGameObject
+    def ToMatrix(self, elements:list, distance:tuple, labelMatrix:bool=True)->list:
+        offset, delta, clusters = self.compute_offest_delta_dict(elements, distance)
+        max_row_col=[0,0]
+        #print(offset,delta,sep="\n")
+        for j in range(len(elements)):
+                coord=[0,0]       
                 for i in range(2):
-                    current = (match[i]-offset[i])//delta[i]
-                    if current > max[(i+1)%2]:
-                        max[(i+1)%2]=current
+                    key = "x" if i==0 else "y"
+                    current_coord = Cluster.get(key,clusters[i][j]).get_mean()
+                    coord[i]=current_coord
+                    current = (current_coord-offset[i])//delta[i]
+                    if current > max_row_col[(i+1)%2]:
+                        max_row_col[(i+1)%2]=int(current)
+                elements[j].x=coord[0]
+                elements[j].y=coord[1]
         matrix=[]
-        for i in range(max[0]+1):
+        for i in range(max_row_col[0]+1):
             matrix.append([])
-            for j in range(max[1]+1):
+            for j in range(max_row_col[1]+1):
                 matrix[i].append(None)
-        for label in elements.keys():
-            for match in elements[label]:
-                r=(match[1]-offset[1])//delta[1]
-                c=(match[0]-offset[0])//delta[0]
-                if matrix[r][c]!=None and matrix[r][c][1][2]>match[2]:#matrix[r][c][1][2]: matrix stores the lable and the coordinates+value of the match
-                    continue
-                matrix[r][c]=(label,match)
+        for element in elements:
+                r=int((element.y-offset[1])//delta[1])
+                c=int((element.x-offset[0])//delta[0])
+                if isinstance(element,OutputTemplateMatch):
+                    if matrix[r][c]!=None and matrix[r][c].confidence> element.confidence:
+                        continue
+                matrix[r][c]=element
         offset, delta = self.compute_offest_delta_matrix(matrix)
         for r in range(len(matrix)):
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
-                    matrix[r][c]=matrix[r][c][0]
-        print(matrix)
+                    if labelMatrix and isinstance(matrix[r][c],OutputTemplateMatch) :
+                        print(matrix[r][c].x,matrix[r][c].y,matrix[r][c].label)
+                        matrix[r][c]=matrix[r][c].label
+                    else:
+                        matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
+        '''
+        for r in range(len(matrix)):
+            for c in range(len(matrix[r])):
+                print(matrix[r][c],end="\t")
+            print()
+        #print(matrix)
+        '''
         return matrix,offset,delta
-
-    def compute_offest_delta_dict(self, elements, distance):
+    def compute_offest_delta_dict(self, elements:list, distance):
+        #print(distance)
         offset=[10000,10000]
-        delta=[distance[0]*10,distance[1]*10]
-        all_matches=[[],[],]
-        for match_list in elements.values():
-            for match in match_list:
-                all_matches[0].append(match[0])
-                all_matches[1].append(match[1])
+        delta=[10000,10000]
+        all_coordinates=[[],[],]
+        for element in elements:
+            all_coordinates[0].append(element.x)
+            all_coordinates[1].append(element.y)
+            #print(element.label,element.x,element.y)
+        Cluster.clear_clusters()
+        x_clusters  = Cluster.generate_initial_clusters(all_coordinates[0],"x")
+        y_clusters  = Cluster.generate_initial_clusters(all_coordinates[1],"y")
+        representative_coord = []
+        index=0
+        for key in Cluster.clusters.keys():
+            representative_coord.append([])
+            for cluster in Cluster.clusters[key]:
+                representative_coord[-1].append(cluster.get_mean())
+            representative_coord[-1].sort()
+            offset[index] = representative_coord[-1][0]
+            index+=1
         for i in range(2):
-            all_matches[i].sort()
-            offset[i]=all_matches[i][0]
-        for match_index in range(len(all_matches[0])):
-            for i in range(2):
-                if match_index<len(all_matches[i])-1:
-                    current_delta=all_matches[i][match_index+1]-all_matches[i][match_index]
-                    if current_delta>=distance[i] and current_delta<delta[i]:
+            for j in range(len(representative_coord[i])-1):
+                current_delta = representative_coord[i][j+1]-representative_coord[i][j]
+                #print(i,current_delta)
+                if current_delta>=distance[i] and current_delta<delta[i]:
+                    if current_delta < delta[i]:
                         delta[i]=current_delta
-        return offset,delta
+        return offset,delta,(x_clusters,y_clusters)
     
     def compute_offest_delta_matrix(self, matrix):
         offset=[0,0]
         for i in range(len(matrix)):
             if matrix[i][0]!=None:
-                offset[0]=matrix[i][0][1][0]
+                offset[0]=matrix[i][0].x
         for i in range(len(matrix[0])):
             if matrix[0][i]!=None:
-                offset[1]=matrix[0][i][1][1]
+                offset[1]=matrix[0][i].y
         delta=[0,0]
         cont=[0,0]
         for r in range(len(matrix)):
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
                     if c<len(matrix[r])-1 and matrix[r][c+1]!=None:
-                        delta[0]+=matrix[r][c+1][1][0]-matrix[r][c][1][0]
+                        delta[0]+=matrix[r][c+1].x-matrix[r][c].x
                         cont[0]+=1
                     if r<len(matrix)-1 and matrix[r+1][c]!=None:
-                        delta[1]+=matrix[r+1][c][1][1]-matrix[r][c][1][1]
+                        delta[1]+=matrix[r+1][c].y-matrix[r][c].y
                         cont[1]+=1
-        delta[0]//=cont[0]
-        delta[1]//=cont[1]
+        if(cont[0]!=0):
+            delta[0]//=cont[0]
+        if(cont[1]!=0):
+            delta[1]//=cont[1]
         return offset,delta
                 
                 
@@ -130,19 +162,19 @@ class Abstraction:
         [stack.set_y_coordinate() for stack in stacks]
         return stacks
 
-    def assign_to_container_as_stack(self, contained,containers,containers_coord)->dict:
+    def assign_to_container_as_stack(self, contained:list[OutputCircle],containers:list[OutputContainer])->dict:
         elements_per_container =[]
         for i in range(len(containers)):
             elements_per_container.append([])
-        contained.sort(reverse=True,key = lambda x: x[1])
+        contained.sort(reverse=True,key = lambda x: x.y)
         for obj in contained:
             for i in range(len(containers)):                
-                dist = cv2.pointPolygonTest(containers[i],(float(obj[0]),float(obj[1])),True)
+                dist = cv2.pointPolygonTest(containers[i].contour,(float(obj.x),float(obj.y)),True)
 
-                if  dist>0 and dist>obj[2]:
+                if  dist>0 and dist>obj.radius:
                     skip=False
                     for existing in elements_per_container[i]:
-                        if (existing[1] -obj[1])<existing[2]+obj[2]-(existing[2]+obj[2])*10/100:
+                        if (existing.y -obj.y)<existing.radius+obj.radius-(existing.radius+obj.radius)*10/100:
                             skip=True
                     if not skip:
                         elements_per_container[i].append(obj)
@@ -150,12 +182,37 @@ class Abstraction:
         empty=[]
         non_empty=[]
         for i in range(len(containers)):
+            container_coord = (containers[i].x,containers[i].y)
+            to_append = Stack(container_coord,containers[i].id)
             if len(elements_per_container[i])==0:
-                empty.append(Stack(containers_coord[i]))
+                empty.append(to_append)
             else:
-                non_empty.append(Stack(containers_coord[i]))
+                non_empty.append(to_append)
                 non_empty[-1].add_elements(elements_per_container[i])
+        self.assign_id_to_containers(empty,non_empty)
+        
         return empty,non_empty
+
+    def assign_id_to_containers(self, empty,non_empty):
+        l:list[Stack] = []
+        l.extend(empty)
+        l.extend(non_empty)
+        coordinates=[]
+        for container in l:
+            coordinates.append((container.get_x(),container.get_y()))
+        if len(Cluster.clusters)==0:
+            Cluster.generate_initial_clusters([x[0] for x in coordinates],"x")
+            Cluster.generate_initial_clusters([x[1] for x in coordinates],"y")
+            '''
+            for key in Cluster.clusters.keys():
+                print(key)
+                for cluster in Cluster.clusters[key]:
+                    print(cluster.cluster_id)
+            '''
+        for i in range(len(l)):
+            cluster_x_id = Cluster.find_or_add_cluster(l[i].get_x(),"x").cluster_id
+            cluster_y_id = Cluster.find_or_add_cluster(l[i].get_y(),"y").cluster_id
+            l[i].set_id(f"x{cluster_x_id}y{cluster_y_id}")
 
     def stack_no_duplicates(self, elements:dict)->list:
         stacks = []
@@ -169,4 +226,77 @@ class Abstraction:
             stacks.append(stack)
         return stacks
 
+
+class Cluster:
+    clusters = {} 
+    def __init__(self, cluster_id, coordinates, cluster_threshold=10):
+        self.cluster_id = cluster_id
+        self.coordinates = coordinates
+        self.cluster_threshold = cluster_threshold
+
+    def get_mean(self):
+
+        return custom_median(self.coordinates)
+
+    @classmethod
+    def return_belonging_cluster(cls, coord, cluster_key):
+        for cluster in cls.clusters[cluster_key]:
+                if all(abs(coord - c) <= cluster.cluster_threshold for c in cluster.coordinates):
+                    return cluster
+        return None
+
+    @classmethod
+    def find_or_add_cluster(cls, coord, cluster_key, cluster_threshold=10):
+        if cluster_key not in Cluster.clusters.keys():
+            cls.clusters[cluster_key]=[]
+        existing_cluster = cls.return_belonging_cluster(coord,cluster_key)
+        if existing_cluster:
+            existing_cluster.coordinates.append(coord)
+            return existing_cluster
+
+        new_cluster = Cluster(len(cls.clusters[cluster_key]) + 1, [coord], cluster_threshold)
+        cls.clusters[cluster_key].append(new_cluster)
+        cls.clusters[cluster_key].sort(key=lambda c: min(c.coordinates))
         
+        return new_cluster
+
+    @classmethod
+    def clear_clusters(cls):
+        cls.clusters = {}
+    @classmethod
+    def generate_initial_clusters(cls, coordinates, cluster_key, cluster_threshold=10):
+        if cluster_key not in cls.clusters.keys():
+                    cls.clusters[cluster_key]=[]
+        '''
+        sorted_coords = sorted(coordinates)
+        current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[], cluster_threshold=cluster_threshold)
+
+        for coord in sorted_coords:
+            if all(abs(coord - c) <= cluster_threshold for c in current_cluster.coordinates):
+                current_cluster.coordinates.append(coord)
+            else:
+                
+                cls.clusters[cluster_key].append(current_cluster)
+                current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[coord], cluster_threshold=cluster_threshold)
+        cls.clusters[cluster_key].append(current_cluster)
+        '''
+        coordinates2 = np.array(coordinates).reshape(-1,1)
+        agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=cluster_threshold)
+        labels = agglomerative.fit_predict(coordinates2)
+        for i in range(len(coordinates)):
+            cls.get(cluster_key,labels[i]).coordinates.append(coordinates[i])
+        return labels
+
+    @classmethod
+    def get(cls,key,cluster_id):
+        for cluster in cls.clusters[key]:
+            if cluster.cluster_id == cluster_id:
+                return cluster
+        cluster = Cluster(cluster_id=cluster_id, coordinates=[])
+        cls.clusters[key].append(cluster)
+        return cluster
+
+def custom_median(lst):
+    lst_sorted = sorted(lst)
+    mid_index = len(lst_sorted) // 2
+    return lst_sorted[mid_index]

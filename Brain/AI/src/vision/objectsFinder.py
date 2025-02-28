@@ -280,8 +280,9 @@ class ObjectsFinder:
             to_return.append(OutputContainer(x,y,containers[i]))
 
         return to_return
-      
-    def find_boxes(self) -> list:
+    
+              
+    def __find_boxes(self) -> list:
         contour = cv2.Canny(self.__img_matrix, 25, 80)
         contour = cv2.dilate(contour, None, iterations=1)
         contours, _ = cv2.findContours(contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
@@ -295,85 +296,27 @@ class ObjectsFinder:
             if len(approx) != 4 or cv2.isContourConvex(approx) == False or cv2.contourArea(approx) < 3000:
                 continue
             x, y, w, h = cv2.boundingRect(approx)
-            boxes.append((x, y, w, h))
+            current_box= OutputRectangle(x,y,w,h)
+            boxes.append(current_box)
         return boxes
     
-    def find_boxes_and_hierarchy(self):
+    def __find_boxes_and_hierarchy(self):
         mat_contour = np.zeros((self.__img_matrix.shape[0], self.__img_matrix.shape[1]), dtype=np.uint8)
-        boxes = self.find_boxes()
+        boxes = self.__find_boxes() 
         for box in boxes:
-            x, y, w, h = box
+            x, y, w, h = box.x,box.y,box.width,box.heigth
             cv2.rectangle(mat_contour, (x, y), (x + w, y + h), 255, thickness=1, lineType=cv2.LINE_AA)
         boxes, hierarchy = cv2.findContours(mat_contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return boxes, hierarchy[0]
-    
-    def find_numbers_multithread(self, boxes):
-        num_processes = min(multiprocessing.cpu_count(), len(boxes))
-        boxes_per_process = len(boxes) // num_processes
-        res_list = []
-        res = []
-        processes = []
-        with multiprocessing.Manager() as manager:
-            for i in range(num_processes):
-                res_list.append(manager.list())
-                if i == num_processes - 1:
-                    processes.append(multiprocessing.Process(target=self.__worker_find_numbers, args=(boxes[(num_processes - 1) * boxes_per_process:], res_list[i])))
-                else:
-                    processes.append(multiprocessing.Process(target=self.__worker_find_numbers, args=(boxes[i * boxes_per_process: (i + 1) * boxes_per_process], res_list[i])))
-                processes[i].start()
-            for i in range(num_processes):
-                processes[i].join()
-                res.extend(list(res_list[i]))
-        return res
-    
-    def find_text_multithread(self, boxes):
-        num_processes = min(multiprocessing.cpu_count(), len(boxes))
-        boxes_per_process = len(boxes) // num_processes
-        res_list = []
-        res = []
-        processes = []
-        with multiprocessing.Manager() as manager:
-            for i in range(num_processes):
-                res_list.append(manager.list())
-                if i == num_processes - 1:
-                    processes.append(multiprocessing.Process(target=self.__worker_find_text, args=(boxes[(num_processes - 1) * boxes_per_process:], res_list[i])))
-                else:
-                    processes.append(multiprocessing.Process(target=self.__worker_find_text, args=(boxes[i * boxes_per_process: (i + 1) * boxes_per_process], res_list[i])))
-                processes[i].start()
-            for i in range(num_processes):
-                processes[i].join()
-                res.extend(list(res_list[i]))
-        return res
 
-    def __worker_find_numbers(self, boxes, output):
-        for box in boxes:
-            x, y, w, h = box
-            elem = self.find_number(x, y, w, h)
-            if elem == None:
-                output.append(0)
-            else:
-                output.append(elem)
-
-    def __worker_find_text(self, boxes, output):
-        for box in boxes:
-            x, y, w, h = box
-            elem = self.find_text(x, y, w, h)
-            if elem == None:
-                output.append('')
-            else:
-                output.append(elem)
-
-    def find_text(self, x, y, w, h) -> str:
-        img = self.__img_matrix[y:y+h, x:x+w]
-        # Upscale the image to improve the OCR if the image is too small
-        if img.shape[0] < 150 or img.shape[1] < 150:
-            img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
-        img = self.__img_matrix[y:y+h, x:x+w].copy()
+    def __find_text(self, rectangle:OutputRectangle) -> str:
+        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
         elem = ts.image_to_string(img, config='--psm 8 --oem 3') 
         return elem if elem != '' else None
 
-    def find_number(self, x, y, w, h) -> int:
-        img = self.__img_matrix[y:y+h, x:x+w]
+    def __find_number(self, search_info:TextRectangle) -> int:
+        rectangle=search_info.rectangle
+        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
         # Upscale the image to improve the OCR if the image is too small
         if img.shape[0] < 150 or img.shape[1] < 150:
             img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
@@ -383,4 +326,23 @@ class ObjectsFinder:
         try:
             return int(elem)
         except:
-            return None   
+            return None
+    
+    def __find_text_from_dictionary(self, search_info:TextRectangle) -> str:
+        rectangle=search_info.rectangle
+        dictionary_path = search_info.dictionary
+        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
+        elem = ts.image_to_string(img, config='--psm 8 --oem 3 --user-words {}'.format(dictionary_path))
+        return elem if elem != '' else None
+
+    def __find_text_from_regex(self,search_info:TextRectangle) -> str:
+        rectangle=search_info.rectangle
+        regex = search_info.regex
+        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
+        elem = ts.image_to_string(img, config='--psm 8 --oem 3')
+        if regex.match(elem):
+            return elem
+        else:
+            return None        
+
+    
