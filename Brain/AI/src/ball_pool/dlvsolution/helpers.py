@@ -9,86 +9,96 @@ from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
 
 from AI.src.constants import DLV_PATH
+from AI.src.asp_mapping.color import Color
 
 
-class Color(Predicate):
+class BPoolColor(Color):
+    """
+    Estensione di Color per il biliardo (8-ball pool).
+    Aggiunge il concetto di 'ball_type' (cue, eight, solid, striped)
+    e parametri di distanza differenti.
+    """
     predicate_name = "color"
 
     __ids = count(1, 1)
     __colors = []
-    __MAX_DISTANCE = 40
+    __MAX_DISTANCE = 20  # più tollerante rispetto a Color
 
-    def __init__(self, bgr=None, ball_type = None):
-        Predicate.__init__(self, [("id", int)])
-        self.__id = next(Color.__ids)
-        self.__bgr = bgr
-        self.__ball_type = ball_type #solid o striped
+    def __init__(self, bgr=None, ball_type=None):
+        # Richiama il costruttore della superclasse
+        super().__init__(bgr)
+        # Sovrascriviamo l'ID con un contatore separato, se vogliamo
+        self.set_id(next(BPoolColor.__ids))
+        self.__ball_type = ball_type
 
-    
-    def get_id(self) -> int:
-        return self.__id
-
-    def set_id(self, id):
-        self.__id = id
-
-    def get_bgr(self) -> []:
-        return self.__bgr
-
-    def set_bgr(self, bgr: []):
-        self.__bgr = bgr
-
-    def get_ball_type(self) -> str:
+    def get_ball_type(self):
         return self.__ball_type
 
+    def set_ball_type(self, ball_type):
+        self.__ball_type = ball_type
 
     @staticmethod
     def __euclidean_distance(color1, color2):
-        return sqrt(pow(color1[0] - color2[0], 2) +
-                    pow(color1[1] - color2[1], 2) +
+        return sqrt(pow(color1[0] - color2[0], 2) + 
+                    pow(color1[1] - color2[1], 2) + 
                     pow(color1[2] - color2[2], 2))
-
+    
     @staticmethod
     def get_color(patch):
-        import numpy as np
-        # Se patch è già un'istanza di Color, restituiscila direttamente.
-        if isinstance(patch, Color):
+        """
+        Ricava (o crea) un BPoolColor da una patch di immagine (o da un BGR).
+        Esegue una semplice euristica per classificare la palla 
+        come 'cue', 'eight', 'solid' o 'striped'.
+        """
+        # Se patch è già un BPoolColor, lo restituiamo
+        if isinstance(patch, BPoolColor):
             return patch
+        
+        # Se patch è un Color generico, estraiamo il BGR
+        if isinstance(patch, Color):
+            patch = patch.get_bgr()
 
-        # Se patch non è un array NumPy, convertilo.
+        # Converte patch in numpy array se non lo è già
         if not isinstance(patch, np.ndarray):
-            patch = np.array(patch)
-        # Se il patch non ha 3 dimensioni, rimodellalo in (1, 1, -1)
-        if patch.ndim < 3:
-            try:
-                patch = patch.reshape((1, 1, -1))
-            except Exception as e:
-                patch = np.array([[[0, 0, 0]]], dtype=np.float32)
-        # Se il patch risulta vuoto, utilizza un fallback.
+            patch = np.array(patch, dtype=np.float32)
+
+        # Se patch è monodimensionale (es. [B, G, R]), reshapiamo
+        if patch.ndim == 1:
+            patch = patch.reshape((1, 1, -1))
+
+        # Calcoliamo la media e la deviazione standard del colore
         if patch.size == 0:
             mean_color = np.array([0, 0, 0], dtype=np.float32)
             std_color = np.array([0, 0, 0], dtype=np.float32)
         else:
             mean_color = np.mean(patch, axis=(0, 1))
             std_color = np.std(patch, axis=(0, 1))
+
         avg = np.mean(mean_color)
-        
-        # Heuristica per determinare il tipo di palla:
+
+        # Euristica di esempio per distinguere i tipi di palla
         if avg > 240:
-            ball_type = "bianca"  # Cue ball
+            ball_type = "cue"       # pallina bianca
         elif avg < 30:
-            ball_type = "nera"    # 8-ball
+            ball_type = "eight"     # pallina nera (8)
         else:
-            if np.mean(std_color) > 30:  # soglia da calibrare
-                ball_type = "mezza"
+            # Se la varianza cromatica è alta -> "striped", altrimenti "solid"
+            if np.mean(std_color) > 30:
+                ball_type = "striped"
             else:
-                ball_type = "piena"
-        # Verifica se esiste già un oggetto Color simile
-        for color in Color.__colors:
-            if Color.__euclidean_distance(color.__bgr, mean_color) < Color.__MAX_DISTANCE:
-                return color
-        color = Color(mean_color, ball_type)
-        Color.__colors.append(color)
-        return color
+                ball_type = "solid"
+
+        # Verifica se esiste già un BPoolColor con colore simile
+        for c in BPoolColor.__colors:
+            dist = BPoolColor.__euclidean_distance(c.get_bgr(), mean_color)
+            if dist < BPoolColor.__MAX_DISTANCE:
+                return c
+
+        # Altrimenti creiamo un nuovo BPoolColor
+        new_color = BPoolColor(mean_color, ball_type)
+        BPoolColor.__colors.append(new_color)
+        return new_color
+
 
 
 

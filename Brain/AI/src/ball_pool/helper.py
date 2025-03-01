@@ -31,17 +31,17 @@ def asp_input(balls_chart):
 
     for ball in balls:
         print(f"Ball in loop{ball}")
-        if ball.get_type() == "piena":
+        if ball.get_type() == "solid":
             piena += 1
             
-        elif ball.get_type() == "mezza":
+        elif ball.get_type() == "striped":
             mezza += 1
 
-        elif ball.get_type() == "nera":
+        elif ball.get_type() == "eight":
             nera += 1
         
         
-        elif ball.get_type() == "bianca":
+        elif ball.get_type() == "cue":
             bianca += 1
         
         #print(f"x = {ball.get_x()}, y = {ball.get_y()}")
@@ -91,9 +91,9 @@ def persist_threshold(value):
 
 
 
-def ball_pool(screenshot, debug=True, validation=None, iteration=0):
+def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, iteration=0):
 
-    matcher = MatchingBallPool(screenshot, debug, validation, iteration, True)
+    matcher = MatchingBallPool(screenshot, debug, vision_val != None, iteration)
     pool_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
     #balls_chart = {"balls": [], "pockets": []}
 

@@ -1,4 +1,4 @@
-from math import sqrt,atan2
+from math import sqrt,atan2 
 
 from itertools import count
 from languages.predicate import Predicate

@@ -8,11 +8,13 @@ import sys
 from AI.src.ball_pool.constants import SPRITE_PATH,SRC_PATH
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
+from AI.src.vision.input_game_object import Circle, Container
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
-from AI.src.ball_pool.dlvsolution.helpers import  Color, Ball, Pocket, MoveAndShoot, GameOver
+from AI.src.ball_pool.dlvsolution.helpers import BPoolColor, Color, Ball, Pocket, MoveAndShoot, GameOver
+
 
 
 """I parametri param1 e param2 nella funzione cv2.HoughCircles() controllano specifici aspetti del rilevamento dei cerchi:
@@ -35,29 +37,27 @@ Aumentare param2 se vengono rilevati troppi falsi cerchi
 """
 class MatchingBallPool:
 
-    BALLS_DISTANCE_RATIO = 1  # rapporto usato per filtrare le palline
-    BALL_RADIUS_RATIO = 20
+    # Parametri relativi al campo (se necessari per ulteriori controlli)
+    X_MIN = 451
+    Y_MIN = 179
+    X_MAX = 2068
+    Y_MAX = 1069
 
-    #Valori range campo
-    X_MIN = 419
-    Y_MIN = 263
-    X_MAX = 1864
-    Y_MAX = 985
+    # Parametri per la rilevazione delle palline
+    BALLS_MIN_DIST = 1
+    BALLS_MIN_RADIUS = 20
+    BALLS_MAX_RADIUS = 25
+    PARAM1 = 10   # Soglia per Canny (palline)
+    PARAM2 = 20   # Soglia per HoughCircles (palline)
 
-    BALLS_MIN_DIST = 1         # distanza minima tra i cerchi
-    BALLS_MIN_RADIUS = 13      # raggio minimo in pixel
-    BALLS_MAX_RADIUS = 25       # raggio massimo in pixel
-    PARAM1 = 70          # soglia per Canny
-    PARAM2 = 20           # soglia per HoughCircles
+    # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
+    POCKETS_MIN_DIST = 400        # Distanza minima tra le buche
+    POCKETS_MIN_RADIUS = 34       # Raggio minimo in pixel per i pocket
+    POCKETS_MAX_RADIUS = 50       # Raggio massimo in pixel per i pocket
+    POCKET_PARAM1 = 28            # Soglia per Canny (pocket)
+    POCKET_PARAM2 = 26            # Soglia per HoughCircles (pocket)
 
-    POCKETS_MIN_DIST = 300        # distanza minima tra buche
-    POCKETS_MIN_RADIUS = 37      # raggio minimo in pixel
-    POCKETS_MAX_RADIUS = 45       # raggio massimo in pixel
-
-    POCKET_PARAM1 = 28
-    POCKET_PARAM2 = 26
-
-    def __init__(self, screenshot_path, debug=True, validation=None, iteration=0, table_area=None):
+    def __init__(self, screenshot_path, debug=False, validation=False, iteration=0):
         self.screenshot = screenshot_path
         self.debug = debug
         self.validation = validation
@@ -65,37 +65,30 @@ class MatchingBallPool:
         self.image = None
         self.__gray = None
         self.__output = None
+        self.__ball_chart = None
         self.detection_result = None
-        self.__pocketTemplates = {}
-        self.__balls = []
-        self.__pockets = []
+        self.__balls: list = []
+        self.__pockets: list = []  # Ora i pocket verranno rilevati via circle detection
         self.img_width = None
-        # Questi valori ora non vengono più letti da config per le palline,
-        # ma potresti comunque usarli per le pocket se necessario.
-        self.canny_threshold = self.PARAM1  # In questo caso, usiamo PARAM1 come soglia per Canny
-        # Imposta la ROI se fornita. Altrimenti, table_area rimane None.
-        self.table_area = MatchingBallPool.X_MIN, MatchingBallPool.Y_MIN, MatchingBallPool.X_MAX, MatchingBallPool.Y_MAX if table_area is not None else None
-        
 
-        
-        """for file in os.listdir(SPRITE_PATH): # indica la cartella in cui cercare i file
-            if file.endswith('.png') or file.endswith('.jpg'):
-                fullname = os.path.join(SPRITE_PATH,file)
-                if not validation: # se non è in modalità di validazione
-                    print(f"Found field sprite {fullname} (testingg)") # stampa il nome del file
-                img = getImg(fullname,gray=True)
-                self.__pocketTemplates[fullname]  = img # crea un dizionario con il nome del file e l'immagine in scala di grigi"""
-        
-    
-    def adjust_threshold(self,iteration):
+        self.table_area = MatchingBallPool.X_MIN, MatchingBallPool.Y_MIN, MatchingBallPool.X_MAX, MatchingBallPool.Y_MAX 
+
+        # Recupera la configurazione dal file config
+        self.canny_threshold, self.proportion_tolerance, self.size_tolerance = self.retrieve_config()
+        self.canny_threshold = self.adjust_threshold(iteration)
+        # Non carichiamo più template per i pocket, poiché li rileviamo via cerchi
+
+    def adjust_threshold(self, iteration):
+        print(f"Adjust thres {self.canny_threshold}")
         if iteration == 0:
             return self.canny_threshold
-        return self.canny_threshold + iteration*10
-    
+        return self.canny_threshold + iteration * 10
+
     def retrieve_config(self):
         with open(os.path.join(SRC_PATH, "config"), "r") as f:
             x = f.read()
         canny_threshold = int(re.search("CANNY_THRESHOLD=([^\n]+)", x, flags=re.M).group(1))
+        # Anche se non usiamo template per i pocket, manteniamo la configurazione per eventuali usi futuri
         proportion_tolerance = (
             float(re.search("POCKET_PROPORTION_TOLERANCE=([^\n]+)", x, flags=re.M).group(1))
             if re.search("POCKET_PROPORTION_TOLERANCE=([^\n]+)", x, flags=re.M)
@@ -107,22 +100,20 @@ class MatchingBallPool:
             else 0.1
         )
         return canny_threshold, proportion_tolerance, size_tolerance
-    
+
+
     def get_balls_chart(self):
-        # Per pool, restituisce un dizionario con le liste di palline e pocket
         vision_output = self.vision()
+        # In questo caso vision_output è una tupla: (lista di palline, lista di pocket)
         if len(vision_output["balls"]) == 0:
             return None
         return self.abstraction(vision_output)
-    
-    
+
     def vision(self):
-        # Inizializza la visione: carica l'immagine e crea la versione in scala di grigi
+        #dichiarato ma mai usato 
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
-        # Carica l'immagine completa e salvala
+
         self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
-        if self.image is None:
-            raise ValueError("Immagine non trovata: " + self.screenshot)
         self.full_image = self.image.copy()  # conserva l'immagine completa per la visualizzazione
         
         if self.debug and self.validation is None:
@@ -153,7 +144,7 @@ class MatchingBallPool:
         ball_circles = self.detect_balls_circles(detection_gray)
 
         # 5) Rilevamento cerchi delle buche (puoi scegliere se usare detection_gray/detection_image o l'immagine intera)
-        pocket_circles = self.detect_pockets_circles(self.__gray)
+        pocket_circles = self.detect_pockets_circles(detection_gray)
 
         # Assegniamo per riferimento interno
         self.__balls = ball_circles
@@ -161,22 +152,6 @@ class MatchingBallPool:
 
         return {"balls": ball_circles, "pockets": pocket_circles}
     
-    def detect_balls_circles(self, detection_gray):
-        """
-        Rileva i cerchi (palline) sfruttando il metodo find() dell'ObjectsFinder.
-        Per fare ciò, creiamo un oggetto Circle con i parametri necessari e lo passiamo a finder.find().
-        """
-        # In questo esempio usiamo self.canny_threshold e BALLS_MIN_RADIUS definiti in MatchingBallPool
-        # per configurare il rilevamento. Se necessario, puoi adattare o calcolare altri parametri,
-        # ad esempio in base alle dimensioni dell'immagine.
-        circle_search_info = Circle(canny_threshold=self.canny_threshold, min_radius=self.BALLS_MIN_RADIUS)
-        
-        # Chiamando finder.find() con l'oggetto Circle verrà invocato il metodo _find_circles all'interno di ObjectsFinder
-        balls = self.finder.find(circle_search_info)
-        
-        return balls
-
-
     def detect_balls_circles(self, detection_gray):
         """
         Esegue HoughCircles per rilevare i cerchi (palline).
@@ -228,18 +203,14 @@ class MatchingBallPool:
         circles = np.array([valid_circles], dtype=np.uint16)
         return circles
 
-    
-    def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=4, type="ball"):
+    def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=4):
         """
         Se due cerchi sono troppo vicini, elimina i duplicati.
         """
         filtered = []
         for obj in circles:
-            if type == "ball":
-                x, y, r = obj.get_x(), obj.get_y(), obj.get_r()
-            else:  # pocket
-                x, y, r = obj.get_x(), obj.get_y(), obj.get_r()
-
+            x, y, r = obj.get_x(), obj.get_y(), obj.get_r()
+        
             duplicate = False
             for f_obj in filtered:
                 fx, fy, fr = f_obj.get_x(), f_obj.get_y(), f_obj.get_r()
@@ -252,10 +223,7 @@ class MatchingBallPool:
                 filtered.append(obj)
         return filtered
 
-
-
-
-    def non_max_suppression(self, circles, overlapThresh=0.5, type="ball"):
+    def non_max_suppression(self, circles, overlapThresh=0.5):
         """
         Esegue la NMS (Non-Maxima Suppression) su una lista di cerchi convertiti in bounding box.
         """
@@ -263,14 +231,10 @@ class MatchingBallPool:
             return []
         # Creiamo le bounding box (x1, y1, x2, y2)
         rects = []
-        if type == "ball":
-            for obj in circles:
-                (x, y, r) = (obj.get_x(), obj.get_y(), obj.get_r())
-                rects.append([x - r, y - r, x + r, y + r])
-        elif type == "pocket":
-            for obj in circles:
-                (x, y, r) = (obj.get_x(), obj.get_y(), obj.get_r())
-                rects.append([x - r, y - r, x + r, y + r])
+       
+        for obj in circles:
+            (x, y, r) = (obj.get_x(), obj.get_y(), obj.get_r())
+            rects.append([x - r, y - r, x + r, y + r])
 
         rects = np.array(rects)
         pick = []
@@ -301,36 +265,47 @@ class MatchingBallPool:
         # Ritorna gli oggetti filtrati
         filtered = [circles[i] for i in pick]
         return filtered
-
-
-    def abstraction(self, vision_output) -> dict:
-        """
-        Converte i cerchi rilevati (vision_output) in oggetti Ball/Pocket.
-        Applica anche eventuale NMS, filtraggio, ecc.
-        """
-        result = {"balls": [], "pockets": []}
-
-        # 1) Creazione e filtraggio palline
-        ball_circles = vision_output["balls"]
-        final_balls = self.clean_balls(ball_circles)
-        result["balls"] = final_balls
-
-        # 2) Creazione e filtraggio buche
-        pocket_circles = vision_output["pockets"]
-        final_pockets = self.clean_pockets(pocket_circles)
-        result["pockets"] = final_pockets
-
-        # Salviamo il risultato in un attributo interno
-        self.__result = result
-
-        if self.validation is None and self.debug:
-            print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
-            self.__show_result()  # Nessun parametro
-
-        return result
-
     
-    def clean_balls(self, circles):
+    """def detect_balls(self) -> list:
+        height = self.image.shape[0]
+        minRadius = int(self.BALLS_MIN_RADIUS)
+        maxRadius = int(self.BALLS_MAX_RADIUS)
+        minDist = int(self.BALLS_MIN_DIST)
+        # Utilizza il finder per individuare le palline tramite il rilevamento dei cerchi
+        print(f"Balls canny {self.canny_threshold}")
+        self.__balls = self.finder.find(
+            Circle(
+            min_radius=minRadius, 
+            max_radius=maxRadius,
+            canny_threshold=1
+            ),
+            area= (self.X_MIN, self.Y_MIN, self.X_MAX, self.Y_MAX)
+            )
+        
+        # Filtra le palline per mantenere solo quelle sufficientemente distanti
+        #self.__balls = self.filter_by_distance(self.__balls, self.BALLS_MIN_DIST)
+        
+        return self.__balls
+
+    def detect_pockets(self) -> list:
+        # Rileva i pocket in maniera simile alle palline, utilizzando i parametri specifici per i pocket
+        height = self.image.shape[0]
+        minRadius = int(self.POCKETS_MIN_RADIUS)
+        maxRadius = int(self.POCKETS_MAX_RADIUS)
+        minDist = int(self.POCKETS_MIN_DIST)
+
+        self.__pockets = self.finder.find(
+            Circle(
+                min_radius=minRadius,
+                max_radius=maxRadius,
+                canny_threshold=3,
+            ),
+                area= (self.X_MIN, self.Y_MIN, self.X_MAX, self.Y_MAX)
+
+        )
+        return self.__pockets"""
+    
+    def abstract_balls(self, circles):
         """
         Converte i cerchi (x, y, r) in oggetti Ball, estraendo il colore da un piccolo patch.
         Esegue anche NMS e filtraggio dei duplicati.
@@ -345,7 +320,7 @@ class MatchingBallPool:
         # Creiamo le Ball
         for (x, y, r) in circles[0]:
             # Evita raggi fuori range, se vuoi
-            if r < self.BALLS_MIN_RADIUS or r > self.BALLS_MAX_RADIUS:
+            if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS ):
                 continue
 
             # Prendiamo un patch attorno al centro per determinare il colore
@@ -355,21 +330,21 @@ class MatchingBallPool:
             y2 = y + half_patch + 1
             patch = self.image[y1:y2, x1:x2]
 
-            color_obj = Color.get_color(patch)
+            color_obj = BPoolColor.get_color(patch)
             ball_obj = Ball(color_obj)
-            ball_obj.set_x(x)
-            ball_obj.set_y(y)
+            ball_obj.set_x(x + self.X_MIN)
+            ball_obj.set_y(y + self.Y_MIN)
             ball_obj.set_r(r)
             raw_balls.append(ball_obj)
 
         # Applica NMS e filtra duplicati
-        nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5, type="ball")
-        filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=30, type="ball")
+        nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
+        filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=30)
 
         print(f"Detected {len(filtered_balls)} balls (after NMS & filtering)")
         return filtered_balls
 
-    def clean_pockets(self, circles):
+    def abstract_pockets(self, circles):
         """
         Converte i cerchi (x, y, r) in oggetti Pocket.
         Esegue eventuale NMS e filtraggio dei duplicati.
@@ -382,88 +357,109 @@ class MatchingBallPool:
             # Se vuoi, controlla range di r
             # if r < self.POCKETS_MIN_RADIUS or r > self.POCKETS_MAX_RADIUS:
             #     continue
-            p = Pocket(x, y)
+            p = Pocket(x + self.X_MIN, y + self.Y_MIN)
             p.set_r(r)
             raw_pockets.append(p)
 
-        nms_pockets = self.non_max_suppression(raw_pockets, overlapThresh=0.5, type="pocket")
+        nms_pockets = self.non_max_suppression(raw_pockets, overlapThresh=0.5)
         filtered_pockets = self.filter_duplicate_circles(
-            nms_pockets, CIRCLE_MIN_DISTANCE=self.POCKETS_MIN_DIST, type="pocket"
+            nms_pockets, CIRCLE_MIN_DISTANCE=self.POCKETS_MIN_DIST
         )
         print(f"Detected {len(filtered_pockets)} pockets (after NMS & filtering)")
         return filtered_pockets
+    
 
+    def abstraction(self, vision_output, reset=True) -> ElementsStacks:
+        """if reset:
+            Ball.reset()
+            Pocket.reset()
+            Color.reset()
+            """
+        result = {"balls": [], "pockets": []}
 
+        # 1) Creazione e filtraggio palline
+        ball_circles = vision_output["balls"]
+        final_balls = self.abstract_balls(ball_circles)
+        result["balls"] = final_balls
 
-    def get_image(self):
-        return self.image
+        # 2) Creazione e filtraggio buche
+        pocket_circles = vision_output["pockets"]
+        final_pockets = self.abstract_pockets(pocket_circles)
+        result["pockets"] = final_pockets
+
+        # Salviamo il risultato in un attributo interno
+        self.__result = result
+
+        self.__balls = result["balls"]
+        self.__pockets = result["pockets"]
+
+        if self.validation is None and self.debug:
+            print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
+            self.__show_result()  # Nessun parametro
+
+        return result
+
+    
 
     def __show_result(self):
-        # Recupera i risultati salvati
-        balls = self.__result["balls"]
-        pockets = self.__result["pockets"]
+        scale_factor = 1.0
+        width = int(self.image.shape[1] * scale_factor)
+        height = int(self.image.shape[0] * scale_factor)
+        dim = (width, height)
 
-        # Se la ROI è definita, usiamo l'immagine completa e aggiungiamo l'offset
-        if self.table_area is not None:
-            x_roi, y_roi, x_max, y_max = self.table_area
-            display_img = self.full_image.copy()
+        img_copy = self.__output.copy()
 
-            # Disegna le palline, compensando le coordinate della ROI
-            for ball in balls:
-                bx = ball.get_x() + x_roi
-                by = ball.get_y() + y_roi
-                r = ball.get_r()
-                cv2.circle(display_img, (bx, by), r, (0, 255, 0), 2)
-                cv2.circle(display_img, (bx, by), 2, (0, 0, 255), 3)
-                cv2.putText(display_img, f"({bx}, {by})", (bx + 10, by),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        print(f"Balls show {len(self.__balls)}")
+        print(f"Pockets show {len(self.__pockets)}")
 
-            # Disegna il rettangolo della ROI
-            cv2.rectangle(display_img, (x_roi, y_roi), (x_max, y_max), (50,205,50), 3)
-        else:
-            # Se non è definita una ROI, usa l'immagine pre-elaborata
-            display_img = self.__output.copy()
-            for ball in balls:
-                x = ball.get_x()
-                y = ball.get_y()
-                r = ball.get_r()
-                cv2.circle(display_img, (x, y), r, (0, 255, 0), 2)
-                cv2.circle(display_img, (x, y), 2, (0, 0, 255), 3)
-                cv2.putText(display_img, f"({x}, {y})", (x + 10, y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-                
-        # Disegna le buche, compensando l'offset della ROI
-        for pocket in pockets:
-            px = pocket.get_x() #+ x_roi
-            py = pocket.get_y()# + y_roi
-            pr = pocket.get_r()
-            cv2.circle(display_img, (px, py), pr, (0, 255, 255), 2)
-            cv2.circle(display_img, (px, py), 2, (0, 0, 255), 3)
-            cv2.putText(display_img, f"({px}, {py}) {pr}", (px + 10, py),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        # Disegna il rettangolo dell'area
+        cv2.rectangle(img_copy, (self.X_MIN, self.Y_MIN), (self.X_MAX, self.Y_MAX), (255, 0, 0), 5)  # Rosso
 
-        # Imposta la finestra di visualizzazione in modalità full screen
-        cv2.namedWindow("Result", cv2.WINDOW_NORMAL)
-        cv2.setWindowProperty("Result", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+        # Disegna le palline (verdi)
+        for ball in self.__balls:
+            x, y, r = ball.get_x(), ball.get_y(), ball.get_r()
+            cv2.circle(img_copy, (x, y), r, (0, 255, 0), 3)
+            cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
+            # Testo con bordo nero
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)  # Bordo nero
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)  # Testo verde
 
-        # Aggiunge il callback del mouse per visualizzare le coordinate in tempo reale
-        mouse_data = {"pos": None}
+        # Disegna i pocket (gialli)
+        for pocket in self.__pockets:
+            x, y, r = pocket.get_x(), pocket.get_y(), pocket.get_r()
+            cv2.circle(img_copy, (x, y), r, (0, 255, 255), 3)
+            cv2.circle(img_copy, (x, y), 4, (0, 0, 0), 1)
+            # Testo con bordo nero
+            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y+r), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)  # Bordo nero
+            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y+r), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)  # Testo giallo
 
-        def mouse_callback(event, x, y, flags, param):
-            if event == cv2.EVENT_MOUSEMOVE:
-                param["pos"] = (x, y)
+        # Ridimensionamento per la visualizzazione
+        resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
+        resized_gray = cv2.cvtColor(cv2.resize(self.__gray, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_GRAY2RGB)
+        resized_output = cv2.cvtColor(cv2.resize(img_copy, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
 
-        cv2.setMouseCallback("Result", mouse_callback, mouse_data)
+        # Mostra i risultati
+        fig, axes = plt.subplots(3, 1, figsize=(8, 18))
 
-        while True:
-            disp = display_img.copy()
-            if mouse_data["pos"] is not None:
-                mx, my = mouse_data["pos"]
-                cv2.circle(disp, (mx, my), 5, (0, 255, 255), -1)
-                cv2.putText(disp, f"X: {mx}, Y: {my}", (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
-            cv2.imshow("Result", disp)
-            key = cv2.waitKey(20) & 0xFF
-            if key == 27:  # ESC per uscire
-                break
-        cv2.destroyAllWindows()
+        axes[0].imshow(resized_input)
+        axes[0].set_title("Input Image")
+        axes[0].axis("off")
+
+        axes[1].imshow(resized_gray)
+        axes[1].set_title("Gray Image")
+        axes[1].axis("off")
+
+        axes[2].imshow(resized_output)
+        axes[2].set_title("Detection Output")
+        axes[2].axis("off")
+
+        plt.tight_layout()
+        plt.show()
+
+
+
+
