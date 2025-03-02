@@ -48,7 +48,7 @@ class MatchingBallPool:
     BALLS_MIN_RADIUS = 20
     BALLS_MAX_RADIUS = 25
     PARAM1 = 10   # Soglia per Canny (palline)
-    PARAM2 = 20   # Soglia per HoughCircles (palline)
+    PARAM2 = 16   # Soglia per HoughCircles (palline)
 
     # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
     POCKETS_MIN_DIST = 400        # Distanza minima tra le buche
