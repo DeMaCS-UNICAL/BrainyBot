@@ -38,17 +38,17 @@ Aumentare param2 se vengono rilevati troppi falsi cerchi
 class MatchingBallPool:
 
     # Parametri relativi al campo (se necessari per ulteriori controlli)
-    X_MIN = 451
+    X_MIN = 320
     Y_MIN = 179
-    X_MAX = 2068
+    X_MAX = 1953
     Y_MAX = 1069
 
     # Parametri per la rilevazione delle palline
     BALLS_MIN_DIST = 1
     BALLS_MIN_RADIUS = 20
     BALLS_MAX_RADIUS = 25
-    PARAM1 = 10   # Soglia per Canny (palline)
-    PARAM2 = 20   # Soglia per HoughCircles (palline)
+    PARAM1 = 17   # Soglia per Canny (palline)
+    PARAM2 = 23   # Soglia per HoughCircles (palline)
 
     # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
     POCKETS_MIN_DIST = 400        # Distanza minima tra le buche
@@ -152,6 +152,103 @@ class MatchingBallPool:
 
         return {"balls": ball_circles, "pockets": pocket_circles}
     
+    def extract_ball_roi(self, ball_obj, scale=1.4):
+        """
+        Data una palla (ball_obj) con centro (x, y) e raggio r,
+        estrae il ROI dalla self.image. 'scale' serve ad aumentare il raggio per includere un margine.
+        Restituisce il ROI come numpy array oppure None se le coordinate non sono valide.
+        """
+        cx, cy, r = ball_obj.get_x(), ball_obj.get_y(), ball_obj.get_r()
+        margin = int(r * scale)
+        x1 = max(0, cx - margin)
+        y1 = max(0, cy - margin)
+        x2 = min(self.image.shape[1], cx + margin)
+        y2 = min(self.image.shape[0], cy + margin)
+        # Se il ROI è vuoto, restituisci None
+        #print(f"ROI: ({x1}, {y1}) - ({x2}, {y2})")
+        if x2 <= x1 or y2 <= y1:
+            #print("Empty ROI")
+            return None
+        #print(f"Self.image : {self.image}")
+        return x1, y1, x2, y2
+
+
+    def check_white_circle_with_black_border(self, roi_coords, r):
+        """
+        Verifica se l'ROI (definito dalle coordinate roi_coords) presenta un interno bianco e un bordo nero.
+        'r' è il raggio stimato della palla (usato per definire la maschera).
+        Restituisce True se la condizione è verificata, False altrimenti.
+        """
+        x1, y1, x2, y2 = roi_coords
+        roi = self.__gray[y1:y2, x1:x2]
+        
+        h, w = roi.shape
+        
+        # Assumiamo che la palla sia centrata nel ROI
+        center_x, center_y = w // 2, h // 2
+
+        # Crea la maschera per il cerchio completo
+        mask = np.zeros(roi.shape, dtype=np.uint8)
+        cv2.circle(mask, (center_x, center_y), r, 255, -1)
+        
+        # Maschera interna, riducendo il raggio per escludere il bordo
+        inner_mask = np.zeros(roi.shape, dtype=np.uint8)
+        cv2.circle(inner_mask, (center_x, center_y), max(r - 5, 0), 255, -1)
+        
+        # La maschera del bordo
+        border_mask = cv2.subtract(mask, inner_mask)
+        
+        mean_inside = cv2.mean(roi, mask=mask)[0]
+        mean_border = cv2.mean(roi, mask=border_mask)[0]
+        
+        # Regola le soglie in base all'immagine e all'illuminazione
+        if mean_inside <= 200 and mean_border >= 50:
+            #print(f"White circle with black border: {mean_inside} - {mean_border}")
+            return True
+        return False
+    
+    def detect_direction_line(self, roi_coords, r):
+        """
+        Cerca di rilevare una linea interna (ad es. la linea di direzione) all'interno dell'ROI.
+        La funzione:
+        - Converte l'ROI in scala di grigi (se necessario)
+        - Applica il rilevamento dei bordi con Canny
+        - Utilizza HoughLinesP per individuare segmenti lineari
+        - Se trova una linea con lunghezza >= 0.8 * r, la restituisce come tuple (x1, y1, x2, y2)
+        Restituisce None se non viene trovata una linea adeguata.
+        """
+        x1, y1, x2, y2 = roi_coords
+        roi = self.image[y1:y2, x1:x2]
+        
+        # Crea una maschera dei pixel "bianchi" (valori > 200)
+        _, white_mask = cv2.threshold(roi, 200, 255, cv2.THRESH_BINARY)
+
+        # Applica Canny per rilevare i bordi
+        edges = cv2.Canny(roi, 50, 150, apertureSize=3)
+        
+        # Utilizza HoughLinesP per individuare segmenti di linea
+        # minLineLength è impostato in modo che la linea debba essere lunga almeno l'80% del raggio della palla
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, minLineLength=int(r * 0.9), maxLineGap=5)
+        
+        if lines is not None:
+            best_line = None
+            best_length = 0
+            for line in lines:
+                x_start, y_start, x_end, y_end = line[0]
+                line_length = np.sqrt((x_end - x_start) ** 2 + (y_end - y_start) ** 2)
+                # Se troviamo una linea più lunga, la consideriamo come candidata
+                if line_length > best_length:
+                    best_length = line_length
+                    best_line = (x_start, y_start, x_end, y_end)
+            
+            # Se la linea trovata ha una lunghezza adeguata, restituiscila
+            if best_line is not None and best_length >= r :
+                return best_line
+
+        return None
+
+
+
     def detect_balls_circles(self, detection_gray):
         """
         Esegue HoughCircles per rilevare i cerchi (palline).
@@ -306,10 +403,6 @@ class MatchingBallPool:
         return self.__pockets"""
     
     def abstract_balls(self, circles):
-        """
-        Converte i cerchi (x, y, r) in oggetti Ball, estraendo il colore da un piccolo patch.
-        Esegue anche NMS e filtraggio dei duplicati.
-        """
         if circles is None:
             return []
         circles = np.uint16(np.around(circles))
@@ -317,31 +410,48 @@ class MatchingBallPool:
         patch_size = 5
         half_patch = patch_size // 2
 
-        # Creiamo le Ball
         for (x, y, r) in circles[0]:
-            # Evita raggi fuori range, se vuoi
-            if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS ):
+            if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS):
                 continue
 
-            # Prendiamo un patch attorno al centro per determinare il colore
+            # Estrai un patch piccolo per il colore (già in uso)
             x1 = max(0, x - half_patch)
             y1 = max(0, y - half_patch)
             x2 = x + half_patch + 1
             y2 = y + half_patch + 1
-            patch = self.image[y1:y2, x1:x2]
 
+            patch = self.image[y1:y2, x1:x2]
             color_obj = BPoolColor.get_color(patch)
             ball_obj = Ball(color_obj)
-            ball_obj.set_x(x + self.X_MIN)
-            ball_obj.set_y(y + self.Y_MIN)
+            x += self.X_MIN
+            y += self.Y_MIN
+            ball_obj.set_x(x)
+            ball_obj.set_y(y)
             ball_obj.set_r(r)
+
+            # Estrai il ROI completo della palla (con margine)
+            roi_coords = self.extract_ball_roi(ball_obj)
+            if roi_coords is not None:
+                # Step 1: Controlla che il ROI mostri un interno bianco e bordi neri
+                if self.check_white_circle_with_black_border(roi_coords, r):
+                    # Step 2: Rileva la linea interna
+                    direction_line = self.detect_direction_line(roi_coords, r)
+                    if direction_line is not None:
+                        ball_obj.get_color().set_ball_type("cue aim")
+                        line_x1, line_y1, line_x2, line_y2 = direction_line
+                        #ball_obj.direction_line = direction_line  # memorizza la linea
+                        len_line = np.sqrt((line_x2 - line_x1) ** 2 + (line_y2 - line_y1) ** 2)
+
+                        print(f"Found cue aim ball at ({x}, {y}) with line {direction_line} len {len_line}")
+            else:
+                print(f"ROI vuoto per la palla in ({x}, {y}) con raggio {r}")
+
             raw_balls.append(ball_obj)
 
         # Applica NMS e filtra duplicati
         nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
-        filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=30)
-
-        print(f"Detected {len(filtered_balls)} balls (after NMS & filtering)")
+        filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=self.BALLS_MIN_DIST)
+        print(f"Rilevate {len(filtered_balls)} palle (dopo NMS e filtraggio)")
         return filtered_balls
 
     def abstract_pockets(self, circles):

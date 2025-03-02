@@ -30,7 +30,7 @@ def asp_input(balls_chart):
     bianca = 0
 
     for ball in balls:
-        print(f"Ball in loop{ball}")
+        #print(f"Ball in loop{ball}")
         if ball.get_type() == "solid":
             piena += 1
             
