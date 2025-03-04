@@ -38,9 +38,9 @@ Aumentare param2 se vengono rilevati troppi falsi cerchi
 class MatchingBallPool:
 
     # Parametri relativi al campo (se necessari per ulteriori controlli)
-    X_MIN = 320
+    X_MIN = 446
     Y_MIN = 179
-    X_MAX = 1953
+    X_MAX = 2067
     Y_MAX = 1069
 
     # Parametri per la rilevazione delle palline
@@ -209,26 +209,35 @@ class MatchingBallPool:
     
     def detect_direction_line(self, roi_coords, r):
         """
-        Cerca di rilevare una linea interna (ad es. la linea di direzione) all'interno dell'ROI.
+        Cerca di rilevare una linea interna (ad es. la linea di direzione) all'interno dell'ROI,
+        che sia formata da pixel bianchi.
         La funzione:
-        - Converte l'ROI in scala di grigi (se necessario)
-        - Applica il rilevamento dei bordi con Canny
+        - Converte l'ROI in scala di grigi se necessario
+        - Crea una maschera per i pixel bianchi (valori > 200)
+        - Applica Canny per il rilevamento dei bordi
         - Utilizza HoughLinesP per individuare segmenti lineari
-        - Se trova una linea con lunghezza >= 0.8 * r, la restituisce come tuple (x1, y1, x2, y2)
+        - Per ogni linea candidata, verifica se lungo la linea prevalgono pixel bianchi
+        - Se viene trovata una linea con lunghezza >= 0.8 * r, la restituisce come tuple (x1, y1, x2, y2)
         Restituisce None se non viene trovata una linea adeguata.
         """
         x1, y1, x2, y2 = roi_coords
         roi = self.image[y1:y2, x1:x2]
+
+        # Converte in scala di grigi se necessario
+        if len(roi.shape) == 3:
+            gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+        else:
+            gray_roi = roi.copy()
         
         # Crea una maschera dei pixel "bianchi" (valori > 200)
-        _, white_mask = cv2.threshold(roi, 200, 255, cv2.THRESH_BINARY)
+        _, white_mask = cv2.threshold(gray_roi, 200, 255, cv2.THRESH_BINARY)
 
-        # Applica Canny per rilevare i bordi
-        edges = cv2.Canny(roi, 50, 150, apertureSize=3)
-        
-        # Utilizza HoughLinesP per individuare segmenti di linea
-        # minLineLength è impostato in modo che la linea debba essere lunga almeno l'80% del raggio della palla
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, minLineLength=int(r * 0.9), maxLineGap=5)
+        # Applica Canny per rilevare i bordi sull'immagine in scala di grigi
+        edges = cv2.Canny(gray_roi, 50, 150, apertureSize=3)
+
+        # Individua segmenti lineari con HoughLinesP
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, 
+                                minLineLength=int(1), maxLineGap=5)
         
         if lines is not None:
             best_line = None
@@ -236,16 +245,62 @@ class MatchingBallPool:
             for line in lines:
                 x_start, y_start, x_end, y_end = line[0]
                 line_length = np.sqrt((x_end - x_start) ** 2 + (y_end - y_start) ** 2)
-                # Se troviamo una linea più lunga, la consideriamo come candidata
-                if line_length > best_length:
+                
+                # Crea una maschera per la linea per verificare l'intensità dei pixel
+                mask_line = np.zeros_like(gray_roi, dtype=np.uint8)
+                cv2.line(mask_line, (x_start, y_start), (x_end, y_end), 255, thickness=3)
+                mean_white = cv2.mean(white_mask, mask=mask_line)[0]
+                
+                # Se la linea è formata prevalentemente da pixel bianchi (media >= 200)
+                # o ha lunghezza maggiore del candidato precedente, allora la selezioniamo
+                if mean_white >= 200 or line_length > best_length:
                     best_length = line_length
-                    best_line = (x_start, y_start, x_end, y_end)
+                    best_line = (x_start + x1, y_start + y1, x_end + x1, y_end + y1)
             
-            # Se la linea trovata ha una lunghezza adeguata, restituiscila
-            if best_line is not None and best_length >= r :
+            # Restituisce la linea se la lunghezza è adeguata
+            if best_line is not None:
                 return best_line
 
         return None
+
+    def find_perpendicular_lines(self, raw_aim_lines, angle_tolerance=10):
+        """
+        Data una lista di raw_aim_lines (ogni elemento è una tupla:
+        (ball_center_x, ball_center_y, direction_line, len_line)),
+        trova due linee che siano perpendicolari (angolo ~90° ± angle_tolerance).
+        Restituisce una tupla contenente le due raw_aim_lines se trovate, altrimenti None.
+        """
+        import math
+        n = len(raw_aim_lines)
+        if n < 2:
+            return None
+        aim_lines = []
+
+        for i in range(n):
+            for j in range(i+1, n):
+                _, _, line1, _ = raw_aim_lines[i]
+                _, _, line2, _ = raw_aim_lines[j]
+                x1, y1, x2, y2 = line1
+                x3, y3, x4, y4 = line2
+
+                # Calcola i vettori direzionali
+                v1 = (x2 - x1, y2 - y1)
+                v2 = (x4 - x3, y4 - y3)
+                norm1 = math.sqrt(v1[0]**2 + v1[1]**2)
+                norm2 = math.sqrt(v2[0]**2 + v2[1]**2)
+                if norm1 == 0 or norm2 == 0:
+                    continue
+
+                # Calcola l'angolo in gradi tra i due vettori
+                dot = v1[0]*v2[0] + v1[1]*v2[1]
+                cos_angle = dot / (norm1 * norm2)
+                # Per evitare errori numerici
+                cos_angle = max(-1.0, min(1.0, cos_angle))
+                angle = math.degrees(math.acos(cos_angle))
+                if abs(angle - 90) <= angle_tolerance:
+                    aim_lines.append(raw_aim_lines[i])
+                    aim_lines.append(raw_aim_lines[j])
+        return aim_lines
 
 
 
@@ -409,12 +464,13 @@ class MatchingBallPool:
         raw_balls = []
         patch_size = 5
         half_patch = patch_size // 2
+        raw_aim_lines = []
 
         for (x, y, r) in circles[0]:
             if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS):
                 continue
 
-            # Estrai un patch piccolo per il colore (già in uso)
+            # Estrai un patch piccolo per il colore
             x1 = max(0, x - half_patch)
             y1 = max(0, y - half_patch)
             x2 = x + half_patch + 1
@@ -423,6 +479,7 @@ class MatchingBallPool:
             patch = self.image[y1:y2, x1:x2]
             color_obj = BPoolColor.get_color(patch)
             ball_obj = Ball(color_obj)
+            # Converti in coordinate globali
             x += self.X_MIN
             y += self.Y_MIN
             ball_obj.set_x(x)
@@ -432,17 +489,16 @@ class MatchingBallPool:
             # Estrai il ROI completo della palla (con margine)
             roi_coords = self.extract_ball_roi(ball_obj)
             if roi_coords is not None:
-                # Step 1: Controlla che il ROI mostri un interno bianco e bordi neri
+                # Controlla che il ROI mostri un interno bianco e bordi neri
                 if self.check_white_circle_with_black_border(roi_coords, r):
-                    # Step 2: Rileva la linea interna
+                    # Rileva la linea interna (direction_line) in coordinate globali
                     direction_line = self.detect_direction_line(roi_coords, r)
                     if direction_line is not None:
                         ball_obj.get_color().set_ball_type("cue aim")
                         line_x1, line_y1, line_x2, line_y2 = direction_line
-                        #ball_obj.direction_line = direction_line  # memorizza la linea
                         len_line = np.sqrt((line_x2 - line_x1) ** 2 + (line_y2 - line_y1) ** 2)
-
-                        print(f"Found cue aim ball at ({x}, {y}) with line {direction_line} len {len_line}")
+                        raw_aim_lines.append((x, y, direction_line, len_line))
+                        print(f"Found line at ({x}, {y}) {direction_line} len {len_line}")
             else:
                 print(f"ROI vuoto per la palla in ({x}, {y}) con raggio {r}")
 
@@ -452,7 +508,15 @@ class MatchingBallPool:
         nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
         filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=self.BALLS_MIN_DIST)
         print(f"Rilevate {len(filtered_balls)} palle (dopo NMS e filtraggio)")
-        return filtered_balls
+
+        # Chiama la funzione per trovare due linee perpendicolari tra loro (già definita altrove)
+        perp_lines = self.find_perpendicular_lines(raw_aim_lines)
+        if perp_lines is not None:
+            print("Found perpendicular lines:", perp_lines)
+        else:
+            print("No perpendicular lines found.")
+
+        return filtered_balls, perp_lines
 
     def abstract_pockets(self, circles):
         """
@@ -485,12 +549,13 @@ class MatchingBallPool:
             Pocket.reset()
             Color.reset()
             """
-        result = {"balls": [], "pockets": []}
+        result = {"balls": [], "aim_lines": [] , "pockets": []}
 
         # 1) Creazione e filtraggio palline
         ball_circles = vision_output["balls"]
-        final_balls = self.abstract_balls(ball_circles)
+        final_balls, final_aim_lines = self.abstract_balls(ball_circles)
         result["balls"] = final_balls
+        result["aim_lines"] = final_aim_lines
 
         # 2) Creazione e filtraggio buche
         pocket_circles = vision_output["pockets"]
@@ -502,6 +567,7 @@ class MatchingBallPool:
 
         self.__balls = result["balls"]
         self.__pockets = result["pockets"]
+        self.__aim_lines = result["aim_lines"]
 
         if self.validation is None and self.debug:
             print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
@@ -521,31 +587,46 @@ class MatchingBallPool:
 
         print(f"Balls show {len(self.__balls)}")
         print(f"Pockets show {len(self.__pockets)}")
+        print(f"Aim lines show {len(self.__aim_lines)}")
+        
 
-        # Disegna il rettangolo dell'area
-        cv2.rectangle(img_copy, (self.X_MIN, self.Y_MIN), (self.X_MAX, self.Y_MAX), (255, 0, 0), 5)  # Rosso
+        # Disegna il rettangolo dell'area (in rosso)
+        cv2.rectangle(img_copy, (self.X_MIN, self.Y_MIN), (self.X_MAX, self.Y_MAX), (255, 0, 0), 5)
 
-        # Disegna le palline (verdi)
+        # Disegna le palline (in verde)
         for ball in self.__balls:
             x, y, r = ball.get_x(), ball.get_y(), ball.get_r()
             cv2.circle(img_copy, (x, y), r, (0, 255, 0), 3)
             cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
-            # Testo con bordo nero
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)  # Bordo nero
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)  # Testo verde
+            # Testo con bordo nero e testo verde
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-        # Disegna i pocket (gialli)
+        # Disegna i pocket (in giallo)
         for pocket in self.__pockets:
             x, y, r = pocket.get_x(), pocket.get_y(), pocket.get_r()
             cv2.circle(img_copy, (x, y), r, (0, 255, 255), 3)
             cv2.circle(img_copy, (x, y), 4, (0, 0, 0), 1)
-            # Testo con bordo nero
-            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y+r), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)  # Bordo nero
-            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y+r), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)  # Testo giallo
+            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y + r),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+            cv2.putText(img_copy, f"P({x}, {y}) {r}", (x + r, y + r),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
+
+        # Disegna le aim_lines (in viola)
+        for aim_line in self.__aim_lines:
+            # Ogni aim_line è definita come (ball_center_x, ball_center_y, direction_line, len_line)
+            _, _, direction_line, _ = aim_line
+            x1_line, y1_line, x2_line, y2_line = direction_line
+            cv2.line(img_copy, (x1_line, y1_line), (x2_line, y2_line), (255, 0, 255), 3)
+
+        # Disegna le linee perpendicolari (se presenti) in rosso
+        if hasattr(self, '__perp_lines') and self.__perp_lines is not None:
+            for aim_line in self.__perp_lines:
+                _, _, direction_line, _ = aim_line
+                x1_line, y1_line, x2_line, y2_line = direction_line
+                cv2.line(img_copy, (x1_line, y1_line), (x2_line, y2_line), (0, 0, 255), 3)
 
         # Ridimensionamento per la visualizzazione
         resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
@@ -569,7 +650,3 @@ class MatchingBallPool:
 
         plt.tight_layout()
         plt.show()
-
-
-
-

@@ -8,6 +8,7 @@ def getImg(file, gray=False,color_conversion=None):
             im = cv2.imread(file)
         else:
             im = cv2.imread(file,cv2.IMREAD_GRAYSCALE)
+            
         if color_conversion is None:
             return im
         else:
