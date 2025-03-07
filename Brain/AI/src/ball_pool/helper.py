@@ -92,8 +92,10 @@ def persist_threshold(value):
 
 
 def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, iteration=0):
+    #screenshot,args.debugVision,vision,abstraction,iteration
 
-    matcher = MatchingBallPool(screenshot, debug, vision_val != None, iteration)
+    matcher = MatchingBallPool(screenshot_path=screenshot, debug=True, validation= 
+                               vision_val!= None, iteration=iteration)
     pool_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
     #balls_chart = {"balls": [], "pockets": []}
 

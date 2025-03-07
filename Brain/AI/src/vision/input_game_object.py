@@ -1,9 +1,10 @@
 from AI.src.vision.output_game_object import OutputRectangle
 class Circle:
-    def __init__(self,min_radius,canny_threshold, max_radius = None,param1 = None, param2 = None):
+    def __init__(self,min_radius,canny_threshold, max_radius = None,area = None):
         self.min_radius=min_radius
         self.canny_threshold=canny_threshold
         self.max_radius=max_radius
+        self.area = area
 
 class TemplateMatch:
     def __init__(self,templates:dict,thresholds:dict, find_all=True,regmax=True,grayscale=False):

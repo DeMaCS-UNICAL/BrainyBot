@@ -141,8 +141,12 @@ class MatchingBallPool:
         self.img_width = self.image.shape[1]
         
         # 4) Rilevamento cerchi delle palline
-        ball_circles = self.detect_balls_circles(detection_gray)
-
+        #ball_circles = self.detect_balls_circles(detection_gray)
+        ball_circles = self.finder._find_ball_pool(
+            Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
+                   (x,y,w,h))
+        )
+        print(f"Ball circles len {len(ball_circles)}")
         # 5) Rilevamento cerchi delle buche (puoi scegliere se usare detection_gray/detection_image o l'immagine intera)
         pocket_circles = self.detect_pockets_circles(detection_gray)
 
@@ -207,7 +211,7 @@ class MatchingBallPool:
             return True
         return False
     
-    def detect_direction_line(self, roi_coords, r):
+    def detect_direction_line(self, roi_coords, r, ball_x, ball_y):
         """
         Cerca di rilevare una linea interna (ad es. la linea di direzione) all'interno dell'ROI,
         che sia formata da pixel bianchi.
@@ -253,9 +257,18 @@ class MatchingBallPool:
                 
                 # Se la linea è formata prevalentemente da pixel bianchi (media >= 200)
                 # o ha lunghezza maggiore del candidato precedente, allora la selezioniamo
+                x = x_start + x1
+                y = y_start + y1
+                w = x_end + x1
+                h = y_end + y1 
+
+                print(f"x1: {x1} y1: {y1}-")
+                print(f"x:  {x}   y: {y} -- ")
                 if mean_white >= 200 or line_length > best_length:
+                    
                     best_length = line_length
-                    best_line = (x_start + x1, y_start + y1, x_end + x1, y_end + y1)
+                    best_line = (x, y, w, h)
+                    
             
             # Restituisce la linea se la lunghezza è adeguata
             if best_line is not None:
@@ -492,7 +505,7 @@ class MatchingBallPool:
                 # Controlla che il ROI mostri un interno bianco e bordi neri
                 if self.check_white_circle_with_black_border(roi_coords, r):
                     # Rileva la linea interna (direction_line) in coordinate globali
-                    direction_line = self.detect_direction_line(roi_coords, r)
+                    direction_line = self.detect_direction_line(roi_coords, r, x, y)
                     if direction_line is not None:
                         ball_obj.get_color().set_ball_type("cue aim")
                         line_x1, line_y1, line_x2, line_y2 = direction_line
@@ -512,7 +525,14 @@ class MatchingBallPool:
         # Chiama la funzione per trovare due linee perpendicolari tra loro (già definita altrove)
         perp_lines = self.find_perpendicular_lines(raw_aim_lines)
         if perp_lines is not None:
-            print("Found perpendicular lines:", perp_lines)
+            print("Found perpendicular lines:",)
+            reset = 0
+            for x,y, dir_line, len_line in perp_lines:
+                print(f"Found PERP line at ({x}, {y}) {direction_line} len {len_line}")
+                reset += 1
+                if reset == 2:
+                    print("\r")
+                    reset = 0
         else:
             print("No perpendicular lines found.")
 
@@ -587,7 +607,8 @@ class MatchingBallPool:
 
         print(f"Balls show {len(self.__balls)}")
         print(f"Pockets show {len(self.__pockets)}")
-        print(f"Aim lines show {len(self.__aim_lines)}")
+        if self.__aim_lines != None:
+            print(f"Aim lines show {len(self.__aim_lines)}")
         
 
         # Disegna il rettangolo dell'area (in rosso)

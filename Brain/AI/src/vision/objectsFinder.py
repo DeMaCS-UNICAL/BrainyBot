@@ -191,9 +191,10 @@ class ObjectsFinder:
         return objects_found
 
 
-    def is_circle(self,contour, circularity_threshold=0.85):
+    def is_circle(self,contour, circularity_threshold=0.5):
         area = cv2.contourArea(contour)
         perimeter = cv2.arcLength(contour, True)
+        
         
         if perimeter == 0:
             return False
@@ -343,6 +344,89 @@ class ObjectsFinder:
         if regex.match(elem):
             return elem
         else:
-            return None        
+            return None 
+        
 
-    
+    def bp_is_circle(self,contour, circularity_threshold=0.65):
+        hull = cv2.convexHull(contour)
+        area = cv2.contourArea(hull)
+        perimeter = cv2.arcLength(hull, True)
+        
+        
+        if perimeter == 0:
+            return False
+        circularity = 4 * 3.14159 * area / (perimeter * perimeter)
+        
+        return circularity >= circularity_threshold
+
+
+    def _find_ball_pool(self, search_info:Circle):
+        canny_threshold = search_info.canny_threshold
+        min_radius = search_info.min_radius
+        
+        gray = self.__gray
+        # threshold
+        # 1. Filtro Bilaterale per ridurre il rumore preservando i bordi
+        filtered = cv2.bilateralFilter(gray, d=3, sigmaColor=90, sigmaSpace=105)
+
+        # 2. Dilatazione per connettere eventuali spazi vuoti nei bordi
+        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
+        dilated = cv2.dilate(filtered, kernel_dilate, iterations=1)
+
+        # 3. Rilevamento dei bordi con Canny
+        #    Soglia inferiore = canny_threshold, superiore = canny_threshold * 2 (invece di 2.5)
+        canny = cv2.Canny(dilated, canny_threshold, int(canny_threshold * 1.5))
+
+        # 4. Operazione morfologica di Closing per chiudere lacune nei bordi
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
+        canny = cv2.morphologyEx(canny, cv2.MORPH_CLOSE, kernel)
+
+        # 5. Estrazione dei contorni
+        contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # 6. Filtraggio dei contorni che rappresentano palle (forme circolari)
+        #circles = [cnt for cnt in contours if self.bp_is_circle(cnt)]
+        circles = contours
+        if self.debug and not self.validation:
+            # Visualizzazione di debug: disegna tutti i contorni sull'immagine canny
+            #canny_color = cv2.cvtColor(canny, cv2.COLOR_GRAY2RGB)
+            #cv2.drawContours(canny_color, contours, -1, (255, 0, 0), 1)
+            """plt.imshow(canny_color)
+            plt.show()"""
+        gray_color = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+        balls = []
+        if circles is not None:
+            for circle in circles:
+                (center), r = cv2.minEnclosingCircle(circle)
+                if r < min_radius:
+                    continue
+
+                if search_info.min_radius is not None:
+                    max_radius = search_info.max_radius
+                    if r > max_radius:
+                        continue
+                
+                # Ottiene il colore del pixel al centro dalla versione già filtrata (o dalla immagine blurred se disponibile)
+                x = int(center[0])
+                y = int(center[1])
+                r = int(r)
+
+                if search_info.area != None:
+                    x_min, y_min, x_max, y_max = search_info.area
+                    if not (x_min <= x <= x_max and 
+                            y_min <= y <= y_max):
+                        continue
+
+                color = np.array(self.__blurred[y, x])
+                if self.debug and not self.validation:
+                    print(f"Found ball pool:({x}, {y}): {color}")
+                # Disegna il cerchio sull'immagine di output
+                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                balls.append(OutputCircle(x, y, r, color.tolist()))
+            if self.debug and not self.validation:
+                plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
+                plt.show()
+                cv2.waitKey(0)
+        return balls
