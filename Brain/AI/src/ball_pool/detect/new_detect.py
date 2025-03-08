@@ -39,9 +39,9 @@ class MatchingBallPool:
 
     # Parametri relativi al campo (se necessari per ulteriori controlli)
     X_MIN = 446
-    Y_MIN = 179
+    Y_MIN = 169
     X_MAX = 2067
-    Y_MAX = 1069
+    Y_MAX = 1073
 
     # Parametri per la rilevazione delle palline
     BALLS_MIN_DIST = 1
@@ -52,10 +52,10 @@ class MatchingBallPool:
 
     # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
     POCKETS_MIN_DIST = 400        # Distanza minima tra le buche
-    POCKETS_MIN_RADIUS = 34       # Raggio minimo in pixel per i pocket
-    POCKETS_MAX_RADIUS = 50       # Raggio massimo in pixel per i pocket
-    POCKET_PARAM1 = 28            # Soglia per Canny (pocket)
-    POCKET_PARAM2 = 26            # Soglia per HoughCircles (pocket)
+    POCKETS_MIN_RADIUS = 33       # Raggio minimo in pixel per i pocket
+    POCKETS_MAX_RADIUS = 50
+    POCKET_PARAM1 = 50            # Soglia per Canny (pocket)
+    POCKET_PARAM2 = 90            # Soglia per HoughCircles (pocket)
 
     def __init__(self, screenshot_path, debug=False, validation=False, iteration=0):
         self.screenshot = screenshot_path
@@ -131,24 +131,24 @@ class MatchingBallPool:
         if self.table_area is not None:
             x, y, w, h = self.table_area
             detection_gray = self.__gray[y:h, x:w]
-            detection_image = self.image[y:h, x:x]
-        else:
-            detection_gray = self.__gray
-            detection_image = self.image
-        
+    
         # Salviamo self.__output come immagine completa per la visualizzazione finale
         self.__output = self.image.copy()
         self.img_width = self.image.shape[1]
         
         # 4) Rilevamento cerchi delle palline
-        #ball_circles = self.detect_balls_circles(detection_gray)
-        ball_circles = self.finder._find_ball_pool(
+        #ball_circles = self.detect_balls_circles((x,y,w,h))
+        ball_circles = self.finder._find_balls_pool_contour(
             Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
                    (x,y,w,h))
         )
         print(f"Ball circles len {len(ball_circles)}")
-        # 5) Rilevamento cerchi delle buche (puoi scegliere se usare detection_gray/detection_image o l'immagine intera)
-        pocket_circles = self.detect_pockets_circles(detection_gray)
+        #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
+        pocket_circles = self.finder._find_pocket_pool_contour(
+            Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
+                   (x,y,w,h)
+                   )
+        )
 
         # Assegniamo per riferimento interno
         self.__balls = ball_circles
@@ -262,8 +262,8 @@ class MatchingBallPool:
                 w = x_end + x1
                 h = y_end + y1 
 
-                print(f"x1: {x1} y1: {y1}-")
-                print(f"x:  {x}   y: {y} -- ")
+                """print(f"x1: {x1} y1: {y1}-")
+                print(f"x:  {x}   y: {y} -- ")"""
                 if mean_white >= 200 or line_length > best_length:
                     
                     best_length = line_length
@@ -317,13 +317,14 @@ class MatchingBallPool:
 
 
 
-    def detect_balls_circles(self, detection_gray):
+    def find_ball_pool_houghCircles(self, area):
         """
         Esegue HoughCircles per rilevare i cerchi (palline).
         Ritorna una struttura circles (x, y, r).
         """
-        # Pre-elaborazione specifica (se necessaria)
-        blurred = cv2.GaussianBlur(detection_gray, (5, 5), 0)
+        x,y,w,h = area if area != None else 0
+        
+        blurred = cv2.GaussianBlur(self.__gray, (5, 5), 0)  
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 
@@ -337,15 +338,26 @@ class MatchingBallPool:
             minRadius=self.BALLS_MIN_RADIUS,
             maxRadius=self.BALLS_MAX_RADIUS
         )
+        filtered_circ = []
+        for c in circles:
+            i = c.get_x()
+            j = c.get_y()
+            r = c.get_r()
+            if (x<= i <= w and
+                    y <= j <= h):
+                continue
+            else:
+                filtered_circ.append()
 
         return circles
 
-    def detect_pockets_circles(self, detection_gray):
+    def find_pocket_pool_houghCircles(self,area):
         """
         Esegue HoughCircles per rilevare i cerchi (buche).
         Ritorna una struttura circles (x, y, r).
         """
-        blurred = cv2.GaussianBlur(detection_gray, (5, 5), 0)
+        x,y,w,h = area if area != None else 0
+        blurred = cv2.GaussianBlur(self.__gray, (5, 5), 0)  
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
 
@@ -359,13 +371,17 @@ class MatchingBallPool:
             minRadius=self.POCKETS_MIN_RADIUS,
             maxRadius=self.POCKETS_MAX_RADIUS
         )
-        h, w = detection_gray.shape[:2]
-        valid_circles = []
-        for (cx, cy, r) in circles[0]:
-            if 0 <= cx <= w+70 and 0 <= cy <= h+70:
-                valid_circles.append((cx, cy, r))
 
-        circles = np.array([valid_circles], dtype=np.uint16)
+        print(f"pocket circles befor filter {len(circles)}")
+
+        filtered_circ = []
+        for (cx,cy,r) in circles[0]:
+            
+            if (x<= cx <= w +50 and
+                    y <= cy <= h):
+                filtered_circ.append((cx,cy,r))
+
+        circles = np.array([filtered_circ], dtype=np.uint16)
         return circles
 
     def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=4):
@@ -473,28 +489,31 @@ class MatchingBallPool:
     def abstract_balls(self, circles):
         if circles is None:
             return []
-        circles = np.uint16(np.around(circles))
+        #circles = np.uint16(np.around(circles))
         raw_balls = []
         patch_size = 5
         half_patch = patch_size // 2
         raw_aim_lines = []
 
-        for (x, y, r) in circles[0]:
-            if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS):
+        for c in circles:
+            """if not (self.BALLS_MIN_RADIUS <= r <= self.BALLS_MAX_RADIUS):
                 continue
-
+"""
             # Estrai un patch piccolo per il colore
-            x1 = max(0, x - half_patch)
+            """x1 = max(0, x - half_patch)
             y1 = max(0, y - half_patch)
             x2 = x + half_patch + 1
             y2 = y + half_patch + 1
 
-            patch = self.image[y1:y2, x1:x2]
-            color_obj = BPoolColor.get_color(patch)
-            ball_obj = Ball(color_obj)
+            #patch = self.image[y1:y2, x1:x2]
+            color_obj = BPoolColor.get_color(patch)"""
+            x = c.x
+            y = c.y
+            r = c.radius
+            color = c.color
+            bpColor = BPoolColor(color)
+            ball_obj = Ball(bpColor)
             # Converti in coordinate globali
-            x += self.X_MIN
-            y += self.Y_MIN
             ball_obj.set_x(x)
             ball_obj.set_y(y)
             ball_obj.set_r(r)
@@ -518,9 +537,9 @@ class MatchingBallPool:
             raw_balls.append(ball_obj)
 
         # Applica NMS e filtra duplicati
-        nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
-        filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=self.BALLS_MIN_DIST)
-        print(f"Rilevate {len(filtered_balls)} palle (dopo NMS e filtraggio)")
+        #nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
+        #filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=self.BALLS_MIN_DIST)
+        print(f"Rilevate {len(raw_balls)} palle (dopo NMS e filtraggio)")
 
         # Chiama la funzione per trovare due linee perpendicolari tra loro (già definita altrove)
         perp_lines = self.find_perpendicular_lines(raw_aim_lines)
@@ -536,7 +555,7 @@ class MatchingBallPool:
         else:
             print("No perpendicular lines found.")
 
-        return filtered_balls, perp_lines
+        return raw_balls, perp_lines
 
     def abstract_pockets(self, circles):
         """
@@ -545,22 +564,23 @@ class MatchingBallPool:
         """
         if circles is None:
             return []
-        circles = np.uint16(np.around(circles))
+        #circles = np.uint16(np.around(circles))
         raw_pockets = []
-        for (x, y, r) in circles[0]:
+        for c in circles:
             # Se vuoi, controlla range di r
             # if r < self.POCKETS_MIN_RADIUS or r > self.POCKETS_MAX_RADIUS:
             #     continue
-            p = Pocket(x + self.X_MIN, y + self.Y_MIN)
-            p.set_r(r)
+
+            p = Pocket(c.x, c.y)
+            p.set_r(c.radius)
             raw_pockets.append(p)
 
-        nms_pockets = self.non_max_suppression(raw_pockets, overlapThresh=0.5)
+        """nms_pockets = self.non_max_suppression(raw_pockets, overlapThresh=0.5)
         filtered_pockets = self.filter_duplicate_circles(
             nms_pockets, CIRCLE_MIN_DISTANCE=self.POCKETS_MIN_DIST
-        )
-        print(f"Detected {len(filtered_pockets)} pockets (after NMS & filtering)")
-        return filtered_pockets
+        )"""
+        print(f"Detected {len(raw_pockets)} pockets (after NMS & filtering)")
+        return raw_pockets
     
 
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
@@ -607,8 +627,7 @@ class MatchingBallPool:
 
         print(f"Balls show {len(self.__balls)}")
         print(f"Pockets show {len(self.__pockets)}")
-        if self.__aim_lines != None:
-            print(f"Aim lines show {len(self.__aim_lines)}")
+        
         
 
         # Disegna il rettangolo dell'area (in rosso)
@@ -636,11 +655,13 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 2)
 
         # Disegna le aim_lines (in viola)
-        for aim_line in self.__aim_lines:
-            # Ogni aim_line è definita come (ball_center_x, ball_center_y, direction_line, len_line)
-            _, _, direction_line, _ = aim_line
-            x1_line, y1_line, x2_line, y2_line = direction_line
-            cv2.line(img_copy, (x1_line, y1_line), (x2_line, y2_line), (255, 0, 255), 3)
+        if self.__aim_lines != None:
+            print(f"Aim lines show {len(self.__aim_lines)}")
+            for aim_line in self.__aim_lines:
+                # Ogni aim_line è definita come (ball_center_x, ball_center_y, direction_line, len_line)
+                _, _, direction_line, _ = aim_line
+                x1_line, y1_line, x2_line, y2_line = direction_line
+                cv2.line(img_copy, (x1_line, y1_line), (x2_line, y2_line), (255, 0, 255), 3)
 
         # Disegna le linee perpendicolari (se presenti) in rosso
         if hasattr(self, '__perp_lines') and self.__perp_lines is not None:

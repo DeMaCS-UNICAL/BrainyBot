@@ -347,11 +347,14 @@ class ObjectsFinder:
             return None 
         
 
-    def bp_is_circle(self,contour, circularity_threshold=0.65):
+    def bp_is_circle(self,contour, circularity_threshold=0.65,area_threshold = None ):
         hull = cv2.convexHull(contour)
         area = cv2.contourArea(hull)
         perimeter = cv2.arcLength(hull, True)
         
+        if area_threshold != None:
+            if area < area_threshold:
+                return False
         
         if perimeter == 0:
             return False
@@ -360,14 +363,14 @@ class ObjectsFinder:
         return circularity >= circularity_threshold
 
 
-    def _find_ball_pool(self, search_info:Circle):
+    def _find_balls_pool_contour(self, search_info:Circle):
         canny_threshold = search_info.canny_threshold
         min_radius = search_info.min_radius
         
         gray = self.__gray
         # threshold
         # 1. Filtro Bilaterale per ridurre il rumore preservando i bordi
-        filtered = cv2.bilateralFilter(gray, d=3, sigmaColor=90, sigmaSpace=105)
+        filtered = cv2.bilateralFilter(gray, d=7, sigmaColor=90, sigmaSpace=105)
 
         # 2. Dilatazione per connettere eventuali spazi vuoti nei bordi
         kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
@@ -421,12 +424,105 @@ class ObjectsFinder:
                 if self.debug and not self.validation:
                     print(f"Found ball pool:({x}, {y}): {color}")
                 # Disegna il cerchio sull'immagine di output
-                cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                """cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
                 cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)"""
                 balls.append(OutputCircle(x, y, r, color.tolist()))
             if self.debug and not self.validation:
-                plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
+                """plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
                 plt.show()
-                cv2.waitKey(0)
+                cv2.waitKey(0)"""
+
+        balls = self.filter_duplicate_circles(balls)
         return balls
+    
+    def _find_pocket_pool_contour(self, search_info:Circle):
+            # Valori minimi di raggio, area e eventuale area di interesse
+        min_radius = search_info.min_radius
+
+        # 1. Pre-elaborazione: Conversione in grigio e Blur
+        gray = self.__gray
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+
+        # 2. Adaptive Thresholding
+        # Utilizza una dimensione del blocco (blockSize) più grande e un parametro costante maggiore
+        # per enfatizzare le zone scure (tipiche delle buche)
+        thresh = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, 77, 27
+        )
+        # Puoi sperimentare: se 15,5 non funziona bene, prova ad aumentare il blockSize (es. 17 o 19)
+        # o modificare il valore costante (5, 7, o 3)
+
+        # 3. Operazione morfologica: Closing per “riempire” piccoli gap
+        # Usa un kernel più piccolo per non unire troppo le aree adiacenti
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        
+        # 4. Estrazione dei contorni dalla maschera
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        pockets = []
+        #print(f"Len pocket circles {len(contours)}")
+        circles = [cnt for cnt in contours if self.bp_is_circle(cnt, circularity_threshold=0.35, area_threshold=70)]
+        #circles = contours
+        print(f"Len circles {len(circles)}")
+        if circles is not None:
+            for circle in circles:
+                (center), r = cv2.minEnclosingCircle(circle)
+                if r < min_radius:
+                    continue
+
+                if search_info.min_radius is not None:
+                    max_radius = search_info.max_radius
+                    if r > max_radius:
+                        continue
+                
+                # Ottiene il colore del pixel al centro dalla versione già filtrata (o dalla immagine blurred se disponibile)
+                x = int(center[0])
+                y = int(center[1])
+                r = int(r)
+
+                if search_info.area != None:
+                    x_min, y_min, x_max, y_max = search_info.area
+                    if not (x_min <= x <= x_max and 
+                            y_min <= y <= y_max):
+                        print("Scartata buca")
+                        continue
+
+                color = np.array(self.__blurred[y, x])
+                if self.debug and not self.validation:
+                    print(f"Found pocket at:({x}, {y}): {color}")
+                # Disegna il cerchio sull'immagine di output
+                """cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
+                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)"""
+                pockets.append(OutputCircle(x, y, r, color.tolist()))
+
+            if self.debug and not self.validation:
+                """plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
+                plt.show()
+                cv2.waitKey(0)"""
+
+        #pockets = self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=100)
+        return pockets
+    
+    def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=2):
+        """
+        Se due cerchi sono troppo vicini, elimina i duplicati.
+        """
+        filtered = []
+        for obj in circles:
+            x, y, r = obj.x, obj.y, obj.radius
+        
+            duplicate = False
+            for f_obj in filtered:
+                fx, fy, fr = f_obj.x, f_obj.y, f_obj.radius
+                dist = np.sqrt((float(x) - float(fx)) ** 2 + (float(y) - float(fy)) ** 2)
+
+                if dist < CIRCLE_MIN_DISTANCE or dist < r *0.7:
+                    duplicate = True
+                    break
+            if not duplicate:
+                filtered.append(obj)
+        return filtered
