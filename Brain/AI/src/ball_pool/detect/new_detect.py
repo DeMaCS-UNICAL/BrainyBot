@@ -135,37 +135,47 @@ class MatchingBallPool:
         self.img_width = self.image.shape[1]
 
 
-
-        
         # 4) Rilevamento cerchi delle palline
         #ball_circles = self.detect_balls_circles((x,y,w,h))
-        ball_circles = self.finder._find_balls_pool_contour(
-            Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
-                   (x,y,w,h))
-        )
-        
-        #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
-        pocket_circles = self.finder._find_pockets_pool_contour(
-            Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
+        target_ball = self.finder.detect_target_ball(
+            Circle(17, 100, 23,
                    (x,y,w,h)
                    )
         )
-        target_ball = self.finder.detect_target_ball(
-            Circle(17, 100, 23,
-                   (x,y,w,h))
+        print(f"Target ball: {target_ball}")
+        aim_line = None
+        tx, ty ,tr = None, None,None
+        if len(target_ball) != 0:
+            tx, ty, tr = target_ball[0]
+            aim_line = self.finder.detect_aim_line(target_ball_center=(tx, ty, tr))
+
+        #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
+        pocket_circles = self.finder._find_pockets_pool_contour(
+            Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
+                   (x,y,w,h),
+                   )
         )
 
-        self.__aim_lines = []
+        ball_circles = self.finder._find_balls_pool_contour(
+            Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
+                   (x,y,w,h),
+                   (tx, ty,tr) if len(target_ball) != 0 else None,
+                   )
+        )
+    
+
         #self.__stick = stick
 
         # Assegniamo per riferimento interno
         self.__balls = ball_circles
         self.__pockets = pocket_circles
         self.__target_balls = target_ball
+        self.__aim_line = aim_line
 
         print(f"{len(pocket_circles)} pockets")
         print(f"{len(target_ball)} target balls")
         print(f"{len(ball_circles)} balls")
+        print(f"{len(aim_line) if aim_line != None else None} aim line")
 
 
         return {"balls": ball_circles, "pockets": pocket_circles}
@@ -455,7 +465,7 @@ class MatchingBallPool:
         ball_circles = vision_output["balls"]
         final_balls = self.abstract_balls(ball_circles)
         result["balls"] = final_balls
-        result["aim_lines"] = self.__aim_lines
+        #result["aim_lines"] = self.__aim_lines
 
         # 2) Creazione e filtraggio buche
         pocket_circles = vision_output["pockets"]
@@ -545,7 +555,31 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
             cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
-            
+        
+        if self.__aim_line != None:
+            for line in self.__aim_line:
+                start_point = line["start_point"]
+                end_point = line["end_point"]
+                x1, y1 = start_point
+                x2, y2 = end_point
+
+                center = line["center"]
+                angle = line["angle"]
+                length = line["length"]
+
+                # Disegna la linea con colore giallo (BGR: 0, 255, 255) e spessore 3
+                cv2.line(img_copy, (x1, y1), (x2, y2), (0, 255, 255), 3)
+                
+                # Disegna il centro come un cerchietto per evidenziarlo
+                cv2.circle(img_copy, center, 5, (0, 0, 255), -1)
+                
+                # Scrive l'angolo vicino al punto di partenza della linea
+                cv2.putText(img_copy, f"Angle: {angle:.2f}", (x1, y1),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                
+                # Scrive la lunghezza 50 pixel più in basso rispetto al punto di partenza
+                cv2.putText(img_copy, f"Length: {length}", (x1, y1 + 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
         # Ridimensionamento per la visualizzazione
         resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)

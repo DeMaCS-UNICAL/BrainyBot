@@ -397,7 +397,14 @@ class ObjectsFinder:
                     if not (search_info.min_radius <= r <= search_info.max_radius):
                         #print("Scartata per radius")
                         continue
-                
+                    if search_info.not_this_coordinates != None:
+                        x_not, y_not, r_not = search_info.not_this_coordinates
+                        dist = np.sqrt((float(x) - float(x_not)) ** 2 + (float(y) - float(y_not)) ** 2)
+                        if dist <= r or dist <= r_not:
+                            print("Scartata per distanza")
+                            print("from",x,y,"to",x_not,y_not)
+                            continue
+
                 circularity = area / (math.pi * r * r)
                 if circularity < circularity_threshold:
                     continue
@@ -412,7 +419,7 @@ class ObjectsFinder:
             
                 balls.append(OutputCircle(x, y, r, color.tolist()))
 
-        balls = self.filter_duplicate_circles(balls)
+        balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=5)
         return balls
     
     def _find_pockets_pool_contour(self, search_info:Circle):
@@ -493,7 +500,7 @@ class ObjectsFinder:
                 fx, fy, fr = f_obj.x, f_obj.y, f_obj.radius
                 dist = np.sqrt((float(x) - float(fx)) ** 2 + (float(y) - float(fy)) ** 2)
 
-                if dist < CIRCLE_MIN_DISTANCE or dist < r *0.7:
+                if dist < CIRCLE_MIN_DISTANCE or dist < r or dist < fr:
                     duplicate = True
                     break
             if not duplicate:
@@ -559,13 +566,13 @@ class ObjectsFinder:
 
                 # Verifichiamo che sia un contorno esterno (padre = -1) che ha un figlio
             if hierarchy[i][3] == -1:  # Se ha un genitore, non è un contorno esterno
-                print("Non ha genitore")
+                #print("Non ha genitore")
                 continue
 
             # Se il contorno non ha un "figlio", non consideriamo questo contorno come candidato
-            """if hierarchy[i][2] == -1:
-                print("Non ha figlio")
-                continue"""
+            if hierarchy[i][2] == -1:
+                #print("Non ha figlio")
+                continue
             
             # Filtraggio per area minima
             
@@ -624,47 +631,113 @@ class ObjectsFinder:
         
         return candidates
 
-
-
     
-    
-    def _find_white_lines(self, area = None):
+    def detect_aim_line(self, target_ball_center, min_line_length=50, max_line_width=20,
+                         color_lower=None, color_upper=None):
         """
-        Rileva le linee bianche (mirino) utilizzando una combinazione di filtraggio per il colore bianco,
-        operazioni morfologiche, Canny e HoughLinesP.
+        Rileva la linea di mira nel gioco di biliardo più vicina alla palla target.
+        
+        Args:
+            image: Immagine BGR originale
+            target_ball_center: Coordinate (x, y) del centro della palla target
+            min_line_length: Lunghezza minima della linea di mira
+            max_line_width: Larghezza massima della linea di mira
+            color_lower: Valore HSV inferiore per il filtraggio del colore (opzionale)
+            color_upper: Valore HSV superiore per il filtraggio del colore (opzionale)
+        
+        Returns:
+            La linea di mira più vicina alla palla target
         """
-        # Converti in HSV per facilitare l'isolamento del bianco
-        hsv = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2HSV)
-        # Definisci una maschera per il bianco (puoi adattare questi valori in base alle condizioni di illuminazione)
-        lower_white = np.array([0, 0, 200])
-        upper_white = np.array([180, 50, 255])
-        mask = cv2.inRange(hsv, lower_white, upper_white)
+        # Converti l'immagine in scala di grigi
+        gray = self.__gray
         
-        # Operazioni morfologiche per eliminare piccoli rumori e unire segmenti vicini
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
         
-        # Rilevamento dei bordi
-        edges = cv2.Canny(mask, 40, 160, apertureSize=3)
+        # Altrimenti procediamo con edge detection su immagine in scala di grigi
+        # Applica un lieve blur per ridurre il rumore
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         
-        # Rilevamento delle linee con HoughLinesP
-        # I parametri possono essere adattati in base alla risoluzione e alle caratteristiche dell'immagine
-        lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180, threshold=90, 
-                                minLineLength=12, maxLineGap=50)
+        # Applica edge detection
+        edges = cv2.Canny(blurred, 50, 150)
         
-        output_lines = []
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                if area != None:
-                    x1_area,y1_area, x2_area, y2_area = area 
-                    if not (x1_area <= x1 <= x2_area and
-                            y1_area <= y2 <= y2_area  ):
-                        continue
+        # Applica operazioni morfologiche per connettere i bordi
+        kernel = np.ones((3, 3), np.uint8)
+        processed = cv2.dilate(edges, kernel, iterations=1)
+        
+        # Trova i contorni
+        contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        candidate_lines = []
+        
+        for cnt in contours:
+            # Calcola l'area e il rettangolo che racchiude il contorno
+            x, y, w, h = cv2.boundingRect(cnt)
+            
+            # Calcola il rapporto di aspetto del rettangolo
+            aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else 0
+            
+            # Verifica se ha caratteristiche di una linea:
+            # 1. Deve essere abbastanza lungo
+            # 2. Deve avere un rapporto di aspetto alto (lungo e sottile)
+            # 3. La larghezza non deve superare max_line_width
+            if (max(w, h) >= min_line_length and 
+                aspect_ratio > 3.0 and
+                min(w, h) <= max_line_width):
                 
-                output_lines.append((x1, y1, x2, y2))
-                # Disegna la linea sull'immagine di output per il debug
-                cv2.line(self.__img_matrix, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # Calcola una rappresentazione migliore della linea
+                vx, vy, x0, y0 = cv2.fitLine(cnt, cv2.DIST_L2, 0, 0.01, 0.01)
+                
+                # Estendi la linea in entrambe le direzioni
+                length = max(w, h) * 1.5  # Estendi oltre il contorno rilevato
+                
+                # Calcola i punti finali della linea
+                pt1 = (int(x0 - vx * length), int(y0 - vy * length))
+                pt2 = (int(x0 + vx * length), int(y0 + vy * length))
+                
+                # Calcola il centro del contorno della linea
+                center_x = x0
+                center_y = y0
+                
+                # Calcola la distanza dal centro della palla target
+                distance_to_target = np.sqrt((center_x - target_ball_center[0])**2 + 
+                                            (center_y - target_ball_center[1])**2)
+                
+                # Salva informazioni sulla linea e la sua distanza dalla palla target
+                line_info = {
+                    "start_point": pt1,
+                    "end_point": pt2,
+                    "center": (int(center_x), int(center_y)),
+                    "distance_to_target": distance_to_target,
+                    "angle": math.degrees(math.atan2(vy, vx)),
+                    "width": min(w, h),
+                    "length": max(w, h),
+                    "contour": cnt
+                }
+                
+                candidate_lines.append(line_info)
+        print(f"Lines found: {len(candidate_lines)}")
         
-        return output_lines
+        # Ordina le linee candidate in base alla distanza dalla palla target
+        candidate_lines.sort(key=lambda x: x["distance_to_target"])
+        
+        return candidate_lines
 
+    def is_point_near_line(point, line_start, line_end, threshold=10):
+        """
+        Determina se un punto è vicino a una linea entro una soglia.
+        Usa la formula della distanza punto-linea.
+        """
+        x, y = point
+        x1, y1 = line_start
+        x2, y2 = line_end
+        
+        # Calcola la distanza perpendicolare
+        num = abs((y2-y1)*x - (x2-x1)*y + x2*y1 - y2*x1)
+        den = np.sqrt((y2-y1)**2 + (x2-x1)**2)
+        
+        if den == 0:
+            # In caso di divisione per zero, calcola la distanza dal punto
+            distance = np.sqrt((x-x1)**2 + (y-y1)**2)
+        else:
+            distance = num / den
+        
+        return distance <= threshold
