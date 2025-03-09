@@ -364,77 +364,55 @@ class ObjectsFinder:
         return circularity >= circularity_threshold
 
 
-    def _find_balls_pool_contour(self, search_info:Circle):
-        canny_threshold = search_info.canny_threshold
-        min_radius = search_info.min_radius
+    def _find_balls_pool_contour(self, search_info:Circle = None, area_threshold=50, circularity_threshold=0.24):
         
         gray = self.__gray
-        # threshold
-        # 1. Filtro Bilaterale per ridurre il rumore preservando i bordi
-        filtered = cv2.bilateralFilter(gray, d=9, sigmaColor=8, sigmaSpace=100)
-
-        # 2. Dilatazione per connettere eventuali spazi vuoti nei bordi
-        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        dilated = cv2.dilate(filtered, kernel_dilate, iterations=1)
-
-        # 3. Rilevamento dei bordi con Canny
-        #    Soglia inferiore = canny_threshold, superiore = canny_threshold * 2 (invece di 2.5)
-        canny = cv2.Canny(dilated, canny_threshold, int(canny_threshold * 2.0))
-
-        # 4. Operazione morfologica di Closing per chiudere lacune nei bordi
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
-        canny = cv2.morphologyEx(canny, cv2.MORPH_CLOSE, kernel)
-
-        # 5. Estrazione dei contorni
-        contours, _ = cv2.findContours(canny, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-        # 6. Filtraggio dei contorni che rappresentano palle (forme circolari)
-        #circles = [cnt for cnt in contours if self.bp_is_circle(cnt)]
-        circles = contours
-        if self.debug and not self.validation:
-            # Visualizzazione di debug: disegna tutti i contorni sull'immagine canny
-            #canny_color = cv2.cvtColor(canny, cv2.COLOR_GRAY2RGB)
-            #cv2.drawContours(canny_color, contours, -1, (255, 0, 0), 1)
-            """plt.imshow(canny_color)
-            plt.show()"""
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+        # Thresholding adattivo per rilevare bordi e forme
+        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY_INV, 11, 2)
+        
+        # Trova i contorni
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        hierarchy = hierarchy[0]
+        
         gray_color = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
         balls = []
-        if circles is not None:
-            for circle in circles:
-                (center), r = cv2.minEnclosingCircle(circle)
-                if r < min_radius:
-                    continue
-
-                if search_info.min_radius is not None:
-                    max_radius = search_info.max_radius
-                    if r > max_radius:
-                        continue
-                
+        if contours is not None:
+            for i, cnt in enumerate(contours):
+                area = cv2.contourArea(cnt)
+                (center), r = cv2.minEnclosingCircle(cnt)                
                 # Ottiene il colore del pixel al centro dalla versione già filtrata (o dalla immagine blurred se disponibile)
                 x = int(center[0])
                 y = int(center[1])
                 r = int(r)
-
-                if search_info.area != None:
+                    
+                if search_info != None:
                     x_min, y_min, x_max, y_max = search_info.area
                     if not (x_min  <= x <= x_max and 
                             y_min +70 <= y <= y_max -70):
                         continue
 
+                    if not (search_info.min_radius <= r <= search_info.max_radius):
+                        #print("Scartata per radius")
+                        continue
+                
+                circularity = area / (math.pi * r * r)
+                if circularity < circularity_threshold:
+                    continue
+                
+                # Controlla se non è un contorno esterno
+                if hierarchy[i][3] == -1:  # Se non ha un genitore, è esterno
+                    continue
+
                 color = np.array(self.__blurred[y, x])
                 if self.debug and not self.validation:
                     print(f"Found ball pool:({x}, {y}): {color}")
-                # Disegna il cerchio sull'immagine di output
-                """cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)"""
+            
                 balls.append(OutputCircle(x, y, r, color.tolist()))
-            if self.debug and not self.validation:
-                """plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
-                plt.show()
-                cv2.waitKey(0)"""
 
-        #balls = self.filter_duplicate_circles(balls)
+        balls = self.filter_duplicate_circles(balls)
         return balls
     
     def _find_pockets_pool_contour(self, search_info:Circle):

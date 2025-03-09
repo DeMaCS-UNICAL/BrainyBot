@@ -520,8 +520,6 @@ class MatchingBallPool:
                 cv2.rectangle(img_copy, (x, y), (x+width, y+heigth), (255, 255, 255), 5)
         """
 
-        
-
         # Disegna le aim_lines (in viola)
         """if self.__aim_lines != None:
             print(f"Aim lines show {len(self.__aim_lines)}")
@@ -543,9 +541,9 @@ class MatchingBallPool:
             cv2.circle(img_copy, (x, y), r, (60,20,220), 4)
             cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
             # Testo con bordo nero e testo verde
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y -50),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
             
 
