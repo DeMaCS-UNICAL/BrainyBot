@@ -13,6 +13,7 @@ from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
 from AI.src.vision.output_game_object import *
 from AI.src.abstraction.objectsMatrix import *
+import math
 
 
 class ObjectsFinder:
@@ -370,15 +371,15 @@ class ObjectsFinder:
         gray = self.__gray
         # threshold
         # 1. Filtro Bilaterale per ridurre il rumore preservando i bordi
-        filtered = cv2.bilateralFilter(gray, d=7, sigmaColor=90, sigmaSpace=105)
+        filtered = cv2.bilateralFilter(gray, d=9, sigmaColor=8, sigmaSpace=100)
 
         # 2. Dilatazione per connettere eventuali spazi vuoti nei bordi
-        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
+        kernel_dilate = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         dilated = cv2.dilate(filtered, kernel_dilate, iterations=1)
 
         # 3. Rilevamento dei bordi con Canny
         #    Soglia inferiore = canny_threshold, superiore = canny_threshold * 2 (invece di 2.5)
-        canny = cv2.Canny(dilated, canny_threshold, int(canny_threshold * 1.5))
+        canny = cv2.Canny(dilated, canny_threshold, int(canny_threshold * 2.0))
 
         # 4. Operazione morfologica di Closing per chiudere lacune nei bordi
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4, 4))
@@ -416,8 +417,8 @@ class ObjectsFinder:
 
                 if search_info.area != None:
                     x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min <= x <= x_max and 
-                            y_min <= y <= y_max):
+                    if not (x_min  <= x <= x_max and 
+                            y_min +70 <= y <= y_max -70):
                         continue
 
                 color = np.array(self.__blurred[y, x])
@@ -433,10 +434,10 @@ class ObjectsFinder:
                 plt.show()
                 cv2.waitKey(0)"""
 
-        balls = self.filter_duplicate_circles(balls)
+        #balls = self.filter_duplicate_circles(balls)
         return balls
     
-    def _find_pocket_pool_contour(self, search_info:Circle):
+    def _find_pockets_pool_contour(self, search_info:Circle):
             # Valori minimi di raggio, area e eventuale area di interesse
         min_radius = search_info.min_radius
 
@@ -457,7 +458,7 @@ class ObjectsFinder:
         # 3. Operazione morfologica: Closing per “riempire” piccoli gap
         # Usa un kernel più piccolo per non unire troppo le aree adiacenti
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
         
         # 4. Estrazione dei contorni dalla maschera
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -466,7 +467,6 @@ class ObjectsFinder:
         #print(f"Len pocket circles {len(contours)}")
         circles = [cnt for cnt in contours if self.bp_is_circle(cnt, circularity_threshold=0.35, area_threshold=70)]
         #circles = contours
-        print(f"Len circles {len(circles)}")
         if circles is not None:
             for circle in circles:
                 (center), r = cv2.minEnclosingCircle(circle)
@@ -487,16 +487,11 @@ class ObjectsFinder:
                     x_min, y_min, x_max, y_max = search_info.area
                     if not (x_min <= x <= x_max and 
                             y_min <= y <= y_max):
-                        print("Scartata buca")
+                        #print("Scartata buca")
                         continue
 
                 color = np.array(self.__blurred[y, x])
-                if self.debug and not self.validation:
-                    print(f"Found pocket at:({x}, {y}): {color}")
-                # Disegna il cerchio sull'immagine di output
-                """cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)"""
+                    
                 pockets.append(OutputCircle(x, y, r, color.tolist()))
 
             if self.debug and not self.validation:
@@ -504,10 +499,10 @@ class ObjectsFinder:
                 plt.show()
                 cv2.waitKey(0)"""
 
-        #pockets = self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=100)
+        pockets = self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
         return pockets
     
-    def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=2):
+    def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=10):
         """
         Se due cerchi sono troppo vicini, elimina i duplicati.
         """
@@ -526,3 +521,172 @@ class ObjectsFinder:
             if not duplicate:
                 filtered.append(obj)
         return filtered
+    
+
+
+    def detect_target_ball(self, 
+                           search_info:Circle = None,
+                       area_threshold=50, 
+                       circularity_threshold=0.4,
+                       border_intensity_threshold=25,   # soglia massima per il bordo (nero)
+                       inner_intensity_threshold=105):  # soglia minima per il bianco
+        """
+        Rileva la palla mirino in un'immagine, caratterizzata da:
+        - un contorno esterno (nero) sottile,
+        - un interno (bianco).
+
+        Il metodo sfrutta la gerarchia dei contorni per individuare contorni che possiedono
+        un "figlio": il contorno esterno (nero) che racchiude un'area interna (bianca).
+
+        Parametri:
+        area_threshold: area minima del contorno esterno.
+        circularity_threshold: rapporto minimo (area_contorno / area_cerchio inscritto) per considerare
+                                la forma sufficientemente circolare.
+        border_intensity_threshold: valore massimo medio (0-255) lungo il bordo (da aspettarsi scuro).
+        inner_intensity_threshold: valore minimo medio (0-255) all'interno (da aspettarsi chiaro).
+
+        Ritorna:
+        Una lista di tuple (x, y, r) per ogni candidato palla mirino rilevato.
+        """
+        # Utilizzo dell'immagine in scala di grigi già presente in self.__gray
+        gray = self.__gray.copy()
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # Utilizziamo la sogliatura automatica (Otsu) per ottenere una immagine binaria.
+        ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        # Troviamo i contorni e la relativa gerarchia
+        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return []
+        hierarchy = hierarchy[0]  # si lavora sulla prima (ed unica) dimensione della gerarchia
+        
+        candidates = []
+        
+        for i, cnt in enumerate(contours):
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            area_outer = cv2.contourArea(cnt)
+            #print(f"x {x}, y {y}, r {radius}")
+
+            if search_info != None:
+                x_min, y_min, x_max, y_max = search_info.area
+                if not (x_min <= x <= x_max and
+                        y_min <= y <= y_max):
+                    #print("Scartata per area")
+                    continue
+
+                if not (search_info.min_radius <= radius <= search_info.max_radius):
+                    #print("Scartata per radius")
+                    continue
+
+                # Verifichiamo che sia un contorno esterno (padre = -1) che ha un figlio
+            if hierarchy[i][3] == -1:  # Se ha un genitore, non è un contorno esterno
+                print("Non ha genitore")
+                continue
+
+            # Se il contorno non ha un "figlio", non consideriamo questo contorno come candidato
+            """if hierarchy[i][2] == -1:
+                print("Non ha figlio")
+                continue"""
+            
+            # Filtraggio per area minima
+            
+            if area_outer < area_threshold:
+                #print("Scartata per area")
+                continue
+            
+            # Verifica della forma circolare: rapporto area_contorno / area del cerchio inscritto
+            
+            if radius <= 0:
+                #print("Scartata per radius")
+                continue
+            
+            circle_area = np.pi * (radius ** 2)
+            circ_ratio = area_outer / circle_area
+            if circ_ratio < circularity_threshold:
+                #print("Scartata per circularity")
+                continue
+            
+            # Recupero del contorno interno (si prende il primo figlio)
+            inner_index = hierarchy[i][2]
+            inner_cnt = contours[inner_index]
+
+            (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
+            
+            # Creazione di una maschera per il contorno esterno
+            mask_outer = np.zeros_like(gray)
+            cv2.drawContours(mask_outer, [cnt], -1, 255, -1)
+
+            # Creazione della maschera per il contorno interno
+            mask_inner = np.zeros_like(gray)
+            cv2.drawContours(mask_inner, [inner_cnt], -1, 255, -1)
+            
+            # La zona del bordo è data dalla differenza tra il contorno esterno e quello interno
+            mask_border = cv2.subtract(mask_outer, mask_inner)
+            
+            # Calcolo dell'intensità media lungo il bordo e all'interno
+            mean_border = cv2.mean(gray, mask=mask_border)[0]
+            mean_inner = cv2.mean(gray, mask=mask_inner)[0]
+            
+            # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
+            #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
+            if mean_border > border_intensity_threshold: #25
+                """print("Scartata per mean_border")
+                print("----------------------------")
+                """
+                continue
+            if mean_inner < inner_intensity_threshold: #120
+                """print("Scartata per mean_inner")
+                print("----------------------------")"""
+
+                continue
+            candidate = (int(x), int(y), int(radius))
+            
+            candidates.append(candidate)
+        
+        return candidates
+
+
+
+    
+    
+    def _find_white_lines(self, area = None):
+        """
+        Rileva le linee bianche (mirino) utilizzando una combinazione di filtraggio per il colore bianco,
+        operazioni morfologiche, Canny e HoughLinesP.
+        """
+        # Converti in HSV per facilitare l'isolamento del bianco
+        hsv = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2HSV)
+        # Definisci una maschera per il bianco (puoi adattare questi valori in base alle condizioni di illuminazione)
+        lower_white = np.array([0, 0, 200])
+        upper_white = np.array([180, 50, 255])
+        mask = cv2.inRange(hsv, lower_white, upper_white)
+        
+        # Operazioni morfologiche per eliminare piccoli rumori e unire segmenti vicini
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+        
+        # Rilevamento dei bordi
+        edges = cv2.Canny(mask, 40, 160, apertureSize=3)
+        
+        # Rilevamento delle linee con HoughLinesP
+        # I parametri possono essere adattati in base alla risoluzione e alle caratteristiche dell'immagine
+        lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/180, threshold=90, 
+                                minLineLength=12, maxLineGap=50)
+        
+        output_lines = []
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                if area != None:
+                    x1_area,y1_area, x2_area, y2_area = area 
+                    if not (x1_area <= x1 <= x2_area and
+                            y1_area <= y2 <= y2_area  ):
+                        continue
+                
+                output_lines.append((x1, y1, x2, y2))
+                # Disegna la linea sull'immagine di output per il debug
+                cv2.line(self.__img_matrix, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        
+        return output_lines
+

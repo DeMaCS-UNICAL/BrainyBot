@@ -19,6 +19,7 @@ class OutputTemplateMatch(OutputGameObject):
 
     def __str__(self) -> str:
         return self.label
+    
 
 class OutputRectangle(OutputGameObject):
     def __init__(self,x,y,width,heigth):
@@ -34,6 +35,7 @@ class OutputRectangleWithHierarchy:
 class OutputText:
     def __init__(self,text):
         self.text=text
+    
 
 class OutputContainer(OutputGameObject):
     def __init__(self, x,y,contour):

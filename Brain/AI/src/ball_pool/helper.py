@@ -23,7 +23,6 @@ def asp_input(balls_chart):
     facts = []
 
     # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
-    print("Balls:", len(balls))
     piena = 0
     nera = 0
     mezza = 0
