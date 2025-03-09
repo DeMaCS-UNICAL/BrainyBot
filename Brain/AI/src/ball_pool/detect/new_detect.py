@@ -3,6 +3,7 @@ import os
 import re
 import cv2
 import numpy as np
+import math
 from matplotlib import pyplot as plt
 import sys 
 from AI.src.ball_pool.constants import SPRITE_PATH,SRC_PATH
@@ -142,13 +143,12 @@ class MatchingBallPool:
                    (x,y,w,h)
                    )
         )
-        print(f"Target ball: {target_ball}")
+        
         aim_line = None
         tx, ty ,tr = None, None,None
         if len(target_ball) != 0:
-            tx, ty, tr = target_ball[0]
-            aim_line = self.finder.detect_aim_line(target_ball_center=(tx, ty, tr))
-
+            tx, ty, tr = target_ball[0] #target_ball_center=(tx, ty, tr)
+            aim_line = self.finder.detect_aim_lines()
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
             Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
@@ -162,8 +162,6 @@ class MatchingBallPool:
                    (tx, ty,tr) if len(target_ball) != 0 else None,
                    )
         )
-    
-
         #self.__stick = stick
 
         # Assegniamo per riferimento interno
@@ -556,30 +554,14 @@ class MatchingBallPool:
             cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
         
-        if self.__aim_line != None:
+        if self.__aim_line is not None:
             for line in self.__aim_line:
-                start_point = line["start_point"]
-                end_point = line["end_point"]
-                x1, y1 = start_point
-                x2, y2 = end_point
+                x1, y1, x2, y2 = line["bounding_rect"]
+                cv2.line(img_copy, (x1, y1), (x2, y2), (255, 0, 255), 3)
+                cv2.putText(img_copy, f"({x1}, {y1}) - ({x2}, {y2})", (x1, y1),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+                
 
-                center = line["center"]
-                angle = line["angle"]
-                length = line["length"]
-
-                # Disegna la linea con colore giallo (BGR: 0, 255, 255) e spessore 3
-                cv2.line(img_copy, (x1, y1), (x2, y2), (0, 255, 255), 3)
-                
-                # Disegna il centro come un cerchietto per evidenziarlo
-                cv2.circle(img_copy, center, 5, (0, 0, 255), -1)
-                
-                # Scrive l'angolo vicino al punto di partenza della linea
-                cv2.putText(img_copy, f"Angle: {angle:.2f}", (x1, y1),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-                
-                # Scrive la lunghezza 50 pixel più in basso rispetto al punto di partenza
-                cv2.putText(img_copy, f"Length: {length}", (x1, y1 + 50),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
 
         # Ridimensionamento per la visualizzazione
         resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)

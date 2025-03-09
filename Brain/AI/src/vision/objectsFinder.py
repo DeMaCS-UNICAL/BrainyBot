@@ -631,113 +631,49 @@ class ObjectsFinder:
         
         return candidates
 
-    
-    def detect_aim_line(self, target_ball_center, min_line_length=50, max_line_width=20,
-                         color_lower=None, color_upper=None):
+
+    def detect_aim_lines(self, min_line_length=50, max_line_gap=5, white_threshold=200):
         """
-        Rileva la linea di mira nel gioco di biliardo più vicina alla palla target.
-        
-        Args:
-            image: Immagine BGR originale
-            target_ball_center: Coordinate (x, y) del centro della palla target
-            min_line_length: Lunghezza minima della linea di mira
-            max_line_width: Larghezza massima della linea di mira
-            color_lower: Valore HSV inferiore per il filtraggio del colore (opzionale)
-            color_upper: Valore HSV superiore per il filtraggio del colore (opzionale)
-        
-        Returns:
-            La linea di mira più vicina alla palla target
+        Rileva le linee mirino bianche di 8 Ball Pool.
+
+        Parametri:
+        - min_line_length: lunghezza minima per considerare un segmento valido.
+        - max_line_gap: distanza massima tra segmenti per considerarli uniti.
+        - white_threshold: soglia minima per considerare un pixel bianco (0-255).
+
+        Ritorna:
+        Una lista di tuple (x1, y1, x2, y2) con le coordinate delle linee rilevate.
         """
-        # Converti l'immagine in scala di grigi
-        gray = self.__gray
-        
-        
-        # Altrimenti procediamo con edge detection su immagine in scala di grigi
-        # Applica un lieve blur per ridurre il rumore
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Applica edge detection
-        edges = cv2.Canny(blurred, 50, 150)
-        
-        # Applica operazioni morfologiche per connettere i bordi
-        kernel = np.ones((3, 3), np.uint8)
-        processed = cv2.dilate(edges, kernel, iterations=1)
-        
-        # Trova i contorni
-        contours, _ = cv2.findContours(processed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        candidate_lines = []
+        gray = self.__gray.copy()
+
+        # Miglioriamo il contrasto con equalizzazione
+        gray = cv2.equalizeHist(gray)
+
+        # Applicare un filtro di Sobel per rilevare bordi chiari
+        sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        sobel = cv2.magnitude(sobel_x, sobel_y)
+        sobel = np.uint8(sobel)
+
+        # Soglia binaria per isolare le parti bianche
+        _, thresh = cv2.threshold(sobel, white_threshold, 255, cv2.THRESH_BINARY)
+
+        # Trovare i contorni
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        lines = []
         
         for cnt in contours:
-            # Calcola l'area e il rettangolo che racchiude il contorno
-            x, y, w, h = cv2.boundingRect(cnt)
-            
-            # Calcola il rapporto di aspetto del rettangolo
-            aspect_ratio = max(w, h) / min(w, h) if min(w, h) > 0 else 0
-            
-            # Verifica se ha caratteristiche di una linea:
-            # 1. Deve essere abbastanza lungo
-            # 2. Deve avere un rapporto di aspetto alto (lungo e sottile)
-            # 3. La larghezza non deve superare max_line_width
-            if (max(w, h) >= min_line_length and 
-                aspect_ratio > 3.0 and
-                min(w, h) <= max_line_width):
-                
-                # Calcola una rappresentazione migliore della linea
-                vx, vy, x0, y0 = cv2.fitLine(cnt, cv2.DIST_L2, 0, 0.01, 0.01)
-                
-                # Estendi la linea in entrambe le direzioni
-                length = max(w, h) * 1.5  # Estendi oltre il contorno rilevato
-                
-                # Calcola i punti finali della linea
-                pt1 = (int(x0 - vx * length), int(y0 - vy * length))
-                pt2 = (int(x0 + vx * length), int(y0 + vy * length))
-                
-                # Calcola il centro del contorno della linea
-                center_x = x0
-                center_y = y0
-                
-                # Calcola la distanza dal centro della palla target
-                distance_to_target = np.sqrt((center_x - target_ball_center[0])**2 + 
-                                            (center_y - target_ball_center[1])**2)
-                
-                # Salva informazioni sulla linea e la sua distanza dalla palla target
-                line_info = {
-                    "start_point": pt1,
-                    "end_point": pt2,
-                    "center": (int(center_x), int(center_y)),
-                    "distance_to_target": distance_to_target,
-                    "angle": math.degrees(math.atan2(vy, vx)),
-                    "width": min(w, h),
-                    "length": max(w, h),
-                    "contour": cnt
-                }
-                
-                candidate_lines.append(line_info)
-        print(f"Lines found: {len(candidate_lines)}")
-        
-        # Ordina le linee candidate in base alla distanza dalla palla target
-        candidate_lines.sort(key=lambda x: x["distance_to_target"])
-        
-        return candidate_lines
+            # Approssimiamo il contorno a una linea retta
+            epsilon = 0.02 * cv2.arcLength(cnt, True)
+            approx = cv2.approxPolyDP(cnt, epsilon, False)
 
-    def is_point_near_line(point, line_start, line_end, threshold=10):
-        """
-        Determina se un punto è vicino a una linea entro una soglia.
-        Usa la formula della distanza punto-linea.
-        """
-        x, y = point
-        x1, y1 = line_start
-        x2, y2 = line_end
-        
-        # Calcola la distanza perpendicolare
-        num = abs((y2-y1)*x - (x2-x1)*y + x2*y1 - y2*x1)
-        den = np.sqrt((y2-y1)**2 + (x2-x1)**2)
-        
-        if den == 0:
-            # In caso di divisione per zero, calcola la distanza dal punto
-            distance = np.sqrt((x-x1)**2 + (y-y1)**2)
-        else:
-            distance = num / den
-        
-        return distance <= threshold
+            if len(approx) >= 2:  # Se ci sono almeno due punti, consideriamo una linea
+                x1, y1 = approx[0][0]
+                x2, y2 = approx[-1][0]
+                
+                # Verifica della lunghezza della linea
+                if np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) >= min_line_length:
+                    lines.append((x1, y1, x2, y2))
+
+        return lines
