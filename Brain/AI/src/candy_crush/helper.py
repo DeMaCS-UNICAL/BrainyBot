@@ -15,9 +15,11 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
 from AI.src.constants import RESOURCES_PATH
+from AI.src.constants import BENCHMARK_PATH
+from AI.src.benchmark.benchmark_utils import BenchmarkUtils
 from AI.src.candy_crush.constants import SRC_PATH
-
 from languages.asp.asp_mapper import ASPMapper
+
 class CCSValidation:
     def __init__(self):
          self.current_false_negative={}
@@ -83,12 +85,46 @@ def update_config(thresholds:dict):
     with open(os.path.join(SRC_PATH,"config"), 'w') as file:
         for key in current:
             file.write(f"{key} {current[key]}\n")
-
      
+def candy_crush_benchmark(screenshot, spriteSize):
+    benchmark_utils = BenchmarkUtils("candy_crush")
+    matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+
+    while not benchmark_utils.is_game_finished():
+        while not benchmark_utils.is_level_finished():
+            print(f"Level {benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - cache")
+            benchmark_utils.start_timer()
+            matchingCandy.search(benchmark=True)
+            benchmark_utils.stop_timer()
+            benchmark_utils.save_time(level=benchmark_utils.get_level_name(), step=benchmark_utils.get_step_name(), type="cache")
+            benchmark_utils.load_new_step()
+        benchmark_utils.load_new_level()
+        matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+
+    matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+    benchmark_utils.restart()
+
+    while not benchmark_utils.is_game_finished():
+        while not benchmark_utils.is_level_finished():
+            print(f"Level {benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - no cache")
+            benchmark_utils.start_timer()
+            matchingCandy.search(benchmark=True)
+            benchmark_utils.stop_timer()
+            matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+            benchmark_utils.save_time(level=benchmark_utils.get_level_name(), step=benchmark_utils.get_step_name(), type="no cache")
+            benchmark_utils.load_new_step()
+        benchmark_utils.load_new_level()
+
+    benchmark_utils.end_benchmark()
+
         
-def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,it=0):
+def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,it=0, benchmark=False):
     # execute template matching
     spriteSize = (110, 110)
+
+    if benchmark:
+        candy_crush_benchmark(screenshot, spriteSize)
+        return
     
     matchingCandy = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None)
     if not debug:
@@ -99,6 +135,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
     #for e in input:
         #print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
+
     
     if vision_validation!=None:
         validation_abstraction=[]

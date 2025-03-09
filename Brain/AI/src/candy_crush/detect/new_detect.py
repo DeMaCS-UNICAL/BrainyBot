@@ -56,28 +56,27 @@ class MatchingCandy:
         self.object_matrix=None
         self.first=True
 
-    
-
-    def vision(self, grid_changed=True):
+    def vision(self, grid_changed=True, benchmark=False):
         grid_changed=self.first
         self.first=False
         finder = ObjectsFinder(self.screenshot,color=cv2.COLOR_BGR2RGB, debug=self.debug, threshold=0.78,validation=self.validation)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
-        if  not self.validation:
-            plt.imshow( self.__matrix)
-            plt.title(f"Screenshot")
-            plt.show()
-            if not self.debug:
-                plt.pause(0.1)
+        if not benchmark:
+            if  not self.validation:
+                plt.imshow( self.__matrix)
+                plt.title(f"Screenshot")
+                plt.show()
+                if not self.debug:
+                    plt.pause(0.1)
         if grid_changed:
             to_return = finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
 
             return to_return
         else:
-            print("Looking for existing matrix")
+            print("Looking for existing matrix") if not benchmark else None
             return finder.find_from_existing_matrix(SimplifiedTemplateMatch(SPRITES,self.__distance),self.object_matrix)
     
-    def abstraction(self,vision_output):
+    def abstraction(self,vision_output, benchmark=False):
         gridifier = Abstraction()
         #self.__graph = gridifier.ToGraph(vision_output,self.__difference)
         matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__distance)
@@ -92,23 +91,25 @@ class MatchingCandy:
                 if value != None:
                     color = get_color(value)
                     draw(matrix_copy , (cell.x,cell.y),cell.get_id(),width,heigth, color)
-        if not self.validation:
-            plt.imshow(matrix_copy)
-            plt.title(f"ABSTRACTION")
-            plt.show()
-            if not self.debug: 
-                plt.pause(0.5)
+        if not benchmark:
+            if not self.validation:
+                plt.imshow(matrix_copy)
+                plt.title(f"ABSTRACTION")
+                plt.show()
+                if not self.debug: 
+                    plt.pause(0.5)
         #return self.__graph
         self.object_matrix=objectMatrix
         self.__distance=objectMatrix.delta
         return objectMatrix
     
-    def search(self) -> tuple[list,ObjectMatrix]:
+    def search(self, benchmark=False) -> tuple[list,ObjectMatrix]:
         #self.__graph = self.abstraction(self.vision())
         #return self.__graph
-        template_matches_list = self.vision()
-        matrix = self.abstraction(template_matches_list.copy())
+        template_matches_list = self.vision(False, benchmark)
+        matrix = self.abstraction(template_matches_list.copy(), benchmark)
         return template_matches_list,matrix
 
     def get_matrix(self):
         return self.__matrix
+

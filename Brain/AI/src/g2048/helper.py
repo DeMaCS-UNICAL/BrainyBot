@@ -8,7 +8,7 @@ from AI.src.webservices.helpers import getScreenshot
 from time import sleep
 from math import sqrt
 
-def g2048(screenshot, debug = False, vision_validation=None, abstraction_validation=None, iteration=0):
+def g2048(screenshot, debug = False, vision_validation=None, abstraction_validation=None, iteration=0, benchmark=False):
     print("START 2048")
     matcher = Matching2048(screenshot,debug,vision_validation,iteration)
     cx = matcher.get_image_width() // 2
