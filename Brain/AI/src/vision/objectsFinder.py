@@ -285,7 +285,7 @@ class ObjectsFinder:
     
               
     def __find_boxes(self) -> list:
-        contour = cv2.Canny(self.__img_matrix, 25, 80)
+        contour = cv2.Canny(self.__img_matrix, 55, 120)
         contour = cv2.dilate(contour, None, iterations=1)
         contours, _ = cv2.findContours(contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         boxes = []
@@ -401,8 +401,8 @@ class ObjectsFinder:
                         x_not, y_not, r_not = search_info.not_this_coordinates
                         dist = np.sqrt((float(x) - float(x_not)) ** 2 + (float(y) - float(y_not)) ** 2)
                         if dist <= r or dist <= r_not:
-                            print("Scartata per distanza")
-                            print("from",x,y,"to",x_not,y_not)
+                            #print("Scartata per distanza")
+                            #print("from",x,y,"to",x_not,y_not)
                             continue
 
                 circularity = area / (math.pi * r * r)
@@ -414,8 +414,8 @@ class ObjectsFinder:
                     continue
 
                 color = np.array(self.__blurred[y, x])
-                if self.debug and not self.validation:
-                    print(f"Found ball pool:({x}, {y}): {color}")
+                #if self.debug and not self.validation:
+                    #print(f"Found ball pool:({x}, {y}): {color}")
             
                 balls.append(OutputCircle(x, y, r, color.tolist()))
 
@@ -514,7 +514,7 @@ class ObjectsFinder:
                        area_threshold=50, 
                        circularity_threshold=0.4,
                        border_intensity_threshold=25,   # soglia massima per il bordo (nero)
-                       inner_intensity_threshold=105):  # soglia minima per il bianco
+                       inner_intensity_threshold=94):  # soglia minima per il bianco
         """
         Rileva la palla mirino in un'immagine, caratterizzata da:
         - un contorno esterno (nero) sottile,
@@ -615,65 +615,223 @@ class ObjectsFinder:
             
             # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
             #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
-            if mean_border > border_intensity_threshold: #25
-                """print("Scartata per mean_border")
-                print("----------------------------")
-                """
-                continue
-            if mean_inner < inner_intensity_threshold: #120
-                """print("Scartata per mean_inner")
-                print("----------------------------")"""
-
-                continue
+            if mean_border > border_intensity_threshold or mean_inner < inner_intensity_threshold: #25
+                #print("Scartata per mean_border")
+                #print("----------------------------")
+                
+                if mean_inner -mean_border < 28:
+                    #print("Scartata per differenza")
+                    #print("----------------------------")
+                    continue
+            
             candidate = (int(x), int(y), int(radius))
             
             candidates.append(candidate)
         
         return candidates
 
-
-    def detect_aim_lines(self, min_line_length=50, max_line_gap=5, white_threshold=200):
-        """
-        Rileva le linee mirino bianche di 8 Ball Pool.
-
-        Parametri:
-        - min_line_length: lunghezza minima per considerare un segmento valido.
-        - max_line_gap: distanza massima tra segmenti per considerarli uniti.
-        - white_threshold: soglia minima per considerare un pixel bianco (0-255).
-
-        Ritorna:
-        Una lista di tuple (x1, y1, x2, y2) con le coordinate delle linee rilevate.
-        """
-        gray = self.__gray.copy()
-
-        # Miglioriamo il contrasto con equalizzazione
-        gray = cv2.equalizeHist(gray)
-
-        # Applicare un filtro di Sobel per rilevare bordi chiari
-        sobel_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-        sobel = cv2.magnitude(sobel_x, sobel_y)
-        sobel = np.uint8(sobel)
-
-        # Soglia binaria per isolare le parti bianche
-        _, thresh = cv2.threshold(sobel, white_threshold, 255, cv2.THRESH_BINARY)
-
-        # Trovare i contorni
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        lines = []
+    def detect_square_boxes(self) -> list:
+        # Rileva i bordi con Canny e li dilata
+        contour = cv2.Canny(self.__img_matrix, 55, 120)
+        contour = cv2.dilate(contour, None, iterations=1)
+        contours, _ = cv2.findContours(contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        boxes = []
         
         for cnt in contours:
-            # Approssimiamo il contorno a una linea retta
-            epsilon = 0.02 * cv2.arcLength(cnt, True)
-            approx = cv2.approxPolyDP(cnt, epsilon, False)
+            per = cv2.arcLength(cnt, True)
+            epsilon = 0.05 * per
+            approx = cv2.approxPolyDP(cnt, epsilon, True)
+            
+            # Se il contorno non è un quadrilatero convesso o troppo piccolo, scarta
+            if len(approx) != 4 or not cv2.isContourConvex(approx) or cv2.contourArea(approx) < 3000:
+                continue
+            
+            x, y, w, h = cv2.boundingRect(approx)
+            #print(f"Found square box: ({x}, {y}, {w}, {h})")
+            
+            # Controlla che la box sia quadrata (lati uguali con una tolleranza)
+            if not (h - 6 <= w <= h + 6):
+                #print("Scartata per non quadrata")
+                #print(f" w {w}, h {h}")
+                #print("----------------------------")
+                continue
+            
+            # Estrae la regione d'interesse (ROI)
+            roi = self.__img_matrix[y:y+h, x:x+w]
+            hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+            
+            # Definisce i range HSV per verde, arancione e bianco
+            lower_green = np.array([40, 40, 40])
+            upper_green = np.array([80, 255, 255])
+            
+            lower_orange = np.array([5, 100, 100])
+            upper_orange = np.array([25, 255, 255])
+            
+            lower_white = np.array([0, 0, 200])
+            upper_white = np.array([180, 55, 255])
+            
+            # Crea le maschere per ogni colore
+            mask_green = cv2.inRange(hsv_roi, lower_green, upper_green)
+            mask_orange = cv2.inRange(hsv_roi, lower_orange, upper_orange)
+            mask_white = cv2.inRange(hsv_roi, lower_white, upper_white)
+            
+            # Combina le maschere per ottenere i pixel "chiari"
+            mask_clear = cv2.bitwise_or(mask_green, mask_orange)
+            mask_clear = cv2.bitwise_or(mask_clear, mask_white)
+            
+            # Definisce lo spessore del bordo (10% della larghezza, almeno 1 pixel)
+            border_thickness = max(1, int(0.1 * w))
+            top_border = mask_clear[0:border_thickness, :]
+            bottom_border = mask_clear[-border_thickness:, :]
+            left_border = mask_clear[:, 0:border_thickness]
+            right_border = mask_clear[:, -border_thickness:]
+            
+            # Combina i pixel dei bordi e calcola la percentuale di pixel chiari
+            border_pixels = np.concatenate((
+                top_border.flatten(),
+                bottom_border.flatten(),
+                left_border.flatten(),
+                right_border.flatten()
+            ))
+            
+            clear_count = np.count_nonzero(border_pixels)
+            total_count = border_pixels.size
+            
+            # Ad esempio, se meno del 50% dei pixel del bordo sono "chiari", scarta la box
+            #print(f"Clear count: {clear_count}, Total count: {total_count}")
+            
+            current_box = OutputRectangle(x, y, w, h)
+            boxes.append((current_box, clear_count))
+            #print("----------------------------")
+            
+        return boxes
 
-            if len(approx) >= 2:  # Se ci sono almeno due punti, consideriamo una linea
-                x1, y1 = approx[0][0]
-                x2, y2 = approx[-1][0]
+
+
+    def detect_aim_lines(self, tg_ball_coords, area, min_line_length=50, max_line_length=220,
+                        border_intensity_threshold=25, inner_intensity_threshold=85):
+        """
+        Rileva le linee mirino bianche di 8 Ball Pool tramite i contorni:
+        - Il contorno esterno (bordo) deve avere un'intensità media bassa (scuro).
+        - Il contorno interno (figlio) deve avere un'intensità media alta (chiaro).
+        
+        Parametri:
+        - tg_ball_coords: tuple (x, y, r) della palla mirino, usata per eventuale selezione in base alla vicinanza.
+        - area: tupla (x_min, y_min, x_max, y_max) che definisce l'area di interesse.
+        - min_line_length: lunghezza minima del lato maggiore del rettangolo orientato che approssima la linea.
+        - max_line_length: lunghezza massima del lato maggiore.
+        - border_intensity_threshold: soglia massima per l'intensità media del bordo (atteso scuro).
+        - inner_intensity_threshold: soglia minima per l'intensità media dell'interno (atteso chiaro).
+        
+        Ritorna:
+        Una lista di tuple (x1, y1, x2, y2) che rappresentano le estremità della linea rilevata.
+        """
+        # Preparazione dell'immagine
+        gray = self.__gray.copy()
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        # Soglia automatica (Otsu) invertita per ottenere contorni che evidenziano il bordo scuro
+        ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        # Trova i contorni e la gerarchia
+        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return []
+        hierarchy = hierarchy[0]  # Lavoriamo sulla prima dimensione della gerarchia
+        
+        detected_lines = []
+        x_min, y_min, x_max, y_max = area
+
+        print(f"Len detected lines {len(contours)}")
+        # Loop su ogni contorno candidato
+        for i, cnt in enumerate(contours):
+            # Verifica: il contorno esterno deve avere un figlio (il contorno interno)
+            rect = cv2.minAreaRect(cnt)
+            (cx, cy), (w, h), angle = rect
+            line_length = max(w, h)
+            line_width  = min(w, h)
+            #print(f"cx {cx}, cy {cy}, w {w}, h {h}, angle {angle}")
+
+            if hierarchy[i][2] == -1:
+                continue
+            # Per evitare di analizzare contorni interni, lavoriamo solo sui contorni senza genitore
+            if hierarchy[i][3] != -1:
+                continue
+            
+            # Analisi della forma tramite il rettangolo minimo orientato
+            
+            
+            # Verifica sulla lunghezza: la linea deve essere sufficientemente lunga
+            if not (min_line_length <= line_length <= max_line_length):
+                print("Scartata per lunghezza")
+                print("----------------------------")
+                continue
+            # Inoltre, la forma deve essere allungata (rapporto line_length/line_width elevato)
+            if line_width == 0 or (line_length / line_width) < 2:
+                print("Scartata per rapporto")
+                print("----------------------------")
+
+                continue
+            
+            # Verifica che il contorno sia interamente contenuto nell'area d'interesse
+            x_rect, y_rect, w_rect, h_rect = cv2.boundingRect(cnt)
+            if not (x_min <= x_rect and x_rect + w_rect <= x_max and 
+                    y_min <= y_rect and y_rect + h_rect <= y_max):
+                print("----------------------------")
                 
-                # Verifica della lunghezza della linea
-                if np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) >= min_line_length:
-                    lines.append((x1, y1, x2, y2))
+                continue
+            
+            # Recupera il contorno interno (primo figlio)
+            inner_index = hierarchy[i][2]
+            inner_cnt = contours[inner_index]
+            
+            # Crea le maschere per il contorno esterno ed interno
+            mask_outer = np.zeros_like(gray)
+            cv2.drawContours(mask_outer, [cnt], -1, 255, -1)
+            mask_inner = np.zeros_like(gray)
+            cv2.drawContours(mask_inner, [inner_cnt], -1, 255, -1)
+            # Il bordo è definito dalla differenza tra la maschera esterna e quella interna
+            mask_border = cv2.subtract(mask_outer, mask_inner)
+            
+            # Calcola l'intensità media del bordo e dell'interno
+            mean_border = cv2.mean(gray, mask=mask_border)[0]
+            mean_inner  = cv2.mean(gray, mask=mask_inner)[0]
+            
+            if mean_border > border_intensity_threshold:
+                print("Scartata per mean_border")
+                print("----------------------------")
 
-        return lines
+                continue
+            if mean_inner < inner_intensity_threshold:
+                print("Scartata per mean_inner")
+                print("----------------------------")
+
+                continue
+            
+            # Estrae le estremità della linea: utilizziamo i box points del rettangolo minimo
+            box = cv2.boxPoints(rect)
+            box = np.int0(box)
+            # Seleziona i due punti più distanti (le estremità della linea)
+            max_dist = 0
+            endpoint1, endpoint2 = None, None
+            for j in range(4):
+                for k in range(j+1, 4):
+                    d = np.linalg.norm(box[j] - box[k])
+                    if d > max_dist:
+                        max_dist = d
+                        endpoint1, endpoint2 = box[j], box[k]
+            
+            if endpoint1 is None or endpoint2 is None:
+                print("Scartata per endpoint")
+                print("----------------------------")
+
+                continue
+            
+            # Opzionale: se si desidera selezionare la linea più vicina alla palla mirino, si può usare tg_ball_coords
+            # (qui è possibile inserire logica per scegliere la linea migliore)
+            
+            detected_lines.append((endpoint1[0], endpoint1[1], endpoint2[0], endpoint2[1]))
+
+        
+        return detected_lines
+
+

@@ -58,6 +58,10 @@ class MatchingBallPool:
     POCKET_PARAM1 = 50            # Soglia per Canny (pocket)
     POCKET_PARAM2 = 90            # Soglia per HoughCircles (pocket)
 
+    STICK_COORDS = 221, 348, 221, 887
+    #dimensioni del mio schermo 2400x1077
+    #Calibrerò meglio le costanti 
+
     def __init__(self, screenshot_path, debug=False, validation=False, iteration=0):
         self.screenshot = screenshot_path
         self.debug = debug
@@ -76,8 +80,9 @@ class MatchingBallPool:
 
         # Recupera la configurazione dal file config
         self.canny_threshold, self.proportion_tolerance, self.size_tolerance = self.retrieve_config()
+        
         self.canny_threshold = self.adjust_threshold(iteration)
-        # Non carichiamo più template per i pocket, poiché li rileviamo via cerchi
+        
 
     def adjust_threshold(self, iteration):
         if iteration == 0:
@@ -136,8 +141,8 @@ class MatchingBallPool:
         self.img_width = self.image.shape[1]
 
 
-        # 4) Rilevamento cerchi delle palline
-        #ball_circles = self.detect_balls_circles((x,y,w,h))
+        player_squares = self.find_sqare(area=(x,y,w,h))
+
         target_ball = self.finder.detect_target_ball(
             Circle(17, 100, 23,
                    (x,y,w,h)
@@ -148,7 +153,8 @@ class MatchingBallPool:
         tx, ty ,tr = None, None,None
         if len(target_ball) != 0:
             tx, ty, tr = target_ball[0] #target_ball_center=(tx, ty, tr)
-            aim_line = self.finder.detect_aim_lines()
+            aim_line = self.finder.detect_aim_lines((tx, ty, tr), (x,y,w,h))
+
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
             Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
@@ -162,21 +168,41 @@ class MatchingBallPool:
                    (tx, ty,tr) if len(target_ball) != 0 else None,
                    )
         )
-        #self.__stick = stick
 
         # Assegniamo per riferimento interno
         self.__balls = ball_circles
         self.__pockets = pocket_circles
         self.__target_balls = target_ball
-        self.__aim_line = aim_line
+        self.__player_squares = player_squares
+        
+        if self.__player1_turn:
+            print("Player 1 turn")
+        else:
+            print("Player 2 turn")
 
-        print(f"{len(pocket_circles)} pockets")
-        print(f"{len(target_ball)} target balls")
-        print(f"{len(ball_circles)} balls")
-        print(f"{len(aim_line) if aim_line != None else None} aim line")
+        print(f"{len(pocket_circles)} Pockets")
+        print(f"{len(target_ball)} Target balls")
+        print(f"{len(ball_circles)} Balls")
+        print(f"{len(aim_line) if aim_line != None else None} Aim line")
 
 
         return {"balls": ball_circles, "pockets": pocket_circles}
+    
+   
+    def find_sqare(self, area=None):
+        squares = self.finder.detect_square_boxes()
+        if area is not None:
+            x_min, y_min, x_max, y_max = area 
+            squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
+        
+        # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
+        squares= sorted(squares, key=lambda item: item[1], reverse=True)
+        brighter_square_x = squares[0][0].x
+        second_square_x = squares[1][0].x
+
+        self.__player1_turn = brighter_square_x < second_square_x
+       
+        return squares
     
     def extract_ball_roi(self, ball_obj, scale=1.4):
         """
@@ -198,40 +224,6 @@ class MatchingBallPool:
         #print(f"Self.image : {self.image}")
         return x1, y1, x2, y2
 
-
-    def check_white_circle_with_black_border(self, roi_coords, r):
-        """
-        Verifica se l'ROI (definito dalle coordinate roi_coords) presenta un interno bianco e un bordo nero.
-        'r' è il raggio stimato della palla (usato per definire la maschera).
-        Restituisce True se la condizione è verificata, False altrimenti.
-        """
-        x1, y1, x2, y2 = roi_coords
-        roi = self.__gray
-        
-        h, w = roi.shape
-        
-        # Assumiamo che la palla sia centrata nel ROI
-        center_x, center_y = w // 2, h // 2
-
-        # Crea la maschera per il cerchio completo
-        mask = np.zeros(roi.shape, dtype=np.uint8)
-        cv2.circle(mask, (center_x, center_y), r, 255, -1)
-        
-        # Maschera interna, riducendo il raggio per escludere il bordo
-        inner_mask = np.zeros(roi.shape, dtype=np.uint8)
-        cv2.circle(inner_mask, (center_x, center_y), max(r - 5, 0), 255, -1)
-        
-        # La maschera del bordo
-        border_mask = cv2.subtract(mask, inner_mask)
-        
-        mean_inside = cv2.mean(roi, mask=mask)[0]
-        mean_border = cv2.mean(roi, mask=border_mask)[0]
-        
-        # Regola le soglie in base all'immagine e all'illuminazione
-        if mean_inside <= 200 and mean_border >= 50:
-            #print(f"White circle with black border: {mean_inside} - {mean_border}")
-            return True
-        return False
     
     def detect_direction_line(self, roi_coords, r, ball_x, ball_y):
         """
@@ -336,41 +328,6 @@ class MatchingBallPool:
                     aim_lines.append(raw_aim_lines[j])
         return aim_lines
 
-
-
-    def find_ball_pool_houghCircles(self, area):
-        """
-        Esegue HoughCircles per rilevare i cerchi (palline).
-        Ritorna una struttura circles (x, y, r).
-        """
-        x,y,w,h = area if area != None else 0
-        
-        blurred = cv2.GaussianBlur(self.__gray, (5, 5), 0)  
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        closed = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, kernel)
-
-        circles = cv2.HoughCircles(
-            closed,
-            cv2.HOUGH_GRADIENT,
-            dp=1,
-            minDist=self.BALLS_MIN_DIST,
-            param1=self.PARAM1,
-            param2=self.PARAM2,
-            minRadius=self.BALLS_MIN_RADIUS,
-            maxRadius=self.BALLS_MAX_RADIUS
-        )
-        filtered_circ = []
-        for c in circles:
-            i = c.get_x()
-            j = c.get_y()
-            r = c.get_r()
-            if (x<= i <= w and
-                    y <= j <= h):
-                continue
-            else:
-                filtered_circ.append()
-
-        return circles
 
     
     def abstract_balls(self, circles):
@@ -554,14 +511,30 @@ class MatchingBallPool:
             cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
         
-        if self.__aim_line is not None:
-            for line in self.__aim_line:
-                x1, y1, x2, y2 = line["bounding_rect"]
-                cv2.line(img_copy, (x1, y1), (x2, y2), (255, 0, 255), 3)
-                cv2.putText(img_copy, f"({x1}, {y1}) - ({x2}, {y2})", (x1, y1),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
-                
+        #purple bgr 
+        x_above, y_above, x_below, y_below = self.STICK_COORDS
 
+        cv2.line(img_copy, (x_above, y_above), (x_below, y_below), (255, 0, 255), 3)
+        cv2.putText(img_copy, f"Stick", (x_above, y_above),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
+
+        #purple rgb  (255,0,255)
+        #red rgb (0,0,255)
+        print(f"{len(self.__player_squares)} Player square")
+
+        if self.__player_squares is not None and len(self.__player_squares) != 0:
+            player_cont = 0
+            for rect, clear_count in self.__player_squares:
+                x = rect.x
+                y = rect.y
+                width = rect.width
+                heigth = rect.heigth
+                if player_cont == 0:
+                    cv2.rectangle(img_copy, (x, y), (x+width, y+heigth), (0, 0, 255), 5)
+                else:
+                    cv2.rectangle(img_copy, (x, y), (x+width, y+heigth), (255,0,255), 5)
+                player_cont+=1
+            player_cont = 0
 
         # Ridimensionamento per la visualizzazione
         resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
