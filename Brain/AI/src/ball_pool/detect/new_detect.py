@@ -141,7 +141,7 @@ class MatchingBallPool:
         self.img_width = self.image.shape[1]
 
 
-        player_squares = self.find_sqare(area=(x,y,w,h))
+        player_squares = self.find_squares(area=(x,y,w,h))
 
         target_ball = self.finder.detect_target_ball(
             Circle(17, 100, 23,
@@ -150,10 +150,9 @@ class MatchingBallPool:
         )
         
         aim_line = None
-        tx, ty ,tr = None, None,None
+        self.tx, self.ty, self.tr = None, None,None
         if len(target_ball) != 0:
-            tx, ty, tr = target_ball[0] #target_ball_center=(tx, ty, tr)
-            aim_line = self.finder.detect_aim_lines((tx, ty, tr), (x,y,w,h))
+            self.tx, self.ty, self.tr = target_ball[0] #target_ball_center=(tx, ty, tr)
 
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
@@ -165,7 +164,7 @@ class MatchingBallPool:
         ball_circles = self.finder._find_balls_pool_contour(
             Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
                    (x,y,w,h),
-                   (tx, ty,tr) if len(target_ball) != 0 else None,
+                   (self.tx, self.ty, self.tr) if len(target_ball) != 0 else None,
                    )
         )
 
@@ -183,13 +182,13 @@ class MatchingBallPool:
         print(f"{len(pocket_circles)} Pockets")
         print(f"{len(target_ball)} Target balls")
         print(f"{len(ball_circles)} Balls")
-        print(f"{len(aim_line) if aim_line != None else None} Aim line")
+        #print(f"{len(aim_line) if aim_line != None else None} Aim line")
 
 
         return {"balls": ball_circles, "pockets": pocket_circles}
     
    
-    def find_sqare(self, area=None):
+    def find_squares(self, area=None):
         squares = self.finder.detect_square_boxes()
         if area is not None:
             x_min, y_min, x_max, y_max = area 
@@ -349,41 +348,7 @@ class MatchingBallPool:
             ball_obj.set_y(y)
             ball_obj.set_r(r)
 
-            """# Estrai il ROI completo della palla (con margine)
-            roi_coords = self.extract_ball_roi(ball_obj)
-            if roi_coords is not None:
-                # Controlla che il ROI mostri un interno bianco e bordi neri
-                if self.check_white_circle_with_black_border(roi_coords, r):
-                    # Rileva la linea interna (direction_line) in coordinate globali
-                    direction_line = self.detect_direction_line(roi_coords, r, x, y)
-                    if direction_line is not None:
-                        ball_obj.get_color().set_ball_type("cue aim")
-                        line_x1, line_y1, line_x2, line_y2 = direction_line
-                        len_line = np.sqrt((line_x2 - line_x1) ** 2 + (line_y2 - line_y1) ** 2)
-                        raw_aim_lines.append((x, y, direction_line, len_line))
-                        print(f"Found line at ({x}, {y}) {direction_line} len {len_line}")
-            else:
-                print(f"ROI vuoto per la palla in ({x}, {y}) con raggio {r}")
-            """
-            raw_balls.append(ball_obj)
-
-        # Applica NMS e filtra duplicati
-        #nms_balls = self.non_max_suppression(raw_balls, overlapThresh=0.5)
-        #filtered_balls = self.filter_duplicate_circles(nms_balls, CIRCLE_MIN_DISTANCE=self.BALLS_MIN_DIST)
-
-        """# Chiama la funzione per trovare due linee perpendicolari tra loro (già definita altrove)
-        perp_lines = self.find_perpendicular_lines(raw_aim_lines)
-        if perp_lines is not None:
-            print("Found perpendicular lines:",)
-            reset = 0
-            for x,y, dir_line, len_line in perp_lines:
-                print(f"Found PERP line at ({x}, {y}) {direction_line} len {len_line}")
-                reset += 1
-                if reset == 2:
-                    print("\r")
-                    reset = 0
-        else:
-            print("No perpendicular lines found.")"""
+            raw_balls.append(ball_obj)        
 
         return raw_balls
 
@@ -420,6 +385,14 @@ class MatchingBallPool:
         ball_circles = vision_output["balls"]
         final_balls = self.abstract_balls(ball_circles)
         result["balls"] = final_balls
+
+        aim_line = self.finder.compute_target_direction(all_balls=ball_circles,
+                                                        target_ball=(self.tx, self.ty, self.tr), 
+                                                        area=(self.X_MIN, self.Y_MIN, self.X_MAX, self.Y_MAX),
+                                                        )
+        
+        result["aim_line"] = aim_line
+
         #result["aim_lines"] = self.__aim_lines
 
         # 2) Creazione e filtraggio buche
@@ -432,7 +405,7 @@ class MatchingBallPool:
 
         self.__balls = result["balls"]
         self.__pockets = result["pockets"]
-        self.__aim_lines = result["aim_lines"]
+        self.__aim_line = result["aim_line"]
 
         if self.validation is None and self.debug:
             print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
@@ -485,20 +458,30 @@ class MatchingBallPool:
                 cv2.rectangle(img_copy, (x, y), (x+width, y+heigth), (255, 255, 255), 5)
         """
 
-        # Disegna le aim_lines (in viola)
-        """if self.__aim_lines != None:
-            print(f"Aim lines show {len(self.__aim_lines)}")
-            for x1, y1, x2, y2 in self.__aim_lines:
-                # Ogni aim_line è definita come (ball_center_x, ball_center_y, direction_line, len_line)
-                
-                cv2.line(img_copy, (x1, y1), (x2, y2), (255, 0, 255), 3)"""
+        # Supponiamo che self.__aim_line sia una lista di tuple, in cui ogni tupla è:
+        # (ball_center_x, ball_center_y, direction_vector, len_line)
+        # dove direction_vector è una tupla (dx, dy) già normalizzata.
 
-        # Disegna le linee perpendicolari (se presenti) in rosso
-        if hasattr(self, '__perp_lines') and self.__perp_lines is not None:
-            for aim_line in self.__perp_lines:
-                _, _, direction_line, _ = aim_line
-                x1_line, y1_line, x2_line, y2_line = direction_line
-                cv2.line(img_copy, (x1_line, y1_line), (x2_line, y2_line), (0, 0, 255), 3)
+        if self.__aim_line is not None:
+            print(f"Aim lines show {len(self.__aim_line)}")
+            if isinstance(self.__aim_line, tuple):
+                aim_lines = [self.__aim_line]
+            else:
+                aim_lines = self.__aim_line
+
+            print(f"Aim lines show {len(aim_lines)}")
+            print(f"Aim lines details: {aim_lines}")
+
+            # Iteriamo su ogni linea e disegniamola
+            for line in aim_lines:
+                # Ci aspettiamo che ogni linea sia una tupla (x1, y1, x2, y2)
+                if len(line) == 4:
+                    x1, y1, x2, y2 = line
+                    # Disegna la linea in viola (BGR: (255, 0, 255))
+                    cv2.line(img_copy, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 255), 3)
+                else:
+                    print("Formato non riconosciuto per la linea:", line)
+
 
         for target in self.__target_balls:
             x, y, r = target

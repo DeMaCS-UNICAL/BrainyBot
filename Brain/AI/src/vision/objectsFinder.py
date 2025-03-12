@@ -706,6 +706,83 @@ class ObjectsFinder:
             
         return boxes
 
+    def compute_target_direction(self,all_balls,target_ball, area,  white_ball = (1463,370,23),collision_tolerance=8.0, line_length=100):
+        """
+        Calcola la linea di direzione per la palla mirata, selezionandola tra tutte le palle 
+        come quella più vicina alla palla mirino (target_ball) se la distanza è compatibile con un urto.
+
+        Parametri:
+        all_balls (list): Lista di palle, ognuna rappresentata come una tupla (x, y, r).
+        target_ball (tuple): La palla mirino (quella che colpisce) rappresentata come (x, y, r).
+        area (tuple): Area di interesse definita come (x_min, y_min, x_max, y_max).
+        collision_tolerance (float): Tolleranza in pixel per considerare la palla "vicina abbastanza".
+        line_length (float): Lunghezza in pixel della linea di direzione da restituire.
+
+        Ritorna:
+        tuple: (x1, y1, x2, y2) che definiscono la linea di direzione,
+                oppure None se nessuna palla è a distanza sufficiente per un urto.
+        """
+        cw_x, cw_y, cw_r = white_ball
+        tx, ty, tr = target_ball
+        x_min, y_min, x_max, y_max = area
+        
+        candidate = None
+        min_distance = float('inf')
+
+        
+        # Seleziona la palla mirata: quella più vicina alla palla mirino (escludendo quella stessa)
+        for ball in all_balls:
+            b_x, b_y, b_r = ball.x,ball.y,ball.radius
+            
+            print(f"Ball: {b_x}, {b_y}, {b_r}")
+
+            # Escludi la palla bianca
+            if abs(b_x - cw_x) < 1 and abs(b_y - cw_y) < 1:  # Confronto più robusto
+                continue
+
+            # Verifica che il centro della palla sia all'interno dell'area di interesse
+            if not (x_min <= b_x <= x_max and y_min <= b_y <= y_max):
+                continue
+            
+            dx = b_x - tx
+            dy = b_y - ty
+            distance = math.hypot(dx, dy)
+            
+            # Se la distanza è inferiore a quella minima trovata e compatibile con un urto, seleziona la palla
+            print(f"Distance: {distance} Urto {tr + b_r + collision_tolerance}")
+
+            if distance < min_distance and distance <= (tr + b_r + collision_tolerance):
+                min_distance = distance
+                candidate = ball
+            print("----------------------------")
+                
+        if candidate is None:
+            print("Nessuna palla mirata trovata o distanza non sufficiente per un urto.")
+            return None
+        
+         # Calcola la collision normal: il vettore normalizzato dal ghost_ball_center al centro della target ball
+        collision_dx = candidate.x - tx
+        collision_dy = candidate.y - ty
+        norm = math.hypot(collision_dx, collision_dy)
+        
+        if norm < 0.0001:  # Evita divisione per zero con un valore piccolo
+            print("Errore: i centri coincidono o sono troppo vicini.")
+            return None
+        collision_normal_x = collision_dx / norm
+        collision_normal_y = collision_dy / norm
+
+        # Scegli il punto di partenza per la linea
+        
+        # Determina il punto di impatto sulla palla target
+        impact_x = candidate.x - candidate.radius * collision_normal_x
+        impact_y = candidate.y - candidate.radius * collision_normal_y
+
+        # La direzione della palla target sarà lungo la collision normal
+        end_x = impact_x + collision_normal_x * line_length
+        end_y = impact_y + collision_normal_y * line_length
+
+        return (impact_x, impact_y, end_x, end_y)
+
 
 
     def detect_aim_lines(self, tg_ball_coords, area, min_line_length=50, max_line_length=220,
