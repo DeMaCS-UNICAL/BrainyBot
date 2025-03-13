@@ -47,13 +47,6 @@ def asp_input(balls_chart):
         
     
     print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
-   
-    #print(f"Pockets:, {len(pockets)}, {[p.get_x() for p in pockets]}")
-    
-
-    """
-    print("Colors:", [str(c) for c in colors])
-    """
 
     return balls,pockets
 

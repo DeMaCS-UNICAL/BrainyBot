@@ -17,25 +17,6 @@ from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.dlvsolution.helpers import BPoolColor, Color, Ball, Pocket, MoveAndShoot, GameOver
 
 
-
-"""I parametri param1 e param2 nella funzione cv2.HoughCircles() controllano specifici aspetti del rilevamento dei cerchi:
-
-param1: Corrisponde alla soglia superiore per il rilevatore di bordi di Canny interno all'algoritmo. 
-In pratica, determina la sensibilità nel riconoscere i bordi nell'immagine. Valori più alti richiedono bordi più definiti.
-param2: È la soglia per il rilevamento del centro dei cerchi. Un valore più basso rileverà più cerchi (inclusi quelli falsi),
-mentre un valore più alto sarà più selettivo e rileverà solo cerchi con evidenza più forte. Questo è uno dei parametri più influenti.
-
-Ecco come funzionano nel contesto dell'algoritmo Hough Circles:
-
-param1 influenza quanto l'algoritmo è sensibile ai bordi dell'immagine
-param2 determina quanti "voti" deve ricevere un cerchio candidato per essere considerato valido
-
-Regolando questi valori, puoi:
-
-Aumentare param1 se l'immagine ha contrasto basso
-Diminuire param2 se non vengono rilevati abbastanza cerchi
-Aumentare param2 se vengono rilevati troppi falsi cerchi
-"""
 class MatchingBallPool:
 
     # Parametri relativi al campo (se necessari per ulteriori controlli)
@@ -151,8 +132,8 @@ class MatchingBallPool:
         
         aim_line = None
         self.tx, self.ty, self.tr = None, None,None
-        if len(target_ball) != 0:
-            self.tx, self.ty, self.tr = target_ball[0] #target_ball_center=(tx, ty, tr)
+        if target_ball != None:
+            self.tx, self.ty, self.tr = target_ball #target_ball_center=(tx, ty, tr)
 
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
@@ -164,7 +145,7 @@ class MatchingBallPool:
         ball_circles = self.finder._find_balls_pool_contour(
             Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
                    (x,y,w,h),
-                   (self.tx, self.ty, self.tr) if len(target_ball) != 0 else None,
+                   (self.tx, self.ty, self.tr) if target_ball != None else None,
                    )
         )
 
@@ -180,7 +161,7 @@ class MatchingBallPool:
             print("Player 2 turn")
 
         print(f"{len(pocket_circles)} Pockets")
-        print(f"{len(target_ball)} Target balls")
+        print(f"{target_ball} Target balls")
         print(f"{len(ball_circles)} Balls")
         #print(f"{len(aim_line) if aim_line != None else None} Aim line")
 
@@ -192,8 +173,9 @@ class MatchingBallPool:
         squares = self.finder.detect_square_boxes()
         if area is not None:
             x_min, y_min, x_max, y_max = area 
-            squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
-        
+            #squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
+            
+        print(f"len find squares {len(squares)}")
         # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
         squares= sorted(squares, key=lambda item: item[1], reverse=True)
         brighter_square_x = squares[0][0].x
@@ -332,25 +314,25 @@ class MatchingBallPool:
     def abstract_balls(self, circles):
         if circles is None:
             return []
-        #circles = np.uint16(np.around(circles))
         raw_balls = []
-        raw_aim_lines = []
-
+        # Per ogni cerchio rilevato, crea una Ball assegnandole il BPoolColor
         for c in circles:
             x = c.x
             y = c.y
             r = c.radius
-            color = c.color
-            bpColor = BPoolColor(color)
+            patch = c.color  # patch dell'immagine della pallina
+            print(f"x: {x} y: {y} r: {r} color: {patch}")
+            bpColor = BPoolColor.get_color(patch)
+
             ball_obj = Ball(bpColor)
-            # Converti in coordinate globali
             ball_obj.set_x(x)
             ball_obj.set_y(y)
             ball_obj.set_r(r)
-
-            raw_balls.append(ball_obj)        
-
-        return raw_balls
+            raw_balls.append(ball_obj)
+        
+        # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" o "mezza")
+        final_balls = BPoolColor.assign_ball_types(raw_balls)
+        return final_balls
 
     def abstract_pockets(self, circles):
         """
@@ -483,16 +465,15 @@ class MatchingBallPool:
                     print("Formato non riconosciuto per la linea:", line)
 
 
-        for target in self.__target_balls:
-            x, y, r = target
+        x, y, r = self.__target_balls
 
-            cv2.circle(img_copy, (x, y), r, (60,20,220), 4)
-            cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
-            # Testo con bordo nero e testo verde
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y -50),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
+        cv2.circle(img_copy, (x, y), r, (60,20,220), 4)
+        cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
+        # Testo con bordo nero e testo verde
+        cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y -50),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+        cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
         
         #purple bgr 
         x_above, y_above, x_below, y_below = self.STICK_COORDS

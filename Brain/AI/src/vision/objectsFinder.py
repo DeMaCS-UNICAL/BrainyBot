@@ -413,11 +413,24 @@ class ObjectsFinder:
                 if hierarchy[i][3] == -1:  # Se non ha un genitore, è esterno
                     continue
 
-                color = np.array(self.__blurred[y, x])
-                #if self.debug and not self.validation:
-                    #print(f"Found ball pool:({x}, {y}): {color}")
-            
-                balls.append(OutputCircle(x, y, r, color.tolist()))
+                mask = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
+                cv2.circle(mask, (x, y), r, 255, -1)
+
+                # Estrae i pixel all'interno della maschera dalla versione a colori dell'immagine
+                # Assumiamo che self.__image sia l'immagine originale a colori (BGR)
+                pixels = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
+
+                # -------------------------
+                # K-means clustering per ottenere il colore dominante
+                # -------------------------
+                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+                k = 2  # Imposta k=2 se pensi che la palla abbia due componenti principali (es. colore e bianco)
+                _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+                # Trova il cluster dominante (maggiore numero di pixel)
+                dominant_idx = np.argmax(np.bincount(labels.flatten()))
+                dominant_color = centers[dominant_idx].astype(np.uint8).tolist()
+                balls.append(OutputCircle(x, y, r, dominant_color))
 
         balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=5)
         return balls
@@ -546,8 +559,8 @@ class ObjectsFinder:
             return []
         hierarchy = hierarchy[0]  # si lavora sulla prima (ed unica) dimensione della gerarchia
         
-        candidates = []
-        
+        candidate = None
+        max_diff = 0
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
             area_outer = cv2.contourArea(cnt)
@@ -615,20 +628,20 @@ class ObjectsFinder:
             
             # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
             #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
+            diff = mean_inner - mean_border
             if mean_border > border_intensity_threshold or mean_inner < inner_intensity_threshold: #25
                 #print("Scartata per mean_border")
                 #print("----------------------------")
-                
-                if mean_inner -mean_border < 28:
+                if diff < 28:
                     #print("Scartata per differenza")
                     #print("----------------------------")
                     continue
             
-            candidate = (int(x), int(y), int(radius))
+            if diff > max_diff:
+                max_diff = diff
+                candidate = (int(x), int(y), int(radius))
             
-            candidates.append(candidate)
-        
-        return candidates
+        return candidate
 
     def detect_square_boxes(self) -> list:
         # Rileva i bordi con Canny e li dilata
@@ -703,6 +716,13 @@ class ObjectsFinder:
             current_box = OutputRectangle(x, y, w, h)
             boxes.append((current_box, clear_count))
             #print("----------------------------")
+
+        boxes = sorted(boxes, key=lambda item: item[0].x +item[0].width +item[0].y +item[0].heigth, reverse=True)
+        boxes = boxes[0:2]
+
+        print(f"len square boxes {len(boxes)}")
+        
+
             
         return boxes
 
@@ -734,7 +754,7 @@ class ObjectsFinder:
         for ball in all_balls:
             b_x, b_y, b_r = ball.x,ball.y,ball.radius
             
-            print(f"Ball: {b_x}, {b_y}, {b_r}")
+            #print(f"Ball: {b_x}, {b_y}, {b_r}")
 
             # Escludi la palla bianca
             if abs(b_x - cw_x) < 1 and abs(b_y - cw_y) < 1:  # Confronto più robusto
@@ -749,12 +769,12 @@ class ObjectsFinder:
             distance = math.hypot(dx, dy)
             
             # Se la distanza è inferiore a quella minima trovata e compatibile con un urto, seleziona la palla
-            print(f"Distance: {distance} Urto {tr + b_r + collision_tolerance}")
+            #print(f"Distance: {distance} Urto {tr + b_r + collision_tolerance}")
 
             if distance < min_distance and distance <= (tr + b_r + collision_tolerance):
                 min_distance = distance
                 candidate = ball
-            print("----------------------------")
+            #print("----------------------------")
                 
         if candidate is None:
             print("Nessuna palla mirata trovata o distanza non sufficiente per un urto.")
