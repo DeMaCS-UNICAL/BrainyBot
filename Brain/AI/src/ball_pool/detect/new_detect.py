@@ -25,6 +25,10 @@ class MatchingBallPool:
     X_MAX = 2067
     Y_MAX = 1073
 
+    X_MIN_PLAYER_AREA = 436
+    X_MAX_PLAYER_AREA = 2062
+    Y_MAX_PLAYER_AREA = 172
+
     # Parametri per la rilevazione delle palline
     BALLS_MIN_DIST = 1
     BALLS_MIN_RADIUS = 20
@@ -40,6 +44,8 @@ class MatchingBallPool:
     POCKET_PARAM2 = 90            # Soglia per HoughCircles (pocket)
 
     STICK_COORDS = 221, 348, 221, 887
+    player1_pic_pos = 1018
+    player2_pic_pos = 1356
     #dimensioni del mio schermo 2400x1077
     #Calibrerò meglio le costanti 
 
@@ -115,18 +121,18 @@ class MatchingBallPool:
         # Se è definita una ROI (table_area), creiamo delle versioni per il rilevamento,
         # ma non modifichiamo self.image (che rimane la full image)
         if self.table_area is not None:
-            x, y, w, h = self.table_area
+            pool_x_min, pool_y_min, pool_x_max, pool_y_max = self.table_area
     
         # Salviamo self.__output come immagine completa per la visualizzazione finale
         self.__output = self.image.copy()
         self.img_width = self.image.shape[1]
 
 
-        player_squares = self.find_squares(area=(x,y,w,h))
+        player_squares = self.find_squares(area=(pool_x_min,pool_y_min,pool_x_max,pool_y_max))
 
         target_ball = self.finder.detect_target_ball(
             Circle(17, 100, 23,
-                   (x,y,w,h)
+                   (pool_x_min,pool_y_min,pool_x_max,pool_y_max)
                    )
         )
         
@@ -138,15 +144,22 @@ class MatchingBallPool:
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
             Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
-                   (x,y,w,h),
+                   (pool_x_min,pool_y_min,pool_x_max,pool_y_max),
                    )
         )
 
         ball_circles = self.finder._find_balls_pool_contour(
             Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
-                   (x,y,w,h),
+                   (pool_x_min,pool_y_min,pool_x_max,pool_y_max),
                    (self.tx, self.ty, self.tr) if target_ball != None else None,
                    )
+        )
+
+        players_balls = self.finder._find_balls_pool_contour(
+            Circle(self.BALLS_MIN_RADIUS-1, 70, self.BALLS_MAX_RADIUS+2,
+                   (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA),
+                   None,
+                   ), area_threshold=10,circularity_threshold=0.5
         )
 
         # Assegniamo per riferimento interno
@@ -154,15 +167,17 @@ class MatchingBallPool:
         self.__pockets = pocket_circles
         self.__target_balls = target_ball
         self.__player_squares = player_squares
+        self.__player_balls = players_balls
         
-        """if self.__player1_turn:
+        if self.__player1_turn:
             print("Player 1 turn")
         else:
-            print("Player 2 turn")"""
+            print("Player 2 turn")
 
         print(f"{len(pocket_circles)} Pockets")
         print(f"{target_ball} Target balls")
         print(f"{len(ball_circles)} Balls")
+        print(f"{len(players_balls)} Player balls")
         #print(f"{len(aim_line) if aim_line != None else None} Aim line")
 
 
@@ -175,104 +190,29 @@ class MatchingBallPool:
             x_min, y_min, x_max, y_max = area 
             squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
             
-        if squares is not None and len(squares) >= 2:
-            print(f"len find squares {len(squares)}")
+        if squares is not None and len(squares) > 0:
+            #print(f"len find squares {len(squares)}")
             # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
             squares= sorted(squares, key=lambda item: item[1], reverse=True)
             brighter_square_x = squares[0][0].x
-            second_square_x = squares[1][0].x
+            if len(squares) > 1:
+                second_square_x = squares[1][0].x
+                self.__player1_turn = brighter_square_x < second_square_x
+            else:
+                if squares[0][1] > 50:
+                    if squares[0][0].x <= self.player1_pic_pos:
+                        self.__player1_turn = True
+                    else:
+                        self.__player1_turn = False
 
-            self.__player1_turn = brighter_square_x < second_square_x
         
-        for sq in squares:
-            print(f"Square {sq[0].x} {sq[0].y} {sq[1]}")
+        """for sq in squares:
+            print(f"Square {sq[0].x} {sq[0].y} {sq[1]}")"""
 
         return squares
     
-    def extract_ball_roi(self, ball_obj, scale=1.4):
-        """
-        Data una palla (ball_obj) con centro (x, y) e raggio r,
-        estrae il ROI dalla self.image. 'scale' serve ad aumentare il raggio per includere un margine.
-        Restituisce il ROI come numpy array oppure None se le coordinate non sono valide.
-        """
-        cx, cy, r = ball_obj.get_x(), ball_obj.get_y(), ball_obj.get_r()
-        margin = int(r * scale)
-        x1 = max(0, cx - margin)
-        y1 = max(0, cy - margin)
-        x2 = min(self.image.shape[1], cx + margin)
-        y2 = min(self.image.shape[0], cy + margin)
-        # Se il ROI è vuoto, restituisci None
-        #print(f"ROI: ({x1}, {y1}) - ({x2}, {y2})")
-        if x2 <= x1 or y2 <= y1:
-            #print("Empty ROI")
-            return None
-        #print(f"Self.image : {self.image}")
-        return x1, y1, x2, y2
 
-    
-    def detect_direction_line(self, roi_coords, r, ball_x, ball_y):
-        """
-        Cerca di rilevare una linea interna (ad es. la linea di direzione) all'interno dell'ROI,
-        che sia formata da pixel bianchi.
-        La funzione:
-        - Converte l'ROI in scala di grigi se necessario
-        - Crea una maschera per i pixel bianchi (valori > 200)
-        - Applica Canny per il rilevamento dei bordi
-        - Utilizza HoughLinesP per individuare segmenti lineari
-        - Per ogni linea candidata, verifica se lungo la linea prevalgono pixel bianchi
-        - Se viene trovata una linea con lunghezza >= 0.8 * r, la restituisce come tuple (x1, y1, x2, y2)
-        Restituisce None se non viene trovata una linea adeguata.
-        """
-        x1, y1, x2, y2 = roi_coords
-        roi = self.image
 
-        # Converte in scala di grigi se necessario
-        if len(roi.shape) == 3:
-            gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-        else:
-            gray_roi = roi.copy()
-        
-        # Crea una maschera dei pixel "bianchi" (valori > 200)
-        _, white_mask = cv2.threshold(gray_roi, 200, 255, cv2.THRESH_BINARY)
-
-        # Applica Canny per rilevare i bordi sull'immagine in scala di grigi
-        edges = cv2.Canny(gray_roi, 50, 150, apertureSize=3)
-
-        # Individua segmenti lineari con HoughLinesP
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, 
-                                minLineLength=int(1), maxLineGap=5)
-        
-        if lines is not None:
-            best_line = None
-            best_length = 0
-            for line in lines:
-                x_start, y_start, x_end, y_end = line[0]
-                line_length = np.sqrt((x_end - x_start) ** 2 + (y_end - y_start) ** 2)
-                
-                # Crea una maschera per la linea per verificare l'intensità dei pixel
-                mask_line = np.zeros_like(gray_roi, dtype=np.uint8)
-                cv2.line(mask_line, (x_start, y_start), (x_end, y_end), 255, thickness=3)
-                mean_white = cv2.mean(white_mask, mask=mask_line)[0]
-                
-                # Se la linea è formata prevalentemente da pixel bianchi (media >= 200)
-                # o ha lunghezza maggiore del candidato precedente, allora la selezioniamo
-                if not (x1 <= x_start <= x2 and
-                        y1 <= y_start <= y2):
-                    continue
-
-                """print(f"x1: {x1} y1: {y1}-")
-                print(f"x:  {x}   y: {y} -- ")"""
-                if mean_white >= 200 or line_length > best_length:
-                    
-                    best_length = line_length
-                    best_line = (x_start, y_start, x_end, y_end)
-                    
-            
-            # Restituisce la linea se la lunghezza è adeguata
-            if best_line is not None:
-                return best_line
-
-        return None
 
     def find_perpendicular_lines(self, raw_aim_lines, angle_tolerance=10):
         """
@@ -329,9 +269,9 @@ class MatchingBallPool:
             
 
             #print(f"x: {x} y: {y} r: {r} color: {patch}")
-            bpColor = BPoolColor.get_color(dominant_col, white_ratio)
+            bpColor = BPoolColor.get_color(dominant_col)
 
-            ball_obj = Ball(bpColor)
+            ball_obj = Ball(bpColor, white_ratio)
             ball_obj.set_x(x)
             ball_obj.set_y(y)
             ball_obj.set_r(r)
@@ -426,6 +366,17 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
             cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+        
+        for ball in self.__player_balls:
+            x, y, r = ball.x, ball.y, ball.radius
+            cv2.circle(img_copy, (x, y), r, (255, 0, 0), 3)
+            cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
+            # Testo con bordo nero e testo verde
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
+            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
         # Disegna i pocket (in giallo)
         for pocket in self.__pockets:

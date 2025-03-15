@@ -235,12 +235,14 @@ class ObjectsFinder:
                     print(f"Found ball:({x}, {y}): {color}")
                 # draw the circle
                 cv2.circle(self.__img_matrix, (x, y), r, (0, 255, 0), 2)
-                #cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
-                #cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
-                #cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
+                cv2.circle(self.__output, (x, y), 6, (0, 0, 0), 1)
+                cv2.circle(self.__blurred, (x, y), r, (0, 255, 0), 2)
+                cv2.circle(self.__blurred, (x, y), 6, (0, 0, 0), 1)
                 cv2.putText(self.__img_matrix, f"({x}, {y})", (x + 10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
                 balls.append(OutputCircle(x,y,r,color.tolist()))
+
             if self.debug and not self.validation:
+
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
                 plt.show()
                 cv2.waitKey(0)
@@ -363,115 +365,85 @@ class ObjectsFinder:
         
         return circularity >= circularity_threshold
 
-
-    def _find_balls_pool_contour(self, search_info:Circle = None, area_threshold=50, circularity_threshold=0.23):
-        
+    def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=50, circularity_threshold=0.20):
         gray = self.__gray
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Thresholding adattivo per rilevare bordi e forme
-        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
-                                    cv2.THRESH_BINARY_INV, 7, 3)
+        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY_INV, 11, 2)
         
-        # Trova i contorni
-        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        # Trova i contorni e la gerarchia
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return []
         hierarchy = hierarchy[0]
         
-        gray_color = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
         balls = []
         if contours is not None:
             for i, cnt in enumerate(contours):
                 area = cv2.contourArea(cnt)
                 (center), r = cv2.minEnclosingCircle(cnt)                
-                # Ottiene il colore del pixel al centro dalla versione già filtrata (o dalla immagine blurred se disponibile)
                 x = int(center[0])
                 y = int(center[1])
                 r = int(r)
-                    
-                if search_info != None:
+                
+                if search_info is not None:
                     x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min  <= x <= x_max and 
-                            y_min +70 <= y <= y_max -70):
+                    if not (x_min <= x <= x_max and y_min + 70 <= y <= y_max - 70):
                         continue
 
                     if not (search_info.min_radius <= r <= search_info.max_radius):
-                        #print("Scartata per radius")
                         continue
-                    if search_info.not_this_coordinates != None:
+
+                    if search_info.not_this_coordinates is not None:
                         x_not, y_not, r_not = search_info.not_this_coordinates
-                        dist = np.sqrt((float(x) - float(x_not)) ** 2 + (float(y) - float(y_not)) ** 2)
-                        if dist <= r *0.8 or dist <= r_not:
-                            #print("Scartata per distanza")
-                            #print("from",x,y,"to",x_not,y_not)
+                        dist = np.sqrt((x - x_not) ** 2 + (y - y_not) ** 2)
+                        if dist <= r * 0.3 or dist <= r_not:
                             continue
 
                 circularity = area / (math.pi * r * r)
                 if circularity < circularity_threshold:
                     continue
                 
-                # Controlla se non è un contorno esterno
-                if hierarchy[i][3] == -1:  # Se non ha un genitore, è esterno
+                # Escludi contorni esterni (senza genitore)
+                if hierarchy[i][3] == -1:
                     continue
 
-                # Maschera per il contorno esterno
-                mask_outer = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
-                cv2.drawContours(mask_outer, [cnt], -1, 255, -1)
+                # Crea una maschera per l'intera area della pallina
+                mask = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
+                cv2.circle(mask, (x, y), r, 255, -1)
 
-                # Recupero del contorno interno (si prende il primo figlio)
-                inner_index = hierarchy[i][2]
-                
-                # Verifica se esiste un contorno interno
-                if inner_index != -1:
-                    inner_cnt = contours[inner_index]
-                    
-                    # Creazione della maschera per il contorno interno
-                    mask_inner = np.zeros_like(mask_outer)
-                    cv2.drawContours(mask_inner, [inner_cnt], -1, 255, -1)
-                else:
-                    # Se non esiste un contorno interno, crea una maschera circolare più piccola
-                    smaller_r = int(r * 0.9)
-                    mask_inner = np.zeros_like(mask_outer)
-                    cv2.circle(mask_inner, (x, y), smaller_r, 255, -1)
-                
-                # Estrae i pixel all'interno della maschera dalla versione a colori dell'immagine
-                pixels = self.__blurred[mask_outer == 255].reshape(-1, 3).astype(np.float32)
+                # Per il clustering usiamo comunque la versione blurred (o la stessa immagine utilizzata per i contorni)
+                pixels_kmeans = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
 
-                # -------------------------
                 # K-means clustering per ottenere il colore dominante
-                # -------------------------
                 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-                k = 2  # Imposta k=2 se pensi che la palla abbia due componenti principali (es. colore e bianco)
-                _, labels, centers = cv2.kmeans(pixels, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+                k = 2  # Supponiamo due componenti: colore e bianco
+                _, labels, centers = cv2.kmeans(pixels_kmeans, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
 
-                # Trova il cluster dominante (maggiore numero di pixel)
                 dominant_idx = np.argmax(np.bincount(labels.flatten()))
                 dominant_color = centers[dominant_idx].astype(np.uint8).tolist()
 
-                # --------------------------
-                # MODIFICATA: Calcola il white_ratio usando solo la parte interna
-                # --------------------------
-                
-                # Usa il contorno interno per calcolare il white_ratio
                 full_img = self.__blurred
-                pixels_inner = full_img[mask_inner == 255].reshape(-1, 3).astype(np.float32)
-                
-                if pixels_inner.size > 0:  # Verifica che ci siano pixel nella maschera interna
-                    roi_pixels_inner = pixels_inner.reshape(-1, 1, 3).astype(np.uint8)
-                    hsv_inner = cv2.cvtColor(roi_pixels_inner, cv2.COLOR_BGR2HSV)
-                    lower_white = np.array([0, 0, 200])
-                    upper_white = np.array([180, 55, 255])
-                    mask_white = cv2.inRange(hsv_inner, lower_white, upper_white)
-                    white_count = cv2.countNonZero(mask_white)
-                    white_ratio = white_count / float(pixels_inner.shape[0])
-                else:
-                    white_ratio = 0.0  # Se non ci sono pixel nella maschera interna
 
-                print(f"White ratio (from inner contour): {white_ratio}")
+                pixels_full = full_img[mask == 255].reshape(-1, 3).astype(np.float32)
+                roi_pixels_full = pixels_full.reshape(-1, 1, 3).astype(np.uint8)
+                hsv_full = cv2.cvtColor(roi_pixels_full, cv2.COLOR_BGR2HSV)
+                lower_white = np.array([0, 0, 200])
+                upper_white = np.array([180, 55, 255])
+                mask_white = cv2.inRange(hsv_full, lower_white, upper_white)
+                white_count = cv2.countNonZero(mask_white)
+                white_ratio = white_count / float(pixels_full.shape[0])
+
+                #print(f"Ball at ({x},{y}) - White ratio: {white_ratio:.2f}")
 
                 balls.append(OutputCircle(x, y, r, dominant_color, white_ratio))
 
         balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
         return balls
+
+
     
     def _find_pockets_pool_contour(self, search_info:Circle):
             # Valori minimi di raggio, area e eventuale area di interesse
@@ -598,7 +570,7 @@ class ObjectsFinder:
         hierarchy = hierarchy[0]  # si lavora sulla prima (ed unica) dimensione della gerarchia
         
         candidate = None
-        max_diff = 0
+        max_diff = -1
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
             area_outer = cv2.contourArea(cnt)
@@ -787,7 +759,7 @@ class ObjectsFinder:
 
         boxes = sorted(boxes, key=lambda item: item[0].x +item[0].width +item[0].y +item[0].heigth, reverse=True)
 
-        print(f"len square boxes {len(boxes)}")
+        #print(f"len square boxes {len(boxes)}")
         
 
             

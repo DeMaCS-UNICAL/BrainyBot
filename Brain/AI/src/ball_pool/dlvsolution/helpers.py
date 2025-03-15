@@ -83,6 +83,7 @@ class BPoolColor(Color):
     
     def set_white_ratio(self, white_ratio: float):
         self.__white_ratio = white_ratio
+        print(f"White ratio set: {self.__white_ratio:.4f}")
 
 
     def get_ball_type(self):
@@ -103,12 +104,14 @@ class BPoolColor(Color):
         del colore più vicino tra quelle di POOL_REFERENCE_COLORS.
         """
         return min(BPoolColor.POOL_REFERENCE_COLORS_BGR.items(),
-                key=lambda item: np.linalg.norm(detected_color - item[1]))[0]
+                key=lambda item: BPoolColor.__euclidean_distance(
+                    detected_color, item[1]
+                ))[0]
 
     
     @staticmethod
     def get_color(patch, white_ratio:float = None):
-        print(f"White ratio: {white_ratio:.4f}")
+        #print(f"White ratio: {white_ratio:.4f}")
 
         """
         Estrae (o crea) un BPoolColor dalla patch, assegnando solo il valore BGR.
@@ -127,17 +130,10 @@ class BPoolColor(Color):
             patch = patch.reshape((1, 1, -1))
 
         # Calcola il colore medio; se la patch è vuota usa [0, 0, 0]
-        mean_color = np.mean(patch, axis=(0, 1)) if patch.size > 0 else np.zeros(3, dtype=np.float32)
+        mean_color = np.mean(patch, axis=(0, 1)) 
 
-        # Verifica se esiste già un BPoolColor simile (basato solo sul BGR)
-        for c in BPoolColor.__colors:
-            if BPoolColor.__euclidean_distance(c.get_bgr(), mean_color) < BPoolColor.__MAX_DISTANCE:
-                return c
-
-        # Crea un nuovo BPoolColor con il colore medio.
-        # Nota: il costruttore di BPoolColor va modificato affinché il ball type sia opzionale o venga assegnato successivamente.
         new_color = BPoolColor(mean_color)  
-        new_color.set_white_ratio(white_ratio)
+        
         BPoolColor.__colors.append(new_color)
         return new_color
 
@@ -157,32 +153,38 @@ class BPoolColor(Color):
             color = ball.get_color()
             detected_color = np.array(color.get_bgr(), dtype=np.float32)
             category = cls.find_closest_color_category(detected_color)
+
             ball.category = category  # Salva la categoria nell'oggetto
             ref_color = cls.POOL_REFERENCE_COLORS_BGR[category]
-            distance = np.linalg.norm(detected_color - ref_color)
-            white_ratio = color.get_white_ratio()
-            color_groups.setdefault(category, []).append((ball, distance, white_ratio))
+            distance = BPoolColor.__euclidean_distance(detected_color, ref_color)
+            white_ratio = ball.get_white_ratio()
 
+            color_groups.setdefault(category, []).append((ball, distance, white_ratio))
+           
         final_balls = []
         for category, ball_list in color_groups.items():
             # Ordina in base alla distanza dal colore di riferimento (minore è migliore)
             ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
+
             if category in ("white", "black"):
                 chosen_ball, _, _ = ball_list_sorted[0]
                 ball_type = "cue" if category == "white" else "eight"
                 chosen_ball.get_color().set_ball_type(ball_type)
                 final_balls.append(chosen_ball)
+
                 if len(ball_list_sorted) > 1:
                     print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
             else:
                 ball_list_sorted = ball_list_sorted[:2]
+                #print(f"Rilevate {len(ball_list_sorted)} palle {category}.")
                 if len(ball_list_sorted) == 2:
                     ball1, d1, wr1 = ball_list_sorted[0]
                     ball2, d2, wr2 = ball_list_sorted[1]
-                    print(f"Rilevate due palle {category}. Distanze: {d1:.2f}, {d2:.2f}; White ratios: {wr1:.4f}, {wr2:.4f}")
+                    #print(f"Rilevate due palle {category}. Distanze: {d1:.2f}, {d2:.2f}; White ratios: {wr1:.4f}, {wr2:.4f}")
                     # Se la differenza nel white_ratio è significativa, assegna "striped" a quella con white_ratio maggiore.
 
                     if d1 != d2:
+                        #print(f"Distanze diverse: {d1:.2f}, {d2:.2f}")
                         if d1 > d2:
                                 ball1.get_color().set_ball_type("striped")
                                 ball2.get_color().set_ball_type("solid")
@@ -191,17 +193,23 @@ class BPoolColor(Color):
                             ball2.get_color().set_ball_type("striped")
                             
                     else:
+                        #print(f"Distanze uguali: {d1:.2f}, {d2:.2f}")
                         if wr1 > wr2:
                             ball1.get_color().set_ball_type("striped")
                             ball2.get_color().set_ball_type("solid")
                         else:
                             ball1.get_color().set_ball_type("solid")
                             ball2.get_color().set_ball_type("striped")
-                    
+                    #print("-" * 30)
                         
                 elif len(ball_list_sorted) == 1:
-                    print(f"Rilevata una palla {category} con distanza: {ball_list_sorted[0][1]:.2f} e white ratio: {ball_list_sorted[0][2]:.2f}")
-                    ball_list_sorted[0][0].get_color().set_ball_type("solid")
+                    ball1, d1, wr1 = ball_list_sorted[0]
+                    #print(f"Rilevata una palla {category} con distanza: {ball_list_sorted[0][1]:.2f} e white ratio: {ball_list_sorted[0][2]:.2f}")
+                    if wr1 > 0.9:
+                        ball1.get_color().set_ball_type("striped")
+                    else:
+                        ball1.get_color().set_ball_type("solid")
+
                 for ball, _, _ in ball_list_sorted:
                     final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
 
@@ -212,12 +220,6 @@ class BPoolColor(Color):
 
             
         return final_balls
-
-
-
-    
-    def get_white_ratio(self):
-        return self.__white_ratio
 
     def compute_white_ratio(self, patch):
         """
@@ -250,12 +252,13 @@ class Ball(Predicate):
 
     __ids = count(1, 1) # genera un id univoco per ogni palla, inizia da 1 e incrementa di 1
 
-    def __init__(self, color: BPoolColor):
+    def __init__(self, color: BPoolColor, white_ratio: float = None):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
         self.__x = None
         self.__y = None
+        self.__white_ratio = white_ratio
 
     def get_id(self) -> int:
         return self.__id
@@ -270,11 +273,9 @@ class Ball(Predicate):
         self.__color = color
 
     def get_white_ratio(self):
-        return self.__color.get_white
+        return self.__white_ratio
     
-    def set_white_ratio(self, white_ratio):
-        self.__color.set_white_ratio
-    
+
     def get_x(self) -> int:
         return self.__x
 
