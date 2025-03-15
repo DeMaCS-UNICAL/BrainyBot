@@ -364,17 +364,17 @@ class ObjectsFinder:
         return circularity >= circularity_threshold
 
 
-    def _find_balls_pool_contour(self, search_info:Circle = None, area_threshold=50, circularity_threshold=0.24):
+    def _find_balls_pool_contour(self, search_info:Circle = None, area_threshold=50, circularity_threshold=0.23):
         
         gray = self.__gray
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+
         # Thresholding adattivo per rilevare bordi e forme
-        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY_INV, 11, 2)
+        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
+                                    cv2.THRESH_BINARY_INV, 7, 3)
         
         # Trova i contorni
-        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         hierarchy = hierarchy[0]
         
         gray_color = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
@@ -400,7 +400,7 @@ class ObjectsFinder:
                     if search_info.not_this_coordinates != None:
                         x_not, y_not, r_not = search_info.not_this_coordinates
                         dist = np.sqrt((float(x) - float(x_not)) ** 2 + (float(y) - float(y_not)) ** 2)
-                        if dist <= r or dist <= r_not:
+                        if dist <= r *0.8 or dist <= r_not:
                             #print("Scartata per distanza")
                             #print("from",x,y,"to",x_not,y_not)
                             continue
@@ -413,12 +413,28 @@ class ObjectsFinder:
                 if hierarchy[i][3] == -1:  # Se non ha un genitore, è esterno
                     continue
 
-                mask = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
-                cv2.circle(mask, (x, y), r, 255, -1)
+                # Maschera per il contorno esterno
+                mask_outer = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
+                cv2.drawContours(mask_outer, [cnt], -1, 255, -1)
 
+                # Recupero del contorno interno (si prende il primo figlio)
+                inner_index = hierarchy[i][2]
+                
+                # Verifica se esiste un contorno interno
+                if inner_index != -1:
+                    inner_cnt = contours[inner_index]
+                    
+                    # Creazione della maschera per il contorno interno
+                    mask_inner = np.zeros_like(mask_outer)
+                    cv2.drawContours(mask_inner, [inner_cnt], -1, 255, -1)
+                else:
+                    # Se non esiste un contorno interno, crea una maschera circolare più piccola
+                    smaller_r = int(r * 0.9)
+                    mask_inner = np.zeros_like(mask_outer)
+                    cv2.circle(mask_inner, (x, y), smaller_r, 255, -1)
+                
                 # Estrae i pixel all'interno della maschera dalla versione a colori dell'immagine
-                # Assumiamo che self.__image sia l'immagine originale a colori (BGR)
-                pixels = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
+                pixels = self.__blurred[mask_outer == 255].reshape(-1, 3).astype(np.float32)
 
                 # -------------------------
                 # K-means clustering per ottenere il colore dominante
@@ -430,9 +446,31 @@ class ObjectsFinder:
                 # Trova il cluster dominante (maggiore numero di pixel)
                 dominant_idx = np.argmax(np.bincount(labels.flatten()))
                 dominant_color = centers[dominant_idx].astype(np.uint8).tolist()
-                balls.append(OutputCircle(x, y, r, dominant_color))
 
-        balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=5)
+                # --------------------------
+                # MODIFICATA: Calcola il white_ratio usando solo la parte interna
+                # --------------------------
+                
+                # Usa il contorno interno per calcolare il white_ratio
+                full_img = self.__blurred
+                pixels_inner = full_img[mask_inner == 255].reshape(-1, 3).astype(np.float32)
+                
+                if pixels_inner.size > 0:  # Verifica che ci siano pixel nella maschera interna
+                    roi_pixels_inner = pixels_inner.reshape(-1, 1, 3).astype(np.uint8)
+                    hsv_inner = cv2.cvtColor(roi_pixels_inner, cv2.COLOR_BGR2HSV)
+                    lower_white = np.array([0, 0, 200])
+                    upper_white = np.array([180, 55, 255])
+                    mask_white = cv2.inRange(hsv_inner, lower_white, upper_white)
+                    white_count = cv2.countNonZero(mask_white)
+                    white_ratio = white_count / float(pixels_inner.shape[0])
+                else:
+                    white_ratio = 0.0  # Se non ci sono pixel nella maschera interna
+
+                print(f"White ratio (from inner contour): {white_ratio}")
+
+                balls.append(OutputCircle(x, y, r, dominant_color, white_ratio))
+
+        balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
         return balls
     
     def _find_pockets_pool_contour(self, search_info:Circle):
@@ -654,12 +692,35 @@ class ObjectsFinder:
             per = cv2.arcLength(cnt, True)
             epsilon = 0.05 * per
             approx = cv2.approxPolyDP(cnt, epsilon, True)
+            x, y, w, h = cv2.boundingRect(approx)
             
-            # Se il contorno non è un quadrilatero convesso o troppo piccolo, scarta
-            if len(approx) != 4 or not cv2.isContourConvex(approx) or cv2.contourArea(approx) < 3000:
+            # Controlla l'area minima
+            if cv2.contourArea(approx) < 3000:
+                """if 1340<= x <= 1360 and 17 <= y <= 20:
+                    print(f"Found square box: ({x}, {y}, {w}, {h})")
+                    print(f"Area: {cv2.contourArea(approx)}")
+                    print("Scartata per area")"""
                 continue
             
-            x, y, w, h = cv2.boundingRect(approx)
+            # Se il contorno non è un quadrilatero, prova a ricostruirlo usando il convex hull
+            if len(approx) != 4:
+                hull = cv2.convexHull(cnt)
+                epsilon = 0.05 * cv2.arcLength(hull, True)
+                approx = cv2.approxPolyDP(hull, epsilon, True)
+                if len(approx) != 4:
+                    """if 1340<= x <= 1360 and 17 <= y <= 20:
+                        print(f"Found square box: ({x}, {y}, {w}, {h})")
+                        print("Scartata per non quadrilatero")"""
+                    continue
+
+            # Verifica che il rettangolo sia quasi quadrato (tolleranza di 6 pixel)
+            if not (h - 6 <= w <= h + 6):
+                """if 1340<= x <= 1360 and 17 <= y <= 20:
+                        print(f"Found square box: ({x}, {y}, {w}, {h})")
+                        print(f"Scartata per non h w h {w} {h}")"""
+
+                continue
+            
             #print(f"Found square box: ({x}, {y}, {w}, {h})")
             
             # Controlla che la box sia quadrata (lati uguali con una tolleranza)
@@ -667,7 +728,14 @@ class ObjectsFinder:
                 #print("Scartata per non quadrata")
                 #print(f" w {w}, h {h}")
                 #print("----------------------------")
+                if 1340<= x <= 1360 and 17 <= y <= 20:
+                    print(f"Found square box: ({x}, {y}, {w}, {h})")
+                    print("TROVATO secondo")
+                    print("Scartata per non quadrilatero")
                 continue
+
+            #print(f"Found square box: ({x}, {y}, {w}, {h})")
+
             
             # Estrae la regione d'interesse (ROI)
             roi = self.__img_matrix[y:y+h, x:x+w]
@@ -718,7 +786,6 @@ class ObjectsFinder:
             #print("----------------------------")
 
         boxes = sorted(boxes, key=lambda item: item[0].x +item[0].width +item[0].y +item[0].heigth, reverse=True)
-        boxes = boxes[0:2]
 
         print(f"len square boxes {len(boxes)}")
         

@@ -36,7 +36,7 @@ class BPoolColor(Color):
     __colors = []
     __MAX_DISTANCE = 20  # più tollerante rispetto a Color
 
-        # Dizionario con colori in formato RGB
+    # Dizionario con colori in formato RGB
     POOL_REFERENCE_COLORS_RGB = {
         "yellow": np.array([255, 204, 0], dtype=np.float32),   # Giallo
         "blue": np.array([0, 0, 255], dtype=np.float32),       # Blu
@@ -67,7 +67,8 @@ class BPoolColor(Color):
         super().__init__(bgr)
         self.set_id(next(BPoolColor.__ids))
         self.__ball_type = ball_type
-        # Calcolo del colore medio e della white ratio
+  
+
         if isinstance(bgr, np.ndarray):
             if bgr.ndim == 1:
                 self.__mean_color = bgr
@@ -75,7 +76,14 @@ class BPoolColor(Color):
                 self.__mean_color = np.mean(bgr, axis=(0, 1))
         else:
             self.__mean_color = np.array(bgr, dtype=np.float32)
-        self.__white_ratio = self.compute_white_ratio(bgr)
+
+
+    def get_white_ratio(self):
+        return self.__white_ratio
+    
+    def set_white_ratio(self, white_ratio: float):
+        self.__white_ratio = white_ratio
+
 
     def get_ball_type(self):
         return self.__ball_type
@@ -94,26 +102,18 @@ class BPoolColor(Color):
         Dato un colore (BGR) rilevato, restituisce la categoria (stringa)
         del colore più vicino tra quelle di POOL_REFERENCE_COLORS.
         """
-        best_category = None
-        best_distance = float('inf')
-        for category, ref_color in BPoolColor.POOL_REFERENCE_COLORS_BGR.items():
-            distance = np.linalg.norm(detected_color - ref_color)
-            if distance < best_distance:
-                best_distance = distance
-                best_category = category
-        print(f"Detected color: {detected_color},Ref color {BPoolColor.POOL_REFERENCE_COLORS_BGR[best_category]} Best category: {best_category}")
-        return best_category
+        return min(BPoolColor.POOL_REFERENCE_COLORS_BGR.items(),
+                key=lambda item: np.linalg.norm(detected_color - item[1]))[0]
+
     
     @staticmethod
-    def get_color(patch):
+    def get_color(patch, white_ratio:float = None):
+        print(f"White ratio: {white_ratio:.4f}")
+
         """
-        Estrae (o crea) un BPoolColor dalla patch.
-        Se la luminosità media è molto alta o bassa, classifica la pallina come 'cue' (bianca)
-        o 'eight' (nera). Altrimenti, calcola il colore medio e usa il riferimento per
-        assegnare la categoria più vicina.
+        Estrae (o crea) un BPoolColor dalla patch, assegnando solo il valore BGR.
+        La classificazione (ball type) verrà gestita successivamente.
         """
-         
-        
         if isinstance(patch, BPoolColor):
             return patch
 
@@ -126,90 +126,91 @@ class BPoolColor(Color):
         if patch.ndim == 1:
             patch = patch.reshape((1, 1, -1))
 
-        if patch.size == 0:
-            mean_color = np.array([0, 0, 0], dtype=np.float32)
-        else:
-            mean_color = np.mean(patch, axis=(0, 1))
+        # Calcola il colore medio; se la patch è vuota usa [0, 0, 0]
+        mean_color = np.mean(patch, axis=(0, 1)) if patch.size > 0 else np.zeros(3, dtype=np.float32)
 
-        avg = np.mean(mean_color)
-        ball_type = BPoolColor.find_closest_color_category(detected_color=mean_color)
-        print("------------------")
-
-        # Verifica se esiste già un BPoolColor simile
+        # Verifica se esiste già un BPoolColor simile (basato solo sul BGR)
         for c in BPoolColor.__colors:
-            dist = BPoolColor.__euclidean_distance(c.get_bgr(), mean_color)
-            if dist < BPoolColor.__MAX_DISTANCE:
+            if BPoolColor.__euclidean_distance(c.get_bgr(), mean_color) < BPoolColor.__MAX_DISTANCE:
                 return c
 
-        new_color = BPoolColor(mean_color, ball_type)
+        # Crea un nuovo BPoolColor con il colore medio.
+        # Nota: il costruttore di BPoolColor va modificato affinché il ball type sia opzionale o venga assegnato successivamente.
+        new_color = BPoolColor(mean_color)  
+        new_color.set_white_ratio(white_ratio)
         BPoolColor.__colors.append(new_color)
         return new_color
-    
+
 
     @classmethod
     def assign_ball_types(cls, balls):
         """
-        Raggruppa le palle per categoria di colore e, per ciascun colore, assegna:
-        - Se il colore è "white": viene impostata come "cue" (si tiene al massimo 1 palla)
-        - Se il colore è "black": viene impostata come "eight" (si tiene al massimo 1 palla)
-        - Altrimenti: se ci sono due palle per la categoria, quella con la distanza maggiore
-            dal colore di riferimento viene etichettata come "striped" e l'altra come "solid";
-            se c'è solo una palla, viene impostata come "solid".
+        Raggruppa le palle per categoria di colore e, per ciascuna:
+          - "white": viene mantenuta una sola palla (tipo "cue").
+          - "black": viene mantenuta una sola palla (tipo "eight").
+          - Altri colori: se ci sono due palle, si usa sia la distanza dal colore di riferimento
+            che il white_ratio per determinare quale viene etichettata "striped" (maggiore white_ratio)
+            e quale "solid"; se c'è solo una palla, viene etichettata "solid".
         """
         color_groups = {}
         for ball in balls:
-            # Assumiamo che ball.get_color().get_bgr() restituisca il colore in formato BGR
-            detected_color = np.array(ball.get_color().get_bgr(), dtype=np.float32)
+            color = ball.get_color()
+            detected_color = np.array(color.get_bgr(), dtype=np.float32)
             category = cls.find_closest_color_category(detected_color)
             ball.category = category  # Salva la categoria nell'oggetto
             ref_color = cls.POOL_REFERENCE_COLORS_BGR[category]
             distance = np.linalg.norm(detected_color - ref_color)
-            if category not in color_groups:
-                color_groups[category] = []
-            color_groups[category].append((ball, distance))
-        
+            white_ratio = color.get_white_ratio()
+            color_groups.setdefault(category, []).append((ball, distance, white_ratio))
+
         final_balls = []
         for category, ball_list in color_groups.items():
-            # Gestione speciale per la palla bianca (cue) e quella nera (eight)
-            if category == "white":
-                # Si mantiene al massimo 1 palla per il bianco (cue)
-                ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
-                ball_list_sorted[0][0].get_color().set_ball_type("cue")
-                final_balls.append(ball_list_sorted[0][0])
+            # Ordina in base alla distanza dal colore di riferimento (minore è migliore)
+            ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
+            if category in ("white", "black"):
+                chosen_ball, _, _ = ball_list_sorted[0]
+                ball_type = "cue" if category == "white" else "eight"
+                chosen_ball.get_color().set_ball_type(ball_type)
+                final_balls.append(chosen_ball)
                 if len(ball_list_sorted) > 1:
-                    print("Attenzione: rilevate più palle bianche; ne è stata mantenuta solo una come cue.")
-            elif category == "black":
-                # Si mantiene al massimo 1 palla per il nero (eight)
-                ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
-                ball_list_sorted[0][0].get_color().set_ball_type("eight")
-                final_balls.append(ball_list_sorted[0][0])
-                if len(ball_list_sorted) > 1:
-                    print("Attenzione: rilevate più palle nere; ne è stata mantenuta solo una come eight.")
+                    print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
             else:
-                # Per gli altri colori: se ci sono più di 2, ne si considerano solo 2
-                ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
-                if len(ball_list_sorted) > 2:
-                    ball_list_sorted = ball_list_sorted[:2]
-                
+                ball_list_sorted = ball_list_sorted[:2]
                 if len(ball_list_sorted) == 2:
-                    # Assegna "striped" alla palla con distanza maggiore dal colore di riferimento
-                    if ball_list_sorted[0][1] > ball_list_sorted[1][1]:
-                        ball_list_sorted[0][0].get_color().set_ball_type("striped")
-                        ball_list_sorted[1][0].get_color().set_ball_type("solid")
+                    ball1, d1, wr1 = ball_list_sorted[0]
+                    ball2, d2, wr2 = ball_list_sorted[1]
+                    print(f"Rilevate due palle {category}. Distanze: {d1:.2f}, {d2:.2f}; White ratios: {wr1:.4f}, {wr2:.4f}")
+                    # Se la differenza nel white_ratio è significativa, assegna "striped" a quella con white_ratio maggiore.
+
+                    if d1 != d2:
+                        if d1 > d2:
+                                ball1.get_color().set_ball_type("striped")
+                                ball2.get_color().set_ball_type("solid")
+                        else:
+                            ball1.get_color().set_ball_type("solid")
+                            ball2.get_color().set_ball_type("striped")
+                            
                     else:
-                        ball_list_sorted[0][0].get_color().set_ball_type("solid")
-                        ball_list_sorted[1][0].get_color().set_ball_type("striped")
+                        if wr1 > wr2:
+                            ball1.get_color().set_ball_type("striped")
+                            ball2.get_color().set_ball_type("solid")
+                        else:
+                            ball1.get_color().set_ball_type("solid")
+                            ball2.get_color().set_ball_type("striped")
+                    
+                        
                 elif len(ball_list_sorted) == 1:
+                    print(f"Rilevata una palla {category} con distanza: {ball_list_sorted[0][1]:.2f} e white ratio: {ball_list_sorted[0][2]:.2f}")
                     ball_list_sorted[0][0].get_color().set_ball_type("solid")
-                
-                for ball, _ in ball_list_sorted:
-                    final_balls.append(ball)
-        
-        # Stampa il ball type e il nome del colore per ogni palla
+                for ball, _, _ in ball_list_sorted:
+                    final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
+
         for ball in final_balls:
             bp_color = ball.get_color() if hasattr(ball, "get_color") else ball.color
-            print(f"Ball at ({ball.get_x()}, {ball.get_y()}) with radius {ball.get_r()} is type: {bp_color.get_ball_type()} and color: {ball.category}")
-        
+            print(f"Ball at ({ball.get_x()}, {ball.get_y()}) is type: {bp_color.get_ball_type().upper()} "
+                f"and color: {ball.category.upper()}")
+
+            
         return final_balls
 
 
@@ -267,6 +268,12 @@ class Ball(Predicate):
 
     def set_color(self, color):
         self.__color = color
+
+    def get_white_ratio(self):
+        return self.__color.get_white
+    
+    def set_white_ratio(self, white_ratio):
+        self.__color.set_white_ratio
     
     def get_x(self) -> int:
         return self.__x

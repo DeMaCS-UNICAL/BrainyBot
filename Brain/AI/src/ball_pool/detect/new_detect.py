@@ -155,10 +155,10 @@ class MatchingBallPool:
         self.__target_balls = target_ball
         self.__player_squares = player_squares
         
-        if self.__player1_turn:
+        """if self.__player1_turn:
             print("Player 1 turn")
         else:
-            print("Player 2 turn")
+            print("Player 2 turn")"""
 
         print(f"{len(pocket_circles)} Pockets")
         print(f"{target_ball} Target balls")
@@ -173,16 +173,20 @@ class MatchingBallPool:
         squares = self.finder.detect_square_boxes()
         if area is not None:
             x_min, y_min, x_max, y_max = area 
-            #squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
+            squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
             
-        print(f"len find squares {len(squares)}")
-        # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
-        squares= sorted(squares, key=lambda item: item[1], reverse=True)
-        brighter_square_x = squares[0][0].x
-        second_square_x = squares[1][0].x
+        if squares is not None and len(squares) >= 2:
+            print(f"len find squares {len(squares)}")
+            # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
+            squares= sorted(squares, key=lambda item: item[1], reverse=True)
+            brighter_square_x = squares[0][0].x
+            second_square_x = squares[1][0].x
 
-        self.__player1_turn = brighter_square_x < second_square_x
-       
+            self.__player1_turn = brighter_square_x < second_square_x
+        
+        for sq in squares:
+            print(f"Square {sq[0].x} {sq[0].y} {sq[1]}")
+
         return squares
     
     def extract_ball_roi(self, ball_obj, scale=1.4):
@@ -320,9 +324,12 @@ class MatchingBallPool:
             x = c.x
             y = c.y
             r = c.radius
-            patch = c.color  # patch dell'immagine della pallina
-            print(f"x: {x} y: {y} r: {r} color: {patch}")
-            bpColor = BPoolColor.get_color(patch)
+            dominant_col = c.color  # patch dell'immagine della pallina
+            white_ratio : float= c.white_ratio 
+            
+
+            #print(f"x: {x} y: {y} r: {r} color: {patch}")
+            bpColor = BPoolColor.get_color(dominant_col, white_ratio)
 
             ball_obj = Ball(bpColor)
             ball_obj.set_x(x)
