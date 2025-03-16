@@ -21,10 +21,7 @@ class DLVSolution:
         except Exception as e:
             print(str(e))
 
-    def __init_static_facts(self, colors: list, balls: list, pockets: list):
-        for color in colors:
-            self.__static_facts.add_object_input(color)
-
+    def __init_static_facts(self, balls: list, pockets: list):
         for ball in balls:
             self.__static_facts.add_object_input(ball)
 
@@ -33,50 +30,36 @@ class DLVSolution:
         
         #self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
 
-    """
-        print("Colors:", [str(c) for c in colors])
-        print("Balls:", [str(b) for b in balls])
-        print("Pockets:", [str(p) for p in pockets])
-    """
 
 
-
-    def __init_dinamic_facts(self, dynamic_facts: list):
-        for facts in dynamic_facts:
-            self.__dinamic_facts.add_object_input(facts)
-
+    def __init_dinamic_facts(self, dinamic_facts: []):
+        """for o in dinamic_facts:
+            self.__dinamic_facts.add_object_input(o)"""
+    
     def __init_fixed(self):
         self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.asp"))
 
-    def call_asp(self, balls, pockets):
+    def call_asp(self,balls, pockets, ghost_ball, aim_line, aimed_ball):
 
-        ASPMapper.get_instance().register_class(Color)
         ASPMapper.get_instance().register_class(Ball)
         ASPMapper.get_instance().register_class(Pocket)
         ASPMapper.get_instance().register_class(MoveAndShoot)
         ASPMapper.get_instance().register_class(GameOver)
 
-        self.__init_static_facts( [], balls, pockets)
-        self.__init_dinamic_facts([]) #TO REVIEW
+        self.__init_static_facts(balls, pockets, )
+        #self.__init_dinamic_facts([ghost_ball, aim_line, aimed_ball]) 
         self.__init_fixed()
 
         self.__handler.add_program(self.__static_facts)
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=moveandshoot/3, gameOver/1")
+        option = OptionDescriptor("--filter=MoveAndShoot/4, freeToShoot/3, gameOver/2 --quiet=1")
         self.__handler.add_option(option)
 
-        """
-        print("Static facts:")
-        print(self.__static_facts.get_program_string())  # se il metodo esiste, oppure un modo per ottenere la stringa
-        print("Dinamic facts:")
-        print(self.__dinamic_facts.get_program_string())
-        print("Fixed program:")
-        print(self.__fixed_input_program.get_program_string())
-        """
 
         moves = []
+        ans = []
         game_over = False
         step = 1
 
@@ -84,18 +67,21 @@ class DLVSolution:
             # for a in range(0,LOOK_AHEAD):
             self.__dinamic_facts.add_program(f"step({str(step)}).")
 
-
             answer_sets = self.__handler.start_sync()
             self.__dinamic_facts.clear_all()
 
             print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
             assert_true(answer_sets is not None,"No solutions found for this match.")
+
             print(f"Answer sets: {answer_sets}")
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this match.")
 
             for answer_set in answer_sets.get_optimal_answer_sets():
+                print(answer_set)
+                ans.append(answer_set)
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, MoveAndShoot):
+                        print(obj.get_ball(),obj.get_pocket(),obj.get_step())
                         if obj.get_step() == step:
                             self.__dinamic_facts.add_object_input(obj)
                             moves.append(obj)

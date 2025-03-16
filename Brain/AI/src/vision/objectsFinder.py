@@ -532,7 +532,7 @@ class ObjectsFinder:
     
 
 
-    def detect_target_ball(self, 
+    def detect_ghost_ball(self, 
                            search_info:Circle = None,
                        area_threshold=50, 
                        circularity_threshold=0.4,
@@ -765,14 +765,14 @@ class ObjectsFinder:
             
         return boxes
 
-    def compute_target_direction(self,all_balls,target_ball, area,  white_ball = (1463,370,23),collision_tolerance=8.0, line_length=100):
+    def compute_target_direction(self,all_balls,ghost_ball, area,  white_ball = (1463,370,23),collision_tolerance=8.0, line_length=100):
         """
         Calcola la linea di direzione per la palla mirata, selezionandola tra tutte le palle 
-        come quella più vicina alla palla mirino (target_ball) se la distanza è compatibile con un urto.
+        come quella più vicina alla palla mirino (ghost_ball) se la distanza è compatibile con un urto.
 
         Parametri:
         all_balls (list): Lista di palle, ognuna rappresentata come una tupla (x, y, r).
-        target_ball (tuple): La palla mirino (quella che colpisce) rappresentata come (x, y, r).
+        ghost_ball (tuple): La palla mirino (quella che colpisce) rappresentata come (x, y, r).
         area (tuple): Area di interesse definita come (x_min, y_min, x_max, y_max).
         collision_tolerance (float): Tolleranza in pixel per considerare la palla "vicina abbastanza".
         line_length (float): Lunghezza in pixel della linea di direzione da restituire.
@@ -782,7 +782,7 @@ class ObjectsFinder:
                 oppure None se nessuna palla è a distanza sufficiente per un urto.
         """
         cw_x, cw_y, cw_r = white_ball
-        tx, ty, tr = target_ball
+        gx, gy, gr = ghost_ball
         x_min, y_min, x_max, y_max = area
         
         candidate = None
@@ -803,30 +803,30 @@ class ObjectsFinder:
             if not (x_min <= b_x <= x_max and y_min <= b_y <= y_max):
                 continue
             
-            dx = b_x - tx
-            dy = b_y - ty
+            dx = b_x - gx
+            dy = b_y - gy
             distance = math.hypot(dx, dy)
             
-            # Se la distanza è inferiore a quella minima trovata e compatibile con un urto, seleziona la palla
-            #print(f"Distance: {distance} Urto {tr + b_r + collision_tolerance}")
+            # Se la distanza è inferiore a quella minima grovata e compatibile con un urto, seleziona la palla
+            #print(f"Distance: {distance} Urto {gr + b_r + collision_tolerance}")
 
-            if distance < min_distance and distance <= (tr + b_r + collision_tolerance):
+            if distance < min_distance and distance <= (gr + b_r + collision_tolerance):
                 min_distance = distance
                 candidate = ball
             #print("----------------------------")
                 
         if candidate is None:
             print("Nessuna palla mirata trovata o distanza non sufficiente per un urto.")
-            return None
+            return None, None
         
-         # Calcola la collision normal: il vettore normalizzato dal ghost_ball_center al centro della target ball
-        collision_dx = candidate.x - tx
-        collision_dy = candidate.y - ty
+        # Calcola la collision normal: il vettore normalizzato dal ghost_ball_center al centro della target ball
+        collision_dx = candidate.x - gx
+        collision_dy = candidate.y - gy
         norm = math.hypot(collision_dx, collision_dy)
         
         if norm < 0.0001:  # Evita divisione per zero con un valore piccolo
             print("Errore: i centri coincidono o sono troppo vicini.")
-            return None
+            return None, None
         collision_normal_x = collision_dx / norm
         collision_normal_y = collision_dy / norm
 
@@ -840,7 +840,8 @@ class ObjectsFinder:
         end_x = impact_x + collision_normal_x * line_length
         end_y = impact_y + collision_normal_y * line_length
 
-        return (impact_x, impact_y, end_x, end_y)
+        aim_line = (impact_x, impact_y, end_x, end_y)
+        return aim_line, candidate
 
 
 

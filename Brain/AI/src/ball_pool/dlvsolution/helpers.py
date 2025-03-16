@@ -8,6 +8,8 @@ import numpy as np
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
 from specializations.dlv2.desktop.dlv2_desktop_service import DLV2DesktopService
+from specializations.clingo.desktop.clingo_desktop_service import ClingoDesktopService
+
 
 from AI.src.constants import DLV_PATH
 from AI.src.asp_mapping.color import Color
@@ -36,20 +38,8 @@ class BPoolColor(Color):
     __colors = []
     __MAX_DISTANCE = 20  # più tollerante rispetto a Color
 
-    # Dizionario con colori in formato RGB
-    POOL_REFERENCE_COLORS_RGB = {
-        "yellow": np.array([255, 204, 0], dtype=np.float32),   # Giallo
-        "blue": np.array([0, 0, 255], dtype=np.float32),       # Blu
-        "red": np.array([255, 0, 0], dtype=np.float32),        # Rosso
-        "purple": np.array([128, 0, 128], dtype=np.float32),   # Viola
-        "orange": np.array([255, 102, 0], dtype=np.float32),   # Arancione
-        "green": np.array([0, 153, 0], dtype=np.float32),      # Verde
-        "maroon": np.array([139, 69, 19], dtype=np.float32),   # Marrone
-        "black": np.array([0, 0, 0], dtype=np.float32)   ,      # Nero (8-ball)
-        "white": np.array([255, 255, 255], dtype=np.float32)   # Bianco (cue)
-    }
 
-        # Dizionario con colori in formato BGR (usato in OpenCV) ordinati dal più chiaro al più scuro
+    # Dizionario con colori in formato BGR (usato in OpenCV) ordinati dal più chiaro al più scuro
     POOL_REFERENCE_COLORS_BGR = {
         "white": np.array([255, 255, 255]),   # Bianco: BGR(255, 255, 255) - luminosità: 255
         "yellow": np.array([0, 172, 253]),    # Giallo: BGR(0, 255, 255) - luminosità: 226.7
@@ -146,7 +136,7 @@ class BPoolColor(Color):
           - "black": viene mantenuta una sola palla (tipo "eight").
           - Altri colori: se ci sono due palle, si usa sia la distanza dal colore di riferimento
             che il white_ratio per determinare quale viene etichettata "striped" (maggiore white_ratio)
-            e quale "solid"; se c'è solo una palla, viene etichettata "solid".
+            e quale "solid"; se c'è solo una palla, viene etichettata "striped" se il white_ratio è alto.
         """
         color_groups = {}
         for ball in balls:
@@ -177,39 +167,25 @@ class BPoolColor(Color):
             else:
                 ball_list_sorted = ball_list_sorted[:2]
                 #print(f"Rilevate {len(ball_list_sorted)} palle {category}.")
+                ball1, d1, wr1 = ball_list_sorted[0]
+
                 if len(ball_list_sorted) == 2:
-                    ball1, d1, wr1 = ball_list_sorted[0]
                     ball2, d2, wr2 = ball_list_sorted[1]
                     #print(f"Rilevate due palle {category}. Distanze: {d1:.2f}, {d2:.2f}; White ratios: {wr1:.4f}, {wr2:.4f}")
                     # Se la differenza nel white_ratio è significativa, assegna "striped" a quella con white_ratio maggiore.
 
-                    if d1 != d2:
-                        #print(f"Distanze diverse: {d1:.2f}, {d2:.2f}")
-                        if d1 > d2:
-                                ball1.get_color().set_ball_type("striped")
-                                ball2.get_color().set_ball_type("solid")
-                        else:
-                            ball1.get_color().set_ball_type("solid")
-                            ball2.get_color().set_ball_type("striped")
-                            
+                    if d1 > d2 or wr1 > wr2:
+                        ball1.get_color().set_ball_type("striped")
+                        ball2.get_color().set_ball_type("solid")
                     else:
-                        #print(f"Distanze uguali: {d1:.2f}, {d2:.2f}")
-                        if wr1 > wr2:
-                            ball1.get_color().set_ball_type("striped")
-                            ball2.get_color().set_ball_type("solid")
-                        else:
-                            ball1.get_color().set_ball_type("solid")
-                            ball2.get_color().set_ball_type("striped")
+                        ball1.get_color().set_ball_type("solid")
+                        ball2.get_color().set_ball_type("striped")
                     #print("-" * 30)
                         
                 elif len(ball_list_sorted) == 1:
-                    ball1, d1, wr1 = ball_list_sorted[0]
                     #print(f"Rilevata una palla {category} con distanza: {ball_list_sorted[0][1]:.2f} e white ratio: {ball_list_sorted[0][2]:.2f}")
-                    if wr1 > 0.9:
-                        ball1.get_color().set_ball_type("striped")
-                    else:
-                        ball1.get_color().set_ball_type("solid")
-
+                    ball1.get_color().set_ball_type("striped") if wr1 > 0.9 else ball1.get_color().set_ball_type("solid")
+            
                 for ball, _, _ in ball_list_sorted:
                     final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
 
@@ -221,44 +197,20 @@ class BPoolColor(Color):
             
         return final_balls
 
-    def compute_white_ratio(self, patch):
-        """
-        Calcola la percentuale di pixel "bianchi" nella patch.
-        Se la patch è un singolo pixel, restituisce 1.0 se il valore medio è elevato.
-        """
-        if not isinstance(patch, np.ndarray):
-            patch = np.array(patch, dtype=np.float32)
-        if patch.ndim == 1:
-            avg = np.mean(patch)
-            return 1.0 if avg > 240 else 0.0
-        patch_uint8 = np.uint8(patch)
-        gray = cv2.cvtColor(patch_uint8, cv2.COLOR_BGR2GRAY)
-        white_pixels = np.sum(gray > 240)
-        total_pixels = gray.size
-        return white_pixels / total_pixels
-    
-    def get_color_key(self):
-        """
-        Genera una chiave per il raggruppamento basata sul colore medio arrotondato.
-        Qui arrotondiamo al multiplo di 20 per ridurre la sensibilità a piccole variazioni.
-        """
-        quantization_factor = 60  # Aumenta il fattore rispetto a 10 per ottenere gruppi più ampi
-        rounded = tuple(int(round(c / quantization_factor) * quantization_factor) for c in self.__mean_color)
-        return rounded
-
 
 class Ball(Predicate):
     predicate_name = "ball"
 
     __ids = count(1, 1) # genera un id univoco per ogni palla, inizia da 1 e incrementa di 1
 
-    def __init__(self, color: BPoolColor, white_ratio: float = None):
+    def __init__(self, color: BPoolColor = None, white_ratio: float = None):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
         self.__color = color
         self.__x = None
         self.__y = None
         self.__white_ratio = white_ratio
+        
 
     def get_id(self) -> int:
         return self.__id
@@ -296,6 +248,12 @@ class Ball(Predicate):
 
     def get_type(self) -> str:
         return self.__color.get_ball_type()
+
+    def set_aimed(self, aimed):
+        self.__aimed = aimed
+    
+    def is_aimed(self):
+        return self.__aimed
         
 
 
@@ -307,7 +265,7 @@ class Pocket(Predicate):
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
         self.__id = next(Pocket.__ids)
-        self.__balls = []   # Palline imbucate
+        self.__near_balls = []   # Palline imbucate
         self.__x = x
         self.__y = y
 
@@ -336,18 +294,20 @@ class Pocket(Predicate):
         self.__r = int(r)
 
     def add_ball(self, ball):
-        self.__balls.append(ball)
+        self.__near_balls.append(ball)
     
     def contains_ball(self, ball):
-        return ball in self.__balls
+        return ball in self.__near_balls
 
 class MoveAndShoot(Predicate): #Da modificare
     predicate_name = "moveandshoot"
 
-    def __init__(self, ball=None, pocket=None, step=None):
+    def __init__(self, ball=None, pocket=None, stick = None,ghost_ball= None, step=None):
         Predicate.__init__(self, [("ball", int), ("pocket", int), ("step", int)])
         self.__ball = ball
         self.__pocket = pocket
+        self.__stick = stick
+        self.__ghost_ball = ghost_ball
         self.__step = step
 
     def get_ball(self) -> int:
@@ -367,6 +327,15 @@ class MoveAndShoot(Predicate): #Da modificare
 
     def set_step(self, step):
         self.__step = step
+
+    def get_stick(self):
+        return self.__stick
+    
+    def set_stick(self, stick):
+        self.__stick = stick
+
+    def get_ghost_ball(self):
+        return self.__ghost_ball
 
 
 class Game(Predicate):
@@ -416,36 +385,40 @@ def choose_dlv_system() -> DesktopHandler:
     except Exception as e:
         print(e)
 
+def choose_clingo_system() -> DesktopHandler:
+    return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
-def get_colors(detections: list):
+def get_balls_and_near_pockets(balls: list,pockets : list, ball_type = "solid"):
+    
     """
-    L'input è una lista di rilevamenti [x, y, r, bgr].
-    Restituisce la lista dei colori distinti (con il relativo ball_type).
+    Per ogni pallina del tipo indicato rileva la buca più vicina 
+    e aggiunge una tupla (buca, pallina, distanza) alla lista.
+    La lista viene poi ordinata dalla distanza minima alla massima.
     """
-    colors = set()
-    #print("Detections:", detections.__str__())
-    for detection in detections:
-        # detection[3] contiene il BGR
-        colors.add(Color.get_color(detection.get_color().get_bgr()))
-    return list(colors)
+    pockets_ordered = []
+    for ball in balls:
+        if ball.get_type() != ball_type:
+            continue
+        dist_min = float('inf')  # usa float('inf') per rappresentare l'infinito
+        nearest_pkt = None
+
+        for pkt in pockets:
+            distance = sqrt((pkt.get_x() - ball.get_x())**2 + (pkt.get_y() - ball.get_y())**2)
+            if distance < dist_min:
+                dist_min = distance
+                nearest_pkt = pkt
+
+        pockets_ordered.append((nearest_pkt, ball, dist_min))
+    
+    # Ordina la lista in base alla distanza (terzo elemento della tupla)
+    pockets_ordered.sort(key=lambda tup: tup[2])
+    pockets_ordered = [tup[0].add_ball(tup[1]) for tup in pockets_ordered]  
+
+    return pockets_ordered, balls
 
 
-def get_balls_and_pockets(detections: list):
-    """
-    Converte i rilevamenti in oggetti Ball e inizializza le Pocket.
-    - detections: lista di [x, y, r, bgr]
-    - Restituisce una tupla (lista_pockets, lista_balls).
-    Le Pocket vengono inizializzate con coordinate fisse (da adattare al tavolo reale).
-    """
-    ball_list = []
-    for ball in detections:
-        color_obj = Color.get_color(ball.get_color().get_bgr())
+def get_ghost_ball(ball, pocket):
+    pass
 
-        b = Ball(color_obj)
-        ball_list.append(b)
-        print(f"Ball: {b.get_type()}")
-    # Definizione delle Pocket (coordinate da adattare)
-    pockets = []
-
-    return pockets, ball_list
-
+def get_aimed_ball_and_aim_line(balls, pockets, ball_type):
+    pass

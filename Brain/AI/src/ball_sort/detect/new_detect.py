@@ -18,7 +18,7 @@ from AI.src.vision.output_game_object import OutputContainer, OutputCircle
 
 
 class MatchingBalls:
-
+ 
     BALLS_DISTANCE_RATIO = 30
     TUBES_DISTANCE_RATIO = 8
     RADIUS_RATIO = 60

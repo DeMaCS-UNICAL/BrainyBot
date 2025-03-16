@@ -101,6 +101,7 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
         input=[]
         tubes=[]
     distance=0
+    
     if vision_val!=None:
         for_val=[]
         for i in input:

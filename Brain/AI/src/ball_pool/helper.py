@@ -6,7 +6,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 # Importa le classi aggiornate per ball_pool
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
-from AI.src.ball_pool.dlvsolution.helpers import get_colors, get_balls_and_pockets
+from AI.src.ball_pool.dlvsolution.helpers import  get_balls_and_near_pockets, get_ghost_ball
 from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
@@ -18,37 +18,22 @@ from AI.src.vision.feedback import Feedback
 def asp_input(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
-    balls = balls_chart["balls"]
     pockets = balls_chart["pockets"]
-    facts = []
+    balls = balls_chart["balls"]
+    ghost_ball = balls_chart["ghost_ball"]
+    aim_line = balls_chart["aim_line"]
+    aimed_ball = balls_chart["aimed_ball"]
 
-    # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
-    piena = 0
-    nera = 0
-    mezza = 0
-    bianca = 0
-
-    for ball in balls:
-        #print(f"Ball in loop{ball}")
-        if ball.get_type() == "solid":
-            piena += 1
-            
-        elif ball.get_type() == "striped":
-            mezza += 1
-
-        elif ball.get_type() == "eight":
-            nera += 1
-        
-        
-        elif ball.get_type() == "cue":
-            bianca += 1
-        
-        #print(f"x = {ball.get_x()}, y = {ball.get_y()}")
-        
+    pocket_ord, balls = get_balls_and_near_pockets(balls, pockets, )
     
-    print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
+    input = pocket_ord.copy()
+    input.extend(balls)
+    input.extend([ghost_ball])
+    input.extend([aim_line])
+    input.extend([aimed_ball])
 
-    return balls,pockets
+    return input, pockets, balls, ghost_ball, aim_line, aimed_ball
+
 
 
 def check_if_to_revalidate(output, last_output):
@@ -91,26 +76,24 @@ def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, i
     pool_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
     #balls_chart = {"balls": [], "pockets": []}
 
-    if pool_chart is not None:
-        balls,pockets = asp_input(pool_chart)
+    if pool_chart != None:
+        input, pockets, balls, ghost_ball, aim_line, aimed_ball = asp_input(pool_chart)
     else:
-        facts = []
+        input = []
         pockets = []
-        balls = []
 
-    
     if debug:
         return matcher.canny_threshold
 
     solution = DLVSolution()
     try:
-        moves = solution.call_asp(balls, pockets)
+        moves = solution.call_asp( balls, pockets, ghost_ball, aim_line, aimed_ball)
+
     except ValueError as e:
         # In caso di errore (ad es. nessun answer set ottimale), mostra il risultato della visione
         # Nota: per accedere a __show_result, puoi usare il nome _MatchingBallPool__show_result
         matcher._MatchingBallPool__show_result()
         raise e
-    moves.sort(key=lambda x: x.get_step())
  
     os.chdir(CLIENT_PATH)
     coordinates = []
