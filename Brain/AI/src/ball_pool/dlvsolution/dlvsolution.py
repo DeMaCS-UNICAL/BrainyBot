@@ -33,8 +33,8 @@ class DLVSolution:
 
 
     def __init_dinamic_facts(self, dinamic_facts: []):
-        """for o in dinamic_facts:
-            self.__dinamic_facts.add_object_input(o)"""
+        for o in dinamic_facts:
+            self.__dinamic_facts.add_object_input(o)
     
     def __init_fixed(self):
         self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.asp"))
