@@ -28,7 +28,6 @@ class DLVSolution:
         for pocket in pockets:
             self.__static_facts.add_object_input(pocket)
         
-        self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
 
 
 
@@ -54,7 +53,7 @@ class DLVSolution:
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=MoveAndShoot/4,  GameOver/1, step/1, pocket/1, ball/1")
+        option = OptionDescriptor("--filter=moveandshoot/6,  ball/0, pocket/2, aimline/4, gameOver/1")
         self.__handler.add_option(option)
 
 
@@ -70,18 +69,19 @@ class DLVSolution:
             answer_sets = self.__handler.start_sync()
             self.__dinamic_facts.clear_all()
 
-            print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
+            result = answer_sets.get_answer_sets()
+            print (f"Answer sets: {len(result)}")
             assert_true(answer_sets is not None,"No solutions found for this match.")
 
             print(f"Answer sets: {answer_sets}")
-            assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this match.")
+            assert_true(len(result) != 0,"No optimal solutions found for this match.")
 
-            for answer_set in answer_sets.get_optimal_answer_sets():
+            for answer_set in result:
                 print(answer_set)
                 ans.append(answer_set)
                 for obj in answer_set.get_atoms():
                     if isinstance(obj, MoveAndShoot):
-                        print(obj.get_ball(),obj.get_pocket(),obj.get_step())
+                        #print(obj.get_ball(),obj.get_pocket(),obj.get_step())
                         if obj.get_step() == step:
                             self.__dinamic_facts.add_object_input(obj)
                             moves.append(obj)

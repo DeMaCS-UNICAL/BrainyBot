@@ -100,10 +100,10 @@ def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, i
     feedback = Feedback()
     for move in moves:
         # Per ogni mossa, estraiamo l'ID della pallina da colpire e della pocket di destinazione
-        ball_id = move.get_ball()
+        ball_id = move.get_aimed_ball()
         pocket_id = move.get_pocket()
-        x1, y1 = 0, 0
-        x2, y2 = 0, 0
+        stick_id = move.get_stick()
+        s_x1, s_y1, s_x2, s_y2 = stick.get_coordinates()
         # Otteniamo le coordinate della pallina
         for ball in balls:
             if ball.get_id() == ball_id:
@@ -115,10 +115,11 @@ def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, i
             if pocket.get_id() == pocket_id:
                 x2 = pocket.get_x()
                 y2 = pocket.get_y()
-                break
-        coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
-        time.sleep(0.25)
-        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+                break                                                                                                             
+        
+        for i in range(s_y1, s_y2):
+            coordinates.append({'x1': s_x1, 'y1': i, 'x2': s_x2, 'y2': i})
+        
+        os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {s_x1} {s_y1}'")
     
     return coordinates

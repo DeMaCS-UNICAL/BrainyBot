@@ -44,7 +44,7 @@ class MatchingBallPool:
     POCKET_PARAM1 = 50            # Soglia per Canny (pocket)
     POCKET_PARAM2 = 90            # Soglia per HoughCircles (pocket)
 
-    STICK_COORDS = 221, 348, 221, 887
+    STICK_COORDS = 221, 362, 221, 887
     player1_pic_pos = 1018
     player2_pic_pos = 1356
     #dimensioni del mio schermo 2400x1077
@@ -236,10 +236,12 @@ class MatchingBallPool:
             #print(f"x: {x} y: {y} r: {r} color: {patch}")
             bpColor = BPoolColor.get_color(dominant_col)
 
-            ball_obj = Ball(bpColor, white_ratio)
+            ball_obj = Ball()
             ball_obj.set_x(x)
             ball_obj.set_y(y)
             ball_obj.set_r(r)
+            ball_obj.set_color(bpColor)
+            ball_obj.set_white_ratio(white_ratio)
             raw_balls.append(ball_obj)
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" o "mezza")
