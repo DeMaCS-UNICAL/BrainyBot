@@ -6,7 +6,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 # Importa le classi aggiornate per ball_pool
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
-from AI.src.ball_pool.dlvsolution.helpers import  get_balls_and_near_pockets, get_ghost_ball
+from AI.src.ball_pool.dlvsolution.helpers import  get_balls_and_near_pockets, get_aimed_ball_and_aim_line
 from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
@@ -23,16 +23,15 @@ def asp_input(balls_chart):
     ghost_ball = balls_chart["ghost_ball"]
     aim_line = balls_chart["aim_line"]
     aimed_ball = balls_chart["aimed_ball"]
+    stick = balls_chart["stick"]
 
     pocket_ord, balls = get_balls_and_near_pockets(balls, pockets, )
+    aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
     input = pocket_ord.copy()
     input.extend(balls)
-    input.extend([ghost_ball])
-    input.extend([aim_line])
-    input.extend([aimed_ball])
 
-    return input, pockets, balls, ghost_ball, aim_line, aimed_ball
+    return input, pockets, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick
 
 
 
@@ -71,29 +70,27 @@ def persist_threshold(value):
 def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, iteration=0):
     #screenshot,args.debugVision,vision,abstraction,iteration
 
-    matcher = MatchingBallPool(screenshot_path=screenshot, debug=True, validation= 
+    matcher  = MatchingBallPool(screenshot_path=screenshot, debug=True, validation= 
                                vision_val!= None, iteration=iteration)
     pool_chart = matcher.get_balls_chart()  # Rileva le palline e (eventualmente) le pocket o le informazioni sul tavolo
     #balls_chart = {"balls": [], "pockets": []}
 
-    if pool_chart != None:
-        input, pockets, balls, ghost_ball, aim_line, aimed_ball = asp_input(pool_chart)
+    if pool_chart is not None:
+            input, pockets, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick = asp_input(pool_chart)
     else:
-        input = []
-        pockets = []
+        print("No balls found.")
+        return
 
     if debug:
         return matcher.canny_threshold
 
     solution = DLVSolution()
-    try:
-        moves = solution.call_asp( balls, pockets, ghost_ball, aim_line, aimed_ball)
 
-    except ValueError as e:
-        # In caso di errore (ad es. nessun answer set ottimale), mostra il risultato della visione
-        # Nota: per accedere a __show_result, puoi usare il nome _MatchingBallPool__show_result
-        matcher._MatchingBallPool__show_result()
+    try:
+        moves = solution.call_asp(balls, pockets, aim_situation)
+    except Exception as e:
         raise e
+
  
     os.chdir(CLIENT_PATH)
     coordinates = []

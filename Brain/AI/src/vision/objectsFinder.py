@@ -9,6 +9,7 @@ from time import time
 from matplotlib import pyplot as plt
 
 from AI.src.abstraction.helpers import getImg
+from AI.src.ball_pool.dlvsolution.helpers import AimLine, Ball
 from AI.src.constants import SCREENSHOT_PATH
 from AI.src.vision.input_game_object import *
 from AI.src.vision.output_game_object import *
@@ -365,13 +366,13 @@ class ObjectsFinder:
         
         return circularity >= circularity_threshold
 
-    def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=50, circularity_threshold=0.20):
+    def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.20):
         gray = self.__gray
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Thresholding adattivo per rilevare bordi e forme
         thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY_INV, 11, 2)
+                                    cv2.THRESH_BINARY_INV, 15,3)
         
         # Trova i contorni e la gerarchia
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -390,7 +391,7 @@ class ObjectsFinder:
                 
                 if search_info is not None:
                     x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min <= x <= x_max and y_min + 70 <= y <= y_max - 70):
+                    if not (x_min <= x <= x_max and y_min + 50 <= y <= y_max - 50):
                         continue
 
                     if not (search_info.min_radius <= r <= search_info.max_radius):
@@ -502,10 +503,6 @@ class ObjectsFinder:
                     
                 pockets.append(OutputCircle(x, y, r, color.tolist()))
 
-            if self.debug and not self.validation:
-                """plt.imshow(cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2RGB))
-                plt.show()
-                cv2.waitKey(0)"""
 
         pockets = self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
         return pockets
@@ -668,10 +665,6 @@ class ObjectsFinder:
             
             # Controlla l'area minima
             if cv2.contourArea(approx) < 3000:
-                """if 1340<= x <= 1360 and 17 <= y <= 20:
-                    print(f"Found square box: ({x}, {y}, {w}, {h})")
-                    print(f"Area: {cv2.contourArea(approx)}")
-                    print("Scartata per area")"""
                 continue
             
             # Se il contorno non è un quadrilatero, prova a ricostruirlo usando il convex hull
@@ -680,16 +673,10 @@ class ObjectsFinder:
                 epsilon = 0.05 * cv2.arcLength(hull, True)
                 approx = cv2.approxPolyDP(hull, epsilon, True)
                 if len(approx) != 4:
-                    """if 1340<= x <= 1360 and 17 <= y <= 20:
-                        print(f"Found square box: ({x}, {y}, {w}, {h})")
-                        print("Scartata per non quadrilatero")"""
                     continue
 
             # Verifica che il rettangolo sia quasi quadrato (tolleranza di 6 pixel)
             if not (h - 6 <= w <= h + 6):
-                """if 1340<= x <= 1360 and 17 <= y <= 20:
-                        print(f"Found square box: ({x}, {y}, {w}, {h})")
-                        print(f"Scartata per non h w h {w} {h}")"""
 
                 continue
             
@@ -700,10 +687,7 @@ class ObjectsFinder:
                 #print("Scartata per non quadrata")
                 #print(f" w {w}, h {h}")
                 #print("----------------------------")
-                if 1340<= x <= 1360 and 17 <= y <= 20:
-                    print(f"Found square box: ({x}, {y}, {w}, {h})")
-                    print("TROVATO secondo")
-                    print("Scartata per non quadrilatero")
+                
                 continue
 
             #print(f"Found square box: ({x}, {y}, {w}, {h})")
@@ -765,7 +749,7 @@ class ObjectsFinder:
             
         return boxes
 
-    def compute_target_direction(self,all_balls,ghost_ball, area,  white_ball = (1463,370,23),collision_tolerance=8.0, line_length=100):
+    def compute_target_direction(self,all_balls : list[Ball], ghost_ball, area, collision_tolerance=8.0, line_length=100):
         """
         Calcola la linea di direzione per la palla mirata, selezionandola tra tutte le palle 
         come quella più vicina alla palla mirino (ghost_ball) se la distanza è compatibile con un urto.
@@ -781,7 +765,6 @@ class ObjectsFinder:
         tuple: (x1, y1, x2, y2) che definiscono la linea di direzione,
                 oppure None se nessuna palla è a distanza sufficiente per un urto.
         """
-        cw_x, cw_y, cw_r = white_ball
         gx, gy, gr = ghost_ball
         x_min, y_min, x_max, y_max = area
         
@@ -791,12 +774,12 @@ class ObjectsFinder:
         
         # Seleziona la palla mirata: quella più vicina alla palla mirino (escludendo quella stessa)
         for ball in all_balls:
-            b_x, b_y, b_r = ball.x,ball.y,ball.radius
+            b_x, b_y, b_r = ball.get_x(), ball.get_y(), ball.get_r()
             
             #print(f"Ball: {b_x}, {b_y}, {b_r}")
 
             # Escludi la palla bianca
-            if abs(b_x - cw_x) < 1 and abs(b_y - cw_y) < 1:  # Confronto più robusto
+            if ball.get_type() == "cue":
                 continue
 
             # Verifica che il centro della palla sia all'interno dell'area di interesse
@@ -820,8 +803,8 @@ class ObjectsFinder:
             return None, None
         
         # Calcola la collision normal: il vettore normalizzato dal ghost_ball_center al centro della target ball
-        collision_dx = candidate.x - gx
-        collision_dy = candidate.y - gy
+        collision_dx = candidate.get_x() - gx
+        collision_dy = candidate.get_y() - gy
         norm = math.hypot(collision_dx, collision_dy)
         
         if norm < 0.0001:  # Evita divisione per zero con un valore piccolo
@@ -833,14 +816,15 @@ class ObjectsFinder:
         # Scegli il punto di partenza per la linea
         
         # Determina il punto di impatto sulla palla target
-        impact_x = candidate.x - candidate.radius * collision_normal_x
-        impact_y = candidate.y - candidate.radius * collision_normal_y
+        impact_x = candidate.get_x() - candidate.get_r() * collision_normal_x
+        impact_y = candidate.get_y() - candidate.get_r() * collision_normal_y
 
         # La direzione della palla target sarà lungo la collision normal
         end_x = impact_x + collision_normal_x * line_length
         end_y = impact_y + collision_normal_y * line_length
 
-        aim_line = (impact_x, impact_y, end_x, end_y)
+        aim_line = AimLine(impact_x, impact_y, end_x, end_y)
+        
         return aim_line, candidate
 
 

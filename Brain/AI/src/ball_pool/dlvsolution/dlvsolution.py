@@ -9,7 +9,7 @@ from AI.src.ball_pool.dlvsolution.helpers import choose_dlv_system, Color, Ball,
 from AI.src.candy_crush.dlvsolution.helpers import assert_true
 
 
-class DLVSolution:
+class DLVSolution: 
 
     def __init__(self):
         try:
@@ -28,33 +28,33 @@ class DLVSolution:
         for pocket in pockets:
             self.__static_facts.add_object_input(pocket)
         
-        #self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
+        self.__static_facts.add_program("numPockets(" + str(len(pockets)) + ").")
 
 
 
-    def __init_dinamic_facts(self, dinamic_facts: []):
-        for o in dinamic_facts:
-            self.__dinamic_facts.add_object_input(o)
+    def __init_dinamic_facts(self, dinamic_facts : []):
+        for dinamic_fact in dinamic_facts:
+            self.__dinamic_facts.add_object_input(dinamic_fact)
     
     def __init_fixed(self):
         self.__fixed_input_program.add_files_path(os.path.join(RESOURCES_PATH, "ballPool.asp"))
 
-    def call_asp(self,balls, pockets, ghost_ball, aim_line, aimed_ball):
+    def call_asp(self,balls, pockets, aim_situation):
 
         ASPMapper.get_instance().register_class(Ball)
         ASPMapper.get_instance().register_class(Pocket)
         ASPMapper.get_instance().register_class(MoveAndShoot)
         ASPMapper.get_instance().register_class(GameOver)
 
-        self.__init_static_facts(balls, pockets, )
-        #self.__init_dinamic_facts([ghost_ball, aim_line, aimed_ball]) 
+        self.__init_static_facts(balls, pockets )
+        self.__init_dinamic_facts(aim_situation) 
         self.__init_fixed()
 
         self.__handler.add_program(self.__static_facts)
         self.__handler.add_program(self.__dinamic_facts)
         self.__handler.add_program(self.__fixed_input_program)
 
-        option = OptionDescriptor("--filter=MoveAndShoot/4, freeToShoot/3, gameOver/2 --quiet=1")
+        option = OptionDescriptor("--filter=MoveAndShoot/4,  GameOver/1, step/1, pocket/1, ball/1")
         self.__handler.add_option(option)
 
 

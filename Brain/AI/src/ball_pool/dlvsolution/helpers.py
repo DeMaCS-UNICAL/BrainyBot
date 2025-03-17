@@ -38,6 +38,8 @@ class BPoolColor(Color):
     __colors = []
     __MAX_DISTANCE = 20  # più tollerante rispetto a Color
 
+    def reset():
+        BPoolColor.__ids = count(1, 1)
 
     # Dizionario con colori in formato BGR (usato in OpenCV) ordinati dal più chiaro al più scuro
     POOL_REFERENCE_COLORS_BGR = {
@@ -203,6 +205,9 @@ class Ball(Predicate):
 
     __ids = count(1, 1) # genera un id univoco per ogni palla, inizia da 1 e incrementa di 1
 
+    def reset():
+        Ball.__ids = count(1, 1)
+
     def __init__(self, color: BPoolColor = None, white_ratio: float = None):
         Predicate.__init__(self, [("id", int), ("color", int)])
         self.__id = next(Ball.__ids)
@@ -256,11 +261,13 @@ class Ball(Predicate):
         return self.__aimed
         
 
-
 class Pocket(Predicate):
     predicate_name = "pocket"
 
     __ids = count(1, 1)
+
+    def reset():
+        Pocket.__ids = count(1, 1)
 
     def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", int)])
@@ -299,28 +306,88 @@ class Pocket(Predicate):
     def contains_ball(self, ball):
         return ball in self.__near_balls
 
+
+class AimLine(Predicate):
+
+    predicate_name = "aimline"
+
+    __ids = count(1, 1)
+
+    def reset():
+        AimLine.__ids = count(1, 1)
+
+    def __init__(self, x1=None, y1=None, x2=None, y2=None):
+        Predicate.__init__(self, [("x1", int), ("y1", int), ("x2", int), ("y2", int)])
+        self.__id = next(AimLine.__ids)
+        self.__x1 = int(x1)
+        self.__y1 = int(y1)
+        self.__x2 = int(x2)
+        self.__y2 = int(y2)
+
+    def get_id(self) -> int:
+        return self.__id
+    
+    def get_x1(self) -> int:
+        return self.__x1
+    
+    def set_x1(self, x1):
+        self.__x1 = x1
+    
+    def get_y1(self) -> int:
+        return self.__y1
+    
+    def set_y1(self, y1):
+        self.__y1 = y1
+
+    def get_x2(self) -> int:    
+        return self.__x2
+    
+    def set_x2(self, x2):
+        self.__x2 = x2
+
+    def get_y2(self) -> int:
+        return self.__y2
+
+    def set_y2(self, y2):
+        self.__y2 = y2
+
+    
 class MoveAndShoot(Predicate): #Da modificare
     predicate_name = "moveandshoot"
 
-    def __init__(self, ball=None, pocket=None, stick = None,ghost_ball= None, step=None):
-        Predicate.__init__(self, [("ball", int), ("pocket", int), ("step", int)])
-        self.__ball = ball
+    def __init__(self,  pocket=None, stick=None, ghost_ball= None, aimedball=None, aim_line=None, step=None):
+        Predicate.__init__(self, [("pocket", int), ("stick", int), ("ghost_ball", int), 
+                                  ("aimed_ball", int), ("aim_line", int), ("step", int)])
         self.__pocket = pocket
         self.__stick = stick
         self.__ghost_ball = ghost_ball
+        self.__aimed_ball = aimedball
+        self.__aim_line = aim_line
         self.__step = step
-
-    def get_ball(self) -> int:
-        return self.__ball
-
-    def set_ball(self, ball):
-        self.__ball = ball
 
     def get_pocket(self):
         return self.__pocket
 
     def set_pocket(self, pocket):
         self.__pocket = pocket
+
+    def get_ghost_ball(self):
+        return self.__ghost_ball
+    
+    def set_ghost_ball(self, ghost_ball):
+        self.__ghost_ball = ghost_ball
+    
+    def get_aimed_ball(self):
+        return self.__aimed_ball
+    
+    def set_aimed_ball(self, aimed_ball):
+        self.__aimed_ball = aimed_ball
+
+    def get_aim_line(self):
+        return self.__aim_line
+
+    def set_aim_line(self, aim_line):
+        self.__aim_line = aim_line
 
     def get_step(self) -> int:
         return self.__step
@@ -333,9 +400,6 @@ class MoveAndShoot(Predicate): #Da modificare
     
     def set_stick(self, stick):
         self.__stick = stick
-
-    def get_ghost_ball(self):
-        return self.__ghost_ball
 
 
 class Game(Predicate):
@@ -417,8 +481,19 @@ def get_balls_and_near_pockets(balls: list,pockets : list, ball_type = "solid"):
     return pockets_ordered, balls
 
 
-def get_ghost_ball(ball, pocket):
-    pass
+def get_aimed_ball_and_aim_line(ghost_ball : Ball, stick: AimLine, aimed_ball : Ball, aim_line: AimLine):
 
-def get_aimed_ball_and_aim_line(balls, pockets, ball_type):
-    pass
+    if aimed_ball == None:
+        aimed_ball_to_debug = 22
+        print("Aimed ball is None")
+    else:
+        aimed_ball_to_debug = aimed_ball.get_id()
+
+    if aim_line == None:
+        print("Aim line is None")
+    else:
+        aim_line_id_to_debug = aim_line.get_id()
+
+    situation = [MoveAndShoot(ghost_ball=ghost_ball.get_id(), stick= stick.get_id(), aimedball=aimed_ball_to_debug , 
+                              aim_line=aim_line_id_to_debug, step=1)]
+    return situation

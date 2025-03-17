@@ -14,12 +14,13 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
-from AI.src.ball_pool.dlvsolution.helpers import BPoolColor, Color, Ball, Pocket, MoveAndShoot, GameOver
+from AI.src.ball_pool.dlvsolution.helpers import AimLine, BPoolColor, Color, Ball, Pocket, MoveAndShoot, GameOver
 
 
 class MatchingBallPool:
 
     # Parametri relativi al campo (se necessari per ulteriori controlli)
+    #446 / 2400 
     X_MIN = 446
     Y_MIN = 169
     X_MAX = 2067
@@ -61,6 +62,8 @@ class MatchingBallPool:
         self.detection_result = None
         self.__balls: list = []
         self.__pockets: list = []  # Ora i pocket verranno rilevati via circle detection
+        self.__player1_turn = False
+        
         self.img_width = None
 
         self.table_area = MatchingBallPool.X_MIN, MatchingBallPool.Y_MIN, MatchingBallPool.X_MAX, MatchingBallPool.Y_MAX 
@@ -109,7 +112,7 @@ class MatchingBallPool:
         self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
         self.full_image = self.image.copy()  # conserva l'immagine completa per la visualizzazione
         
-        if self.debug and self.validation is None:
+        if not self.debug and self.validation is None:
             plt.imshow(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB))
             plt.title("Screenshot")
             plt.show()
@@ -175,7 +178,7 @@ class MatchingBallPool:
             print("Player 2 turn")
 
         print(f"{len(pocket_circles)} Pockets")
-        print(f"{ghost_ball} Target balls")
+        print(f"{ghost_ball} Target ball")
         print(f"{len(ball_circles)} Balls")
         print(f"{len(players_balls)} Player balls")
         #print(f"{len(aim_line) if aim_line != None else None} Aim line")
@@ -215,42 +218,6 @@ class MatchingBallPool:
 
         return squares
     
-
-
-
-    """def find_perpendicular_lines(self, raw_aim_lines, angle_tolerance=10):
-        import math
-        n = len(raw_aim_lines)
-        if n < 2:
-            return None
-        aim_lines = []
-
-        for i in range(n):
-            for j in range(i+1, n):
-                _, _, line1, _ = raw_aim_lines[i]
-                _, _, line2, _ = raw_aim_lines[j]
-                x1, y1, x2, y2 = line1
-                x3, y3, x4, y4 = line2
-
-                # Calcola i vettori direzionali
-                v1 = (x2 - x1, y2 - y1)
-                v2 = (x4 - x3, y4 - y3)
-                norm1 = math.sqrt(v1[0]**2 + v1[1]**2)
-                norm2 = math.sqrt(v2[0]**2 + v2[1]**2)
-                if norm1 == 0 or norm2 == 0:
-                    continue
-
-                # Calcola l'angolo in gradi tra i due vettori
-                dot = v1[0]*v2[0] + v1[1]*v2[1]
-                cos_angle = dot / (norm1 * norm2)
-                # Per evitare errori numerici
-                cos_angle = max(-1.0, min(1.0, cos_angle))
-                angle = math.degrees(math.acos(cos_angle))
-                if abs(angle - 90) <= angle_tolerance:
-                    aim_lines.append(raw_aim_lines[i])
-                    aim_lines.append(raw_aim_lines[j])
-        return aim_lines
-    """
 
     
     def abstract_balls(self, circles):
@@ -317,7 +284,7 @@ class MatchingBallPool:
         ghost_ball.set_r(self.gr)
 
         aim_line, aimed_ball = self.finder.compute_target_direction(
-                                                    all_balls=ball_circles,
+                                                    all_balls=final_balls,
                                                     ghost_ball=(self.gx, self.gy, self.gr),
                                                     area=(self.X_MIN, self.Y_MIN, self.X_MAX, self.Y_MAX)
                                                 )
@@ -329,6 +296,7 @@ class MatchingBallPool:
         result["ghost_ball"] = ghost_ball
         result["aim_line"] = aim_line
         result["aimed_ball"] = aimed_ball
+        result["stick"] = AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
 
         # Salviamo il risultato in un attributo interno
         self.__result = result
@@ -338,8 +306,10 @@ class MatchingBallPool:
         self.__aim_line = result["aim_line"]
 
 
-        if self.validation is None and self.debug:
-            print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
+        #print(f"Self val {self.validation} debug {self.debug}")
+        print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
+
+        if not self.validation is None and self.debug:
             self.__show_result()  # Nessun parametro
 
         # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
@@ -371,6 +341,7 @@ class MatchingBallPool:
     
 
     def __show_result(self):
+        print("SHOW RESULT")
         scale_factor = 1.0
         width = int(self.image.shape[1] * scale_factor)
         height = int(self.image.shape[0] * scale_factor)
@@ -429,24 +400,11 @@ class MatchingBallPool:
         # dove direction_vector è una tupla (dx, dy) già normalizzata.
 
         if self.__aim_line is not None:
-            print(f"Aim lines show {len(self.__aim_line)}")
-            if isinstance(self.__aim_line, tuple):
-                aim_lines = [self.__aim_line]
-            else:
-                aim_lines = self.__aim_line
-
-            print(f"Aim lines show {len(aim_lines)}")
-            print(f"Aim lines details: {aim_lines}")
-
-            # Iteriamo su ogni linea e disegniamola
-            for line in aim_lines:
-                # Ci aspettiamo che ogni linea sia una tupla (x1, y1, x2, y2)
-                if len(line) == 4:
-                    x1, y1, x2, y2 = line
-                    # Disegna la linea in viola (BGR: (255, 0, 255))
-                    cv2.line(img_copy, (int(x1), int(y1)), (int(x2), int(y2)), (255, 0, 255), 3)
-                else:
-                    print("Formato non riconosciuto per la linea:", line)
+        
+            x1, y1, x2, y2 = self.__aim_line.get_x1(), self.__aim_line.get_y1(), self.__aim_line.get_x2(), self.__aim_line.get_y2()
+            cv2.line(img_copy, (x1, y1), (x2, y2), (255, 0, 0), 3)
+            cv2.putText(img_copy, f"Aim Line", (x1, y1),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
 
         x, y, r = self.__ghost_balls

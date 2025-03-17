@@ -13,12 +13,12 @@ from contextlib import redirect_stdout
 
 '''
 T1
-cd Brain
+cd Brain 
 export PYTHONPATH=.
 pipenv shell
 python3 AI/src/main.py -g ball_pool
 
-
+ 
 T2
 cd tappy-server
 sudo npm start -- --hardware=headless
