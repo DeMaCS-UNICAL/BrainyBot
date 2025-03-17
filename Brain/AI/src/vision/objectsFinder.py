@@ -366,13 +366,13 @@ class ObjectsFinder:
         
         return circularity >= circularity_threshold
 
-    def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.20):
+    def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.27):
         gray = self.__gray
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Thresholding adattivo per rilevare bordi e forme
         thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY_INV, 15,3)
+                                    cv2.THRESH_BINARY, 9,3)
         
         # Trova i contorni e la gerarchia
         contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -391,7 +391,7 @@ class ObjectsFinder:
                 
                 if search_info is not None:
                     x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min <= x <= x_max and y_min + 50 <= y <= y_max - 50):
+                    if not (x_min <= x <= x_max and y_min  <= y <= y_max ):
                         continue
 
                     if not (search_info.min_radius <= r <= search_info.max_radius):

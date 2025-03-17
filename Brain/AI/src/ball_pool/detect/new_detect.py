@@ -153,7 +153,9 @@ class MatchingBallPool:
 
         ball_circles = self.finder._find_balls_pool_contour(
             Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
-                   (pool_x_min,pool_y_min,pool_x_max,pool_y_max),
+                   (pool_x_min + 60 ,pool_y_min + 60,
+                    pool_x_max -60,pool_y_max - 60),
+
                    (self.gx, self.gy, self.gr) if ghost_ball != None else None,
                    )
         )
@@ -201,6 +203,7 @@ class MatchingBallPool:
             #print(f"len find squares {len(squares)}")
             # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
             squares= sorted(squares, key=lambda item: item[1], reverse=True)
+            squares = squares[:2]
             brighter_square_x = squares[0][0].x
             if len(squares) > 1:
                 second_square_x = squares[1][0].x

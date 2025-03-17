@@ -117,7 +117,10 @@ def ball_pool(screenshot, debug=True, vision_val = None, abstraction_val=True, i
                 y2 = pocket.get_y()
                 break                                                                                                             
         
-        for i in range(s_y1, s_y2):
+        for i in range(10):
+            coordinates.append({'x1': s_x1, 'y1': s_y1, 'x2': s_x1, 'y2': s_y1})
+
+        for i in range(s_y1, s_y2, 3):
             coordinates.append({'x1': s_x1, 'y1': i, 'x2': s_x2, 'y2': i})
         
         os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {s_x1} {s_y1}'")
