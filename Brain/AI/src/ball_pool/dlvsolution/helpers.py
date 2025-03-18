@@ -234,23 +234,26 @@ class Ball(Predicate):
         self.__white_ratio = white_ratio
     
     
-    def get_x(self) -> int:
+    def get_x(self):
         return self.__x
 
     def set_x(self, x):
-        self.__x = int(x)
+        self.__x = x
     
-    def get_y(self) -> int:
+    def get_y(self):
         return self.__y
     
     def set_y(self, y):
-        self.__y = int(y)
+        self.__y = y
         
-    def get_r(self) -> int:
+    def get_r(self):
         return self.__r
     
     def set_r(self, r):
-        self.__r = int(r)
+        self.__r = r
+    
+    def get_coordinates(self):
+        return self.__x, self.__y
 
     def get_type(self) -> str:
         return self.__color.get_ball_type()

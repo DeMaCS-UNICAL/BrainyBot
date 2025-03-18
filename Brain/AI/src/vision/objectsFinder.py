@@ -370,15 +370,26 @@ class ObjectsFinder:
         gray = self.__gray
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
+        thresh_cue_ball = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                    cv2.THRESH_BINARY_INV, 9, 2)#la bianca e altre palle, che poi verrano escluse
+
         # Thresholding adattivo per rilevare bordi e forme
         thresh_balls = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY, 11,3) #9, 3 tutti tranne la bianca
+                                    cv2.THRESH_BINARY, 5,3) #9, 3 tutti tranne la bianca
         
-        thresh_cue_ball = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                    cv2.THRESH_BINARY_INV, 15, 3)
+        # Applica operazione morfologica per separare oggetti vicini
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        opened = cv2.morphologyEx(thresh_balls, cv2.MORPH_OPEN, kernel, iterations=12)
+        
+        # Trova i contorni usando RETR_EXTERNAL per ottenere solo i contorni esterni
+        contours_balls, hierarchy_balls = cv2.findContours(
+            opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+
+        
         
         # Trova i contorni e la gerarchia
-        contours_balls, hierarchy_balls = cv2.findContours(thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours_balls, hierarchy_balls = cv2.findContours(thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         contours_cue_ball, hierarchy_cue_ball = cv2.findContours(thresh_cue_ball, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         
         # Se una delle due gerarchie è None, assegna un array vuoto compatibile

@@ -3,7 +3,7 @@
 
 % La regola genera un tiro (moveandshoot) per il passo 1 se:
 % - esiste una ghost_ball, stick, aimline e una buca (pocket);
-% - la palla mirata (ball) ha un tipo che coincide con il target assegnato (assigned_target).
+% - la palla mirata (ball) ha un tipo che coincide con il target assegnato (solid o striped).
 % NOTA: I fatti (ball/2, pocket/1, ghost_ball/1, stick/1, aimline/1 e assigned_target/1)
 % sono passati dinamicamente dall'input del tuo programma Python.
 

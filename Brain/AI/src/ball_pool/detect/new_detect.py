@@ -62,7 +62,7 @@ class MatchingBallPool:
         self.detection_result = None
         self.__balls: list = []
         self.__pockets: list = []  # Ora i pocket verranno rilevati via circle detection
-        self.__player1_turn = False
+        self.player1_turn = False
         
         self.img_width = None
 
@@ -106,7 +106,7 @@ class MatchingBallPool:
 
 
     def vision(self):
-        #dichiarato ma mai usato 
+        
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
 
         self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
@@ -140,9 +140,11 @@ class MatchingBallPool:
         )
         
         aim_line = None
-        self.gx, self.gy, self.gr = None, None,None
         if ghost_ball != None:
             self.gx, self.gy, self.gr = ghost_ball #ghost_ball_center=(tx, ty, tr)
+        else:
+            ghost_ball = (400, 400, 0)
+            self.gx, self.gy, self.gr = ghost_ball
 
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
@@ -174,13 +176,13 @@ class MatchingBallPool:
         self.__player_squares = player_squares
         self.__player_balls = players_balls
         
-        if self.__player1_turn:
+        if self.player1_turn:
             print("Player 1 turn")
         else:
             print("Player 2 turn")
 
         print(f"{len(pocket_circles)} Pockets")
-        print(f"{ghost_ball} Target ball")
+        print(f"{ghost_ball} Ghost ball")
         print(f"{len(ball_circles)} Balls")
         print(f"{len(players_balls)} Player balls")
         #print(f"{len(aim_line) if aim_line != None else None} Aim line")
@@ -190,6 +192,13 @@ class MatchingBallPool:
         
         # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
         return result
+    
+    def search(self) -> tuple:
+        #self.__graph = self.abstraction(self.vision())
+        #return self.__graph
+        vision = self.vision()
+        abstraction = self.abstraction(vision)
+        return vision, abstraction
     
     
    
@@ -207,13 +216,13 @@ class MatchingBallPool:
             brighter_square_x = squares[0][0].x
             if len(squares) > 1:
                 second_square_x = squares[1][0].x
-                self.__player1_turn = brighter_square_x < second_square_x
+                self.player1_turn = brighter_square_x < second_square_x
             else:
                 if squares[0][1] > 50:
                     if squares[0][0].x <= self.player1_pic_pos:
-                        self.__player1_turn = True
+                        self.player1_turn = True
                     else:
-                        self.__player1_turn = False
+                        self.player1_turn = False
 
         
         """for sq in squares:
@@ -283,6 +292,11 @@ class MatchingBallPool:
 
         final_balls = self.abstract_balls(ball_circles)
 
+        
+        final_pockets = self.abstract_pockets(pocket_circles)
+
+        
+
         ghost_ball = Ball()
         ghost_ball.set_x(self.gx)
         ghost_ball.set_y(self.gy)
@@ -293,29 +307,25 @@ class MatchingBallPool:
                                                     ghost_ball=(self.gx, self.gy, self.gr),
                                                     area=(self.X_MIN, self.Y_MIN, self.X_MAX, self.Y_MAX)
                                                 )
+            
         
-        final_pockets = self.abstract_pockets(pocket_circles)
-
         result["balls"] = final_balls
         result["pockets"] = final_pockets
+        result["stick"] = AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
+
         result["ghost_ball"] = ghost_ball
         result["aim_line"] = aim_line
         result["aimed_ball"] = aimed_ball
-        result["stick"] = AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
+        self.__aim_line = result["aim_line"]
 
         # Salviamo il risultato in un attributo interno
         self.__result = result
 
         self.__balls = result["balls"]
         self.__pockets = result["pockets"]
-        self.__aim_line = result["aim_line"]
 
-
-        #print(f"Self val {self.validation} debug {self.debug}")
-        print(f"Found {len(result['balls'])} balls and {len(result['pockets'])} pockets")
-
-        if not self.validation is None and self.debug:
-            self.__show_result()  # Nessun parametro
+        """if not self.validation is None and self.debug:
+            self.show_result()  # Nessun parametro"""
 
         # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
         piena = 0
@@ -341,12 +351,11 @@ class MatchingBallPool:
             
         print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
 
-        return result
+        return result, self.gx != 400
 
     
 
-    def __show_result(self):
-        print("SHOW RESULT")
+    def show_result(self):
         scale_factor = 1.0
         width = int(self.image.shape[1] * scale_factor)
         height = int(self.image.shape[0] * scale_factor)
@@ -429,9 +438,7 @@ class MatchingBallPool:
         cv2.putText(img_copy, f"Stick", (x_above, y_above),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
-        #purple rgb  (255,0,255)
-        #red rgb (0,0,255)
-        print(f"{len(self.__player_squares)} Player square")
+        
 
         if self.__player_squares is not None and len(self.__player_squares) != 0:
             player_cont = 0
