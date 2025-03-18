@@ -371,14 +371,32 @@ class ObjectsFinder:
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Thresholding adattivo per rilevare bordi e forme
-        thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY, 9,3)
+        thresh_balls = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY, 11,3) #9, 3 tutti tranne la bianca
+        
+        thresh_cue_ball = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                    cv2.THRESH_BINARY_INV, 15, 3)
         
         # Trova i contorni e la gerarchia
-        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        if hierarchy is None:
+        contours_balls, hierarchy_balls = cv2.findContours(thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        contours_cue_ball, hierarchy_cue_ball = cv2.findContours(thresh_cue_ball, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Se una delle due gerarchie è None, assegna un array vuoto compatibile
+        if hierarchy_balls is None:
+            hierarchy_balls = np.empty((1, 0, 4), dtype=np.int32)
+        if hierarchy_cue_ball is None:
+            hierarchy_cue_ball = np.empty((1, 0, 4), dtype=np.int32)
+
+        # Unisci i contorni
+        contours = contours_balls + contours_cue_ball
+        # Unisci le gerarchie lungo l'asse 1 (concatenazione verticale)
+        all_hierarchy =  np.concatenate((hierarchy_balls, hierarchy_cue_ball), axis=1) if contours else None
+
+
+        if all_hierarchy is None:
             return []
-        hierarchy = hierarchy[0]
+        
+        hierarchy =  all_hierarchy[0]
         
         balls = []
         if contours is not None:

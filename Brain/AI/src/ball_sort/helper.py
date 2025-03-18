@@ -89,7 +89,7 @@ def read_validation_data(vision_input,abstraction_input):
     return tubes,balls,facts
 
 def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,iteration=0):
-    matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration)
+    matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration) 
     balls_chart = matcher.get_balls_chart()
     balls : list[OutputCircle]=[]
     
@@ -121,7 +121,7 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
         moves, ons, ans = solution.call_asp(colors,balls,tubes,on)
 
         moves.sort(key=lambda x: x.get_step())
-        ons.sort(key=lambda x: x.get_step())
+        ons.sort(key=lambda x: x.get_step()) 
 
         os.chdir(CLIENT_PATH)
 
