@@ -257,6 +257,15 @@ class Ball(Predicate):
 
     def get_type(self) -> str:
         return self.__color.get_ball_type()
+    
+    def set_type(self, ball_type):
+        self.__color.set_ball_type(ball_type)
+
+    def set_ghost_type(self, ghost_type):
+        self.__ghost_type = ghost_type
+    
+    def get_ghost_type(self):
+        return self.__ghost_type
 
     def set_aimed(self, aimed):
         self.__aimed = aimed

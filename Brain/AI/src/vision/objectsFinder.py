@@ -556,6 +556,104 @@ class ObjectsFinder:
                 filtered.append(obj)
         return filtered
     
+    def detect_illegal_ghost_ball(self, 
+                              search_info: Circle = None,
+                              area_threshold=50, 
+                              circularity_threshold=0.2,
+                              red_ratio_threshold=0.5):
+        """
+        Rileva la ghost ball (palla divieto) analizzando i contorni dell'immagine in self.image.
+        La funzione cerca contorni esterni neri che contengono contorni interni rossi.
+        
+        Parametri:
+        - search_info: oggetto con attributi:
+                * area: una tupla (x_min, y_min, x_max, y_max) che definisce l'area di interesse
+                * min_radius e max_radius per limitare il raggio accettabile.
+        - area_threshold: area minima del contorno da considerare.
+        - circularity_threshold: rapporto minimo (area contorno / area del cerchio racchiudente).
+        - red_ratio_threshold: soglia minima del rapporto di pixel rossi all'interno del contorno interno.
+        
+        Restituisce:
+        - Un candidato del tipo (int(x), int(y), int(radius), False) se viene rilevata una ghost ball valida,
+        - Altrimenti None.
+        """
+        
+        # Conversione in scala di grigi e applicazione di un filtro Gaussiano
+        gray = self.__gray.copy()
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        
+        # Sogliatura automatica (Otsu) per ottenere un'immagine binaria
+        ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV)
+        
+        # Troviamo i contorni e la relativa gerarchia
+        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return None
+        hierarchy = hierarchy[0]
+        
+        # Prepara una maschera HSV per rilevare il rosso
+        hsv = cv2.cvtColor(self.get_image(), cv2.COLOR_BGR2HSV)
+        mask_red1 = cv2.inRange(hsv, np.array([0, 70, 50]), np.array([10, 255, 255]))
+        mask_red2 = cv2.inRange(hsv, np.array([170, 70, 50]), np.array([180, 255, 255]))
+        mask_red = cv2.bitwise_or(mask_red1, mask_red2)
+        
+        # Soglia per considerare un colore come nero (in ciascun canale)
+        black_threshold = 50
+        
+        candidate = None
+        for i, cnt in enumerate(contours):
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+            area_outer = cv2.contourArea(cnt)
+            print(f"x {x}, y {y}, r {radius}")
+            # Filtraggio per area e raggio se search_info è fornito
+            if search_info is not None:
+                x_min, y_min, x_max, y_max = search_info.area
+                if not (x_min <= x <= x_max and y_min <= y <= y_max):
+                    continue
+                if not (search_info.min_radius <= radius <= search_info.max_radius):
+                    continue
+            
+            # Verifica che il contorno sia esterno (senza genitore) E che abbia almeno un figlio
+            if hierarchy[i][3] != -1 or hierarchy[i][2] == -1:
+                continue
+            
+            # Filtraggio per area minima
+            if area_outer < area_threshold:
+                continue
+            
+            # Verifica della forma circolare: rapporto area_contorno / area del cerchio racchiudente
+            if radius <= 0:
+                continue
+            circle_area = np.pi * (radius ** 2)
+            circ_ratio = area_outer / circle_area
+            if circ_ratio < circularity_threshold:
+                continue
+            
+            # Verifica che il contorno esterno sia nero:
+            # Creiamo una maschera per disegnare il bordo del contorno (con thickness = 2)
+            ext_mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.drawContours(ext_mask, [cnt], -1, 255, thickness=2)
+            mean_color = cv2.mean(self.get_image(), mask=ext_mask)  # Restituisce (B, G, R, α)
+            if max(mean_color[:3]) > black_threshold:
+                continue
+            
+            # Verifica che il contorno interno (primo figlio) sia rosso:
+            child_idx = hierarchy[i][2]
+            child_cnt = contours[child_idx]
+            child_mask = np.zeros(gray.shape, dtype=np.uint8)
+            cv2.drawContours(child_mask, [child_cnt], -1, 255, thickness=-1)
+            total_child_pixels = cv2.countNonZero(child_mask)
+            if total_child_pixels == 0:
+                continue
+            red_pixels = cv2.countNonZero(cv2.bitwise_and(mask_red, child_mask))
+            red_ratio = red_pixels / total_child_pixels
+            if red_ratio < red_ratio_threshold:
+                continue
+            
+            candidate = (int(x), int(y), int(radius), False)
+            return candidate
+        
+        return None
 
 
     def detect_ghost_ball(self, 
@@ -614,13 +712,11 @@ class ObjectsFinder:
                     continue
 
                 # Verifichiamo che sia un contorno esterno (padre = -1) che ha un figlio
-            if hierarchy[i][3] == -1:  # Se ha un genitore, non è un contorno esterno
-                #print("Non ha genitore")
-                continue
-
-            # Se il contorno non ha un "figlio", non consideriamo questo contorno come candidato
-            if hierarchy[i][2] == -1:
-                #print("Non ha figlio")
+            if hierarchy[i][3] == -1 and hierarchy[i][2] == -1 :  # Se ha un genitore, non è un contorno esterno
+                """if hierarchy[i][2] == -1:
+                    print("Scartata per figlio")
+                if hierarchy[i][3] == -1:
+                    print("Scartata per padre")"""
                 continue
             
             # Filtraggio per area minima
@@ -665,18 +761,24 @@ class ObjectsFinder:
             # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
             #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
             diff = mean_inner - mean_border
-            if mean_border > border_intensity_threshold or mean_inner < inner_intensity_threshold: #25
-                #print("Scartata per mean_border")
-                #print("----------------------------")
-                if diff < 28:
+            if mean_border > border_intensity_threshold: #or mean_inner < inner_intensity_threshold: #25
+                if diff < 90:
                     #print("Scartata per differenza")
                     #print("----------------------------")
                     continue
             
             if diff > max_diff:
+                print(f"Diff {diff} max diff {max_diff}")
                 max_diff = diff
-                candidate = (int(x), int(y), int(radius))
+                candidate = (int(x), int(y), int(radius), True)
+                print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
+                
+            else:
+                """"print("Scartata per diff")
+                print("Max diff: ", max_diff)"""
+            #print("----------------------------")
             
+        
         return candidate
 
     def detect_square_boxes(self) -> list:

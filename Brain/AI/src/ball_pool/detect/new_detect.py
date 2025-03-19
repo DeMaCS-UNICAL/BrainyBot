@@ -1,6 +1,7 @@
 import os
 
 import re
+from string import Template
 import cv2
 import numpy as np
 import math
@@ -9,7 +10,7 @@ import sys
 from AI.src.ball_pool.constants import SPRITE_PATH,SRC_PATH
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
-from AI.src.vision.input_game_object import Circle, Container, Rectangle
+from AI.src.vision.input_game_object import Circle, Container, Rectangle, TemplateMatch
 from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
@@ -138,13 +139,31 @@ class MatchingBallPool:
                    (pool_x_min,pool_y_min,pool_x_max,pool_y_max)
                    )
         )
+        if ghost_ball == None:
+            print("Ghost ball not found")
+            ghost_ball = self.finder._template_matching(
+               TemplateMatch(
+                     {
+                        "red_ghost_ball": getImg(os.path.join(SPRITE_PATH, "red_ghost_ball.png"), gray=True)
+                     },
+                     {
+                        "red_ghost_ball": 0.4
+                     },
+                     find_all=True,
+                     grayscale=True
+               )
+
+            )
+            for gb in ghost_ball:
+                print(f"x {gb.x} y {gb.y} labels {gb.label} confidance {gb.confidence}")
+            
         
         aim_line = None
-        if ghost_ball != None:
-            self.gx, self.gy, self.gr = ghost_ball #ghost_ball_center=(tx, ty, tr)
-        else:
-            ghost_ball = (400, 400, 0)
-            self.gx, self.gy, self.gr = ghost_ball
+        """if ghost_ball != None:
+            self.gx, self.gy, self.gr, self.isWhite = ghost_ball #ghost_ball_center=(tx, ty, tr)"""
+        #else:
+        ghost_ball = (400, 400, 0, False)
+        self.gx, self.gy, self.gr, self.isWhite = ghost_ball
 
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
         pocket_circles = self.finder._find_pockets_pool_contour(
@@ -301,6 +320,7 @@ class MatchingBallPool:
         ghost_ball.set_x(self.gx)
         ghost_ball.set_y(self.gy)
         ghost_ball.set_r(self.gr)
+        ghost_ball.set_ghost_type("GHOST" if self.isWhite else "RED GHOST")
 
         aim_line, aimed_ball = self.finder.compute_target_direction(
                                                     all_balls=final_balls,
@@ -323,8 +343,9 @@ class MatchingBallPool:
 
         self.__balls = result["balls"]
         self.__pockets = result["pockets"]
+        self.__ghost_balls = result["ghost_ball"]
 
-        """if not self.validation is None and self.debug:
+        if not self.validation is None and self.debug:
             self.show_result()  # Nessun parametro"""
 
         # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
@@ -421,15 +442,15 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
 
-        x, y, r = self.__ghost_balls
-
-        cv2.circle(img_copy, (x, y), r, (60,20,220), 4)
+        x, y, r, type = self.__ghost_balls.get_x(), self.__ghost_balls.get_y(), self.__ghost_balls.get_r(), self.__ghost_balls.get_ghost_type()
+        
+        cv2.circle(img_copy, (x, y), r, (60,20,220) if type == "GHOST"  else (255,255,255), 4)
         cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
         # Testo con bordo nero e testo verde
         cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y -50),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
         cv2.putText(img_copy, f"({x}, {y}) {r}", (x - 200, y - 50 ),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220), 2)
+                    cv2.FONT_HERSHEY_SIMPLEX, 1, (60,20,220) if type == "GHOST"  else (255,255,255), 2)
         
         #purple bgr 
         x_above, y_above, x_below, y_below = self.STICK_COORDS
