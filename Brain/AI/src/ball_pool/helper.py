@@ -170,9 +170,9 @@ def ball_pool(screenshot_path, debug=True, vision_val = None, abstraction_val=Tr
 
                 # Aggiorna la posizione della ghost ball acquisendo nuovamente l'immagine e ricavando le nuove coordinate
                 feedback.take_screenshot()
-                matcher = MatchingBallPool(screenshot_path, debug=True, validation= 
-                               vision_val!= None, iteration=iteration)
-                vision = matcher.vision()
+                #matcher = MatchingBallPool(screenshot_path, debug=True, validation= vision_val!= None, iteration=iteration)
+                
+                vision = matcher.vision(iteration)
                 abstraction, g_ball_detected = matcher.abstraction(vision)
                 #1655, 260   1044, 260
                 if abstraction is not None:

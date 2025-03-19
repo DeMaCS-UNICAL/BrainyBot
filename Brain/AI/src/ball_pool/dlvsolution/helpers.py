@@ -141,6 +141,7 @@ class BPoolColor(Color):
             e quale "solid"; se c'è solo una palla, viene etichettata "striped" se il white_ratio è alto.
         """
         color_groups = {}
+        red_ghost = None
         for ball in balls:
             color = ball.get_color()
             detected_color = np.array(color.get_bgr(), dtype=np.float32)
@@ -167,37 +168,66 @@ class BPoolColor(Color):
                 if len(ball_list_sorted) > 1:
                     print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
             else:
-                ball_list_sorted = ball_list_sorted[:2]
-                #print(f"Rilevate {len(ball_list_sorted)} palle {category}.")
-                ball1, d1, wr1 = ball_list_sorted[0]
-
-                if len(ball_list_sorted) == 2:
+                # Limita la lista a massimo 3 elementi, se ce ne sono di più.
+                ball_list_sorted = ball_list_sorted[:3]
+                
+                if len(ball_list_sorted) == 1:
+                    ball1, d1, wr1 = ball_list_sorted[0]
+                    ball1.get_color().set_ball_type("striped") if wr1 > 0.9 else ball1.get_color().set_ball_type("solid")
+                
+                elif len(ball_list_sorted) == 2:
+                    ball1, d1, wr1 = ball_list_sorted[0]
                     ball2, d2, wr2 = ball_list_sorted[1]
-                    #print(f"Rilevate due palle {category}. Distanze: {d1:.2f}, {d2:.2f}; White ratios: {wr1:.4f}, {wr2:.4f}")
-                    # Se la differenza nel white_ratio è significativa, assegna "striped" a quella con white_ratio maggiore.
-
                     if d1 > d2 or wr1 > wr2:
                         ball1.get_color().set_ball_type("striped")
                         ball2.get_color().set_ball_type("solid")
                     else:
                         ball1.get_color().set_ball_type("solid")
                         ball2.get_color().set_ball_type("striped")
-                    #print("-" * 30)
-                        
-                elif len(ball_list_sorted) == 1:
-                    #print(f"Rilevata una palla {category} con distanza: {ball_list_sorted[0][1]:.2f} e white ratio: {ball_list_sorted[0][2]:.2f}")
-                    ball1.get_color().set_ball_type("striped") if wr1 > 0.9 else ball1.get_color().set_ball_type("solid")
+                
+                elif len(ball_list_sorted) == 3:
+                    #print(f"Rilevate 3 palle di colore {category}.")
+                    #for ball, _, _ in ball_list_sorted:
+                        #print(f"Palla a ({ball.get_x()}, {ball.get_y()}) di tipo {category.upper()}")
+                    if category == "TO REVIEW":
+                        # Ordina per white_ratio e rimuovi la palla ghost
+                        special_ball_list_sorted = sorted(ball_list_sorted, key=lambda x: x[2])
+                        red_ghost_tuple = special_ball_list_sorted.pop(0)  # Rimuove e restituisce la prima tupla
+                        red_ghost = red_ghost_tuple[0]
+                        red_ghost.set_ghost_type("RED GHOST")
+                        # Gestisci le due palle rimanenti
+                        ball2, d2, wr2 = special_ball_list_sorted[0]
+                        ball3, d3, wr3 = special_ball_list_sorted[1]
+                        if d2 > d3 or wr2 > wr3:
+                            ball2.get_color().set_ball_type("striped")
+                            ball3.get_color().set_ball_type("solid")
+                        else:
+                            ball2.get_color().set_ball_type("solid")
+                            ball3.get_color().set_ball_type("striped")
+                        # Aggiorna la lista con le due palle rimanenti (quelle non ghost)
+                        ball_list_sorted = special_ball_list_sorted
+                        print("TROVATA RED GHOST BALL")
+                    else:
+                        # Per altre categorie con 3 palle, decidiamo di usare le 2 migliori
+                        ball_list_sorted = sorted(ball_list_sorted, key=lambda x: x[1])[:2]
+                        ball1, d1, wr1 = ball_list_sorted[0]
+                        ball2, d2, wr2 = ball_list_sorted[1]
+                        if d1 > d2 or wr1 > wr2:
+                            ball1.get_color().set_ball_type("striped")
+                            ball2.get_color().set_ball_type("solid")
+                        else:
+                            ball1.get_color().set_ball_type("solid")
+                            ball2.get_color().set_ball_type("striped")
+
             
                 for ball, _, _ in ball_list_sorted:
                     final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
 
         for ball in final_balls:
             bp_color = ball.get_color() if hasattr(ball, "get_color") else ball.color
-            print(f"Ball at ({ball.get_x()}, {ball.get_y()}) is type: {bp_color.get_ball_type().upper()} "
-                f"and color: {ball.category.upper()}")
+            #print(f"Ball at ({ball.get_x()}, {ball.get_y()}) is type: {bp_color.get_ball_type().upper()} and color: {ball.category.upper()}")
 
-            
-        return final_balls
+        return final_balls, red_ghost
 
 
 class Ball(Predicate):

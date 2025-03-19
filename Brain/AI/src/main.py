@@ -35,9 +35,8 @@ def Start(screenshot,args,iteration=0):
     if args.test!=None:
         vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
         abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
+    #return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration)
     return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration)
-    #return gameDictionary[args.games](screenshot,args.debugVision,iteration)
-
 
 def validate_game(args):
     not_done=True

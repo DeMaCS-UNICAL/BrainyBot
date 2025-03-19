@@ -367,193 +367,172 @@ class ObjectsFinder:
         return circularity >= circularity_threshold
 
     def _find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.27):
-        gray = self.__gray
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        thresh_cue_ball = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                    cv2.THRESH_BINARY_INV, 9, 2)#la bianca e altre palle, che poi verrano escluse
-
-        # Thresholding adattivo per rilevare bordi e forme
-        thresh_balls = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                    cv2.THRESH_BINARY, 5,3) #9, 3 tutti tranne la bianca
+        """
+        Rileva le palle della pool table tramite rilevamento dei contorni e clustering.
         
-        # Applica operazione morfologica per separare oggetti vicini
+        - Utilizza due soglie adattive per distinguere la palla "cue" dalle altre.
+        - Applica operazioni morfologiche per separare oggetti vicini.
+        - Per ogni contorno, calcola il cerchio minimo, filtra in base a area, circularità e, se specificato, l'area di interesse.
+        - Esegue un clustering k-means per determinare il colore dominante e calcola il white_ratio.
+        - Restituisce una lista di OutputCircle.
+        """
+        # Pre-elaborazione: blur sull'immagine in scala di grigi
+        blurred = cv2.GaussianBlur(self.__gray, (5, 5), 0)
+
+        # Thresholding: una per la palla cue (inversione per evidenziare il bianco) e una per le altre palle
+        thresh_cue = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                        cv2.THRESH_BINARY_INV, 9, 2)
+        thresh_balls = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                            cv2.THRESH_BINARY, 5, 3)
+
+        # Operazione morfologica per separare oggetti vicini
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         opened = cv2.morphologyEx(thresh_balls, cv2.MORPH_OPEN, kernel, iterations=12)
-        
-        # Trova i contorni usando RETR_EXTERNAL per ottenere solo i contorni esterni
-        contours_balls, hierarchy_balls = cv2.findContours(
-            opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
 
-        
-        
-        # Trova i contorni e la gerarchia
+        # Estrazione dei contorni
+        contours_balls, hierarchy_balls = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Ulteriore rilevamento per ottenere la gerarchia completa
         contours_balls, hierarchy_balls = cv2.findContours(thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-        contours_cue_ball, hierarchy_cue_ball = cv2.findContours(thresh_cue_ball, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Se una delle due gerarchie è None, assegna un array vuoto compatibile
+        contours_cue, hierarchy_cue = cv2.findContours(thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Se le gerarchie sono None, inizializzale come array vuoti
         if hierarchy_balls is None:
             hierarchy_balls = np.empty((1, 0, 4), dtype=np.int32)
-        if hierarchy_cue_ball is None:
-            hierarchy_cue_ball = np.empty((1, 0, 4), dtype=np.int32)
+        if hierarchy_cue is None:
+            hierarchy_cue = np.empty((1, 0, 4), dtype=np.int32)
 
-        # Unisci i contorni
-        contours = contours_balls + contours_cue_ball
-        # Unisci le gerarchie lungo l'asse 1 (concatenazione verticale)
-        all_hierarchy =  np.concatenate((hierarchy_balls, hierarchy_cue_ball), axis=1) if contours else None
-
-
+        # Unione dei contorni e delle gerarchie
+        contours = contours_balls + contours_cue
+        all_hierarchy = np.concatenate((hierarchy_balls, hierarchy_cue), axis=1) if contours else None
         if all_hierarchy is None:
             return []
-        
-        hierarchy =  all_hierarchy[0]
-        
+        hierarchy = all_hierarchy[0]
+
         balls = []
-        if contours is not None:
-            for i, cnt in enumerate(contours):
-                area = cv2.contourArea(cnt)
-                (center), r = cv2.minEnclosingCircle(cnt)                
-                x = int(center[0])
-                y = int(center[1])
-                r = int(r)
-                
-                if search_info is not None:
-                    x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min <= x <= x_max and y_min  <= y <= y_max ):
+        for i, cnt in enumerate(contours):
+            area = cv2.contourArea(cnt)
+            (center), radius = cv2.minEnclosingCircle(cnt)
+            x, y, radius = int(center[0]), int(center[1]), int(radius)
+
+            # Se specificato, filtra in base all'area di interesse e al range di raggio
+            if search_info is not None:
+                x_min, y_min, x_max, y_max = search_info.area
+                if not (x_min <= x <= x_max and y_min <= y <= y_max):
+                    continue
+                if not (search_info.min_radius <= radius <= search_info.max_radius):
+                    continue
+                if search_info.not_this_coordinates is not None:
+                    x_not, y_not, r_not = search_info.not_this_coordinates
+                    dist = np.sqrt((x - x_not) ** 2 + (y - y_not) ** 2)
+                    if dist <= radius * 0.3 or dist <= r_not:
                         continue
 
-                    if not (search_info.min_radius <= r <= search_info.max_radius):
-                        continue
+            # Verifica la circularità
+            circularity = area / (math.pi * radius * radius)
+            if circularity < circularity_threshold:
+                continue
 
-                    if search_info.not_this_coordinates is not None:
-                        x_not, y_not, r_not = search_info.not_this_coordinates
-                        dist = np.sqrt((x - x_not) ** 2 + (y - y_not) ** 2)
-                        if dist <= r * 0.3 or dist <= r_not:
-                            continue
+            # Escludi contorni esterni (senza genitore)
+            if hierarchy[i][3] == -1:
+                continue
 
-                circularity = area / (math.pi * r * r)
-                if circularity < circularity_threshold:
-                    continue
-                
-                # Escludi contorni esterni (senza genitore)
-                if hierarchy[i][3] == -1:
-                    continue
+            # Crea una maschera per la zona della palla
+            mask = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
+            cv2.circle(mask, (x, y), radius, 255, -1)
 
-                # Crea una maschera per l'intera area della pallina
-                mask = np.zeros(self.__blurred.shape[:2], dtype=np.uint8)
-                cv2.circle(mask, (x, y), r, 255, -1)
+            # Clustering k-means sul sottoinsieme di pixel per ottenere il colore dominante
+            pixels = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
+            criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
+            _, labels, centers = cv2.kmeans(pixels, 2, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+            dominant_idx = np.argmax(np.bincount(labels.flatten()))
+            dominant_color = centers[dominant_idx].astype(np.uint8).tolist()
 
-                # Per il clustering usiamo comunque la versione blurred (o la stessa immagine utilizzata per i contorni)
-                pixels_kmeans = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
+            # Calcola il white_ratio usando la conversione in HSV
+            pixels_full = self.__blurred[mask == 255].reshape(-1, 3).astype(np.float32)
+            hsv_pixels = cv2.cvtColor(pixels_full.reshape(-1, 1, 3).astype(np.uint8), cv2.COLOR_BGR2HSV)
+            mask_white = cv2.inRange(hsv_pixels, np.array([0, 0, 200]), np.array([180, 55, 255]))
+            white_ratio = cv2.countNonZero(mask_white) / float(pixels_full.shape[0])
 
-                # K-means clustering per ottenere il colore dominante
-                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 10, 1.0)
-                k = 2  # Supponiamo due componenti: colore e bianco
-                _, labels, centers = cv2.kmeans(pixels_kmeans, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+            balls.append(OutputCircle(x, y, radius, dominant_color, white_ratio))
+            #print(f"Ball at ({x},{y}) - White ratio: {white_ratio:.2f} Dominant color: {dominant_color}")
+            #print("-------------------------------------------------")
 
-                dominant_idx = np.argmax(np.bincount(labels.flatten()))
-                dominant_color = centers[dominant_idx].astype(np.uint8).tolist()
-
-                full_img = self.__blurred
-
-                pixels_full = full_img[mask == 255].reshape(-1, 3).astype(np.float32)
-                roi_pixels_full = pixels_full.reshape(-1, 1, 3).astype(np.uint8)
-                hsv_full = cv2.cvtColor(roi_pixels_full, cv2.COLOR_BGR2HSV)
-                lower_white = np.array([0, 0, 200])
-                upper_white = np.array([180, 55, 255])
-                mask_white = cv2.inRange(hsv_full, lower_white, upper_white)
-                white_count = cv2.countNonZero(mask_white)
-                white_ratio = white_count / float(pixels_full.shape[0])
-
-                #print(f"Ball at ({x},{y}) - White ratio: {white_ratio:.2f}")
-
-                balls.append(OutputCircle(x, y, r, dominant_color, white_ratio))
-
-        balls = self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
-        return balls
+        # Rimuove eventuali cerchi duplicati
+        return self.filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
 
 
     
-    def _find_pockets_pool_contour(self, search_info:Circle):
-            # Valori minimi di raggio, area e eventuale area di interesse
+    def _find_pockets_pool_contour(self, search_info: Circle):
+        """
+        Rileva le buche della pool table tramite rilevamento dei contorni.
+        
+        - Pre-elabora l'immagine (grigio e blur).
+        - Utilizza una soglia adattiva enfatizzando le zone scure (tipiche delle buche).
+        - Applica un'operazione morfologica closing per colmare piccoli gap.
+        - Filtra i contorni in base a circularità e dimensioni.
+        - Restituisce una lista di OutputCircle rappresentanti le buche.
+        """
         min_radius = search_info.min_radius
 
-        # 1. Pre-elaborazione: Conversione in grigio e Blur
-        gray = self.__gray
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-
-        # 2. Adaptive Thresholding
-        # Utilizza una dimensione del blocco (blockSize) più grande e un parametro costante maggiore
-        # per enfatizzare le zone scure (tipiche delle buche)
+        # Pre-elaborazione
+        blurred = cv2.GaussianBlur(self.__gray, (3, 3), 0)
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 77, 27
         )
-        # Puoi sperimentare: se 15,5 non funziona bene, prova ad aumentare il blockSize (es. 17 o 19)
-        # o modificare il valore costante (5, 7, o 3)
 
-        # 3. Operazione morfologica: Closing per “riempire” piccoli gap
-        # Usa un kernel più piccolo per non unire troppo le aree adiacenti
+        # Operazione morfologica: closing per “riempire” piccoli gap
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
         closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=1)
-        
-        # 4. Estrazione dei contorni dalla maschera
+
+        # Estrazione dei contorni
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         pockets = []
-        #print(f"Len pocket circles {len(contours)}")
-        circles = [cnt for cnt in contours if self.bp_is_circle(cnt, circularity_threshold=0.35, area_threshold=70)]
-        #circles = contours
-        if circles is not None:
-            for circle in circles:
-                (center), r = cv2.minEnclosingCircle(circle)
+        # Filtra i contorni che appaiono circolari
+        circles = [cnt for cnt in contours if self.bp_is_circle(cnt, circularity_threshold=0.55, area_threshold=70)]
+        if circles:
+            for cnt in circles:
+                (center), r = cv2.minEnclosingCircle(cnt)
                 if r < min_radius:
                     continue
 
-                if search_info.min_radius is not None:
-                    max_radius = search_info.max_radius
-                    if r > max_radius:
-                        continue
-                
-                # Ottiene il colore del pixel al centro dalla versione già filtrata (o dalla immagine blurred se disponibile)
-                x = int(center[0])
-                y = int(center[1])
-                r = int(r)
+                # Verifica il range di raggio se specificato
+                if search_info.min_radius is not None and r > search_info.max_radius:
+                    continue
 
-                if search_info.area != None:
+                x, y, r = int(center[0]), int(center[1]), int(r)
+                if search_info.area is not None:
                     x_min, y_min, x_max, y_max = search_info.area
-                    if not (x_min <= x <= x_max and 
-                            y_min <= y <= y_max):
-                        #print("Scartata buca")
+                    if not (x_min <= x <= x_max and y_min <= y <= y_max):
                         continue
 
-                color = np.array(self.__blurred[y, x])
-                    
-                pockets.append(OutputCircle(x, y, r, color.tolist()))
+                # Ottieni il colore del pixel centrale dalla versione blurred
+                color = self.__blurred[y, x].tolist()
+                pockets.append(OutputCircle(x, y, r, color))
 
-
-        pockets = self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
-        return pockets
+        return self.filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
     
+
     def filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=10):
         """
-        Se due cerchi sono troppo vicini, elimina i duplicati.
+        Filtra ed elimina i cerchi duplicati, ovvero quelli troppo vicini tra loro.
+        
+        Se la distanza tra due cerchi è minore di CIRCLE_MIN_DISTANCE oppure inferiore al loro raggio,
+        viene considerato duplicato e viene mantenuto solo il primo.
         """
         filtered = []
-        for obj in circles:
-            x, y, r = obj.x, obj.y, obj.radius
-        
+        for circle in circles:
             duplicate = False
-            for f_obj in filtered:
-                fx, fy, fr = f_obj.x, f_obj.y, f_obj.radius
-                dist = np.sqrt((float(x) - float(fx)) ** 2 + (float(y) - float(fy)) ** 2)
-
-                if dist < CIRCLE_MIN_DISTANCE or dist < r or dist < fr:
+            for existing in filtered:
+                dist = np.sqrt((float(circle.x) - float(existing.x)) ** 2 +
+                            (float(circle.y) - float(existing.y)) ** 2)
+                if dist < CIRCLE_MIN_DISTANCE or dist < circle.radius or dist < existing.radius:
                     duplicate = True
                     break
             if not duplicate:
-                filtered.append(obj)
+                filtered.append(circle)
+
         return filtered
     
     def detect_illegal_ghost_ball(self, 
@@ -698,7 +677,6 @@ class ObjectsFinder:
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
             area_outer = cv2.contourArea(cnt)
-            #print(f"x {x}, y {y}, r {radius}")
 
             if search_info != None:
                 x_min, y_min, x_max, y_max = search_info.area
@@ -759,26 +737,27 @@ class ObjectsFinder:
             mean_inner = cv2.mean(gray, mask=mask_inner)[0]
             
             # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
-            #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
+            print(f"x {x}, y {y}, r {radius}")
+
+            print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
             diff = mean_inner - mean_border
             if mean_border > border_intensity_threshold: #or mean_inner < inner_intensity_threshold: #25
-                if diff < 90:
-                    #print("Scartata per differenza")
-                    #print("----------------------------")
+                if diff < 25:
+                    print("Scartata per differenza")
+                    print("----------------------------")
                     continue
             
             if diff > max_diff:
                 print(f"Diff {diff} max diff {max_diff}")
                 max_diff = diff
                 candidate = (int(x), int(y), int(radius), True)
-                print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
+                #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
                 
             else:
                 """"print("Scartata per diff")
                 print("Max diff: ", max_diff)"""
             #print("----------------------------")
             
-        
         return candidate
 
     def detect_square_boxes(self) -> list:
