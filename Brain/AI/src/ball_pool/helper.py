@@ -7,7 +7,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 # Importa le classi aggiornate per ball_pool
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
-from AI.src.ball_pool.dlvsolution.helpers import  get_balls_and_near_pockets, get_aimed_ball_and_aim_line
+from AI.src.ball_pool.dlvsolution.helpers import  get_pockets_and_near_ball, get_aimed_ball_and_aim_line
 from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
@@ -28,13 +28,13 @@ def asp_input(balls_chart):
     aimed_ball = balls_chart["aimed_ball"]
     stick = balls_chart["stick"]
 
-    pocket_ord, balls = get_balls_and_near_pockets(balls, pockets, )
+    pocket_ord = get_pockets_and_near_ball(balls, pockets)
     aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
     input = pocket_ord.copy()
     input.extend(balls)
 
-    return input, pockets, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick
+    return input, pocket_ord, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick
 
 
 
@@ -77,19 +77,19 @@ def ball_pool(screenshot_path, debug=True, vision_val = None, abstraction_val=Tr
     
     # Ciclo di validazione del feedback: acquisisce una nuova immagine e confronta l'output con quello atteso
 
-    x_target, y_target = 1870, 935
+    x_target, y_target = 1, 1
     
     iteration = 1
+    target_ball = None
+
+    matcher = MatchingBallPool(screenshot_path, debug=True, validation= 
+                               vision_val!= None, iteration=iteration)
     while True:
         feedback = Feedback()
-        feedback.take_screenshot()
-        matcher = MatchingBallPool(screenshot_path, debug=True, validation= 
-                               vision_val!= None, iteration=iteration)
-        
-        vision = matcher.vision()
+        vision = matcher.vision(iteration)
 
         abstraction, g_ball_detected = matcher.abstraction(vision)
-        print("Abstraction:", abstraction, "Ghost ball detected:", g_ball_detected)
+        #print("Abstraction:", abstraction, "Ghost ball detected:", g_ball_detected)
 
         player1_turn = matcher.player1_turn
         print("Player1 turn:", player1_turn)
@@ -109,64 +109,67 @@ def ball_pool(screenshot_path, debug=True, vision_val = None, abstraction_val=Tr
 
         solution = DLVSolution()
 
-        try:
+        """try:
             moves = solution.call_asp(balls, pockets, aim_situation)
+            if len(moves) == 0:
+                print("No moves found.")
+                return
         except Exception as e:
-            raise e
+            raise e"""
 
     
         os.chdir(CLIENT_PATH)
         coordinates = []
-        if len(moves) == 0:
-            print("No moves found.")
-            return
+        
         
         # Per ogni mossa individuata, esegue le operazioni necessarie
         s_x1, s_y1, s_x2, s_y2 = stick.get_coordinates()
 
-        for move in moves:
+        for pk in pockets:
             # Estrae l'ID della pallina da colpire, quello della pocket di destinazione e dello stick
-            ball_id = move.get_aimed_ball()
-            pocket_id = move.get_pocket()
-            stick_id = move.get_stick()
+            if len(pk.get_all_balls()) == 0:
+                continue
+            ball = pk.get_ball(0)
+            x_target, y_target = ball.get_x(), ball.get_y()
 
             # Ottieni le coordinate dello stick (necessarie per eseguire lo swipe finale)
 
             # Ottiene le coordinate attuali della ghost ball
             g_x, g_y = ghost_ball.get_coordinates()
 
-            # Ricava le coordinate della pallina da colpire
-            for ball in balls:
-                if ball.get_id() == ball_id:
-                    x_target, y_target = ball.get_x(), ball.get_y()
-                    print("Pallina da colpire:", x_target, y_target)
-                    break
             
+            # Ricava le coordinate della pallina da colpire
+
             swipe_factor = 0.7  # Fattore di spostamento: 70% della distanza residua
 
             # Ciclo per spostare la ghost ball verso la posizione target finché non è sufficientemente vicina
             while True:
                 dist = math.sqrt((x_target - g_x)**2 + (y_target - g_y)**2)
+                if target_ball is not None:
+                    print(f"Palla da colpire:  {ball.get_x()} {ball.get_y()}   {ball.get_type()}")
+                    print(f"Pocket di destinazione:  {pk.get_x(), pk.get_y()}")
+
                 print("Distanza ghost ball:", dist)
                 if dist < 50:
                     break
                 
                 # Fattore dinamico: maggiore se la ghost ball è lontana, minore se è vicina
                 if dist > 200:
-                    swipe_factor = 0.95
+                    swipe_factor = 3.35
                 elif dist > 100:
-                    swipe_factor = 0.85
+                    swipe_factor = 1.95
                 else:
-                    swipe_factor = 0.75
+                    swipe_factor = 1.75
 
-                dx = x_target - g_x
-                dy = y_target - g_y
+                dx = abs(x_target - g_x)
+                dy = abs(y_target - g_y)
                 new_x = int(g_x + dx * swipe_factor)
                 new_y = int(g_y + dy * swipe_factor)
 
+                matcher.show_result()
+
                 ## Esegue il comando swipe per muovere la ghost ball verso il nuovo punto intermedio
                 os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'")
-                time.sleep(0.0005)
 
                 # Aggiorna la posizione della ghost ball acquisendo nuovamente l'immagine e ricavando le nuove coordinate
                 feedback.take_screenshot()
@@ -195,3 +198,4 @@ def ball_pool(screenshot_path, debug=True, vision_val = None, abstraction_val=Tr
             os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(s_y2//1.2)}'")
             time.sleep(7)
             iteration +=1
+        feedback.take_screenshot()

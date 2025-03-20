@@ -345,6 +345,12 @@ class Pocket(Predicate):
 
     def add_ball(self, ball):
         self.__near_balls.append(ball)
+
+    def get_all_balls(self):
+        return self.__near_balls
+    
+    def get_ball(self, index):
+        return self.__near_balls[index]
     
     def contains_ball(self, ball):
         return ball in self.__near_balls
@@ -498,39 +504,50 @@ def choose_dlv_system() -> DesktopHandler:
 def choose_clingo_system() -> DesktopHandler:
     return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
-def get_balls_and_near_pockets(balls: list,pockets : list, ball_type = "solid"):
+def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
+    """
+    Per ogni pallina del tipo indicato, individua la pocket più vicina (rispetto a tutte le pocket)
+    e la associa a quella pocket tramite il metodo add_ball. 
+    Una pallina viene assegnata alla pocket per cui la distanza è minima.
     
+    Restituisce la lista delle pocket ordinate in base al numero di palline associate.
     """
-    Per ogni pallina del tipo indicato rileva la buca più vicina 
-    e aggiunge una tupla (buca, pallina, distanza) alla lista.
-    La lista viene poi ordinata dalla distanza minima alla massima.
-    """
-    pockets_ordered = []
+    # Per ogni pallina, determina la pocket più vicina
     for ball in balls:
         if ball.get_type() != ball_type:
             continue
-        dist_min = float('inf')  # usa float('inf') per rappresentare l'infinito
+        
+        min_distance = float('inf')
         nearest_pkt = None
-
+        
+        # Cerca tra tutte le pocket quella con la distanza minima
         for pkt in pockets:
             distance = sqrt((pkt.get_x() - ball.get_x())**2 + (pkt.get_y() - ball.get_y())**2)
-            if distance < dist_min:
-                dist_min = distance
+            if distance < min_distance:
+                min_distance = distance
                 nearest_pkt = pkt
-
-        pockets_ordered.append((nearest_pkt, ball, dist_min))
+        
+        # Se è stata trovata una pocket, associa la pallina ad essa
+        if nearest_pkt is not None:
+            nearest_pkt.add_ball(ball)
+            #print(f"Ball id {ball.get_id()} associata a Pocket at ({nearest_pkt.get_x()}, {nearest_pkt.get_y()}) con distanza {min_distance:.2f}")
     
-    # Ordina la lista in base alla distanza (terzo elemento della tupla)
-    pockets_ordered.sort(key=lambda tup: tup[2])
-    pockets_ordered = [tup[0].add_ball(tup[1]) for tup in pockets_ordered]  
+    # Funzione ausiliaria: restituisce il numero di palline associate a una pocket
+    def pocket_ball_count(pkt):
+        # Si assume che pkt.get_ball() restituisca una lista di palline associate
+        return len(pkt.get_all_balls())
+    
+    # Ordina le pocket in base al numero di palline associate (in ordine crescente)
+    sorted_pockets = sorted(pockets, key=pocket_ball_count)
+    return sorted_pockets
 
-    return pockets_ordered, balls
+
 
 
 def get_aimed_ball_and_aim_line(ghost_ball : Ball, stick: AimLine, aimed_ball : Ball, aim_line: AimLine):
 
     if aimed_ball == None:
-        aimed_ball_to_debug = 22
+        aimed_ball_to_debug = 0
         print("Aimed ball is None")
     else:
         print("Aimed ball is not None")
