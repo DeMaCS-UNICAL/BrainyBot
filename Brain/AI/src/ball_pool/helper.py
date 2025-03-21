@@ -21,21 +21,16 @@ from matplotlib import pyplot as plt
 def asp_input(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
-    pockets = balls_chart["pockets"]
-    balls = balls_chart["balls"]
-    ghost_ball = balls_chart["ghost_ball"]
-    aim_line = balls_chart["aim_line"]
-    aimed_ball = balls_chart["aimed_ball"]
-    stick = balls_chart["stick"]
+    balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
 
     pocket_ord = get_pockets_and_near_ball(balls, pockets)
-    aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
+    #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
     input = pocket_ord.copy()
     input.extend(balls)
 
-    return input, pocket_ord, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick
-
+    return input, pocket_ord, balls, ghost_ball, aim_line, stick, player1_type
+ 
 
 
 def check_if_to_revalidate(output, last_output):
@@ -70,132 +65,135 @@ def persist_threshold(value):
 
 
 
-def ball_pool(screenshot_path, debug=True, vision_val = None, abstraction_val=True, iteration=0):
-    #screenshot,args.debugVision,vision,abstraction,iteration
-    
-    x_test_aim_to, y_test_aim_to= 1870,935
-    
-    # Ciclo di validazione del feedback: acquisisce una nuova immagine e confronta l'output con quello atteso
+def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True, iteration=0):
 
+    # Inizializzazione dei target e della ghost ball
     x_target, y_target = 1, 1
-    
     iteration = 1
     target_ball = None
 
-    matcher = MatchingBallPool(screenshot_path, debug=True, validation= 
-                               vision_val!= None, iteration=iteration)
+    # Inizializza il matcher per il Ball Pool
+    matcher = MatchingBallPool(
+        screenshot_path,
+        debug=True,
+        validation=(vision_val is not None),
+        iteration=iteration
+    )
+
+    # Helper per acquisire e processare la visione e l'astrazione
+    def acquire_abstraction():
+        vision = matcher.vision(iteration)
+        return matcher.abstraction(vision)
+
+
     while True:
         feedback = Feedback()
-        vision = matcher.vision(iteration)
+        abstraction = acquire_abstraction()
 
-        abstraction, g_ball_detected = matcher.abstraction(vision)
-        #print("Abstraction:", abstraction, "Ghost ball detected:", g_ball_detected)
-
+        # Verifica il turno del giocatore
         player1_turn = matcher.player1_turn
-        print("Player1 turn:", player1_turn)
-        player1_turn = True #debugging
+        player1_turn = True  # Forzatura per debugging
         if not player1_turn:
             time.sleep(1.5)
             continue
-        
-        if abstraction is not None:
-                input, pockets, balls, ghost_ball, aim_line, aimed_ball, aim_situation, stick = asp_input(abstraction)
-        else:
+
+        # Se non sono state rilevate palline, termina l'esecuzione
+        if abstraction is None:
             print("No balls found.")
             return
-                                                                                    
+
+        # Ottieni gli input necessari dall'astrazione
+        inputs = asp_input(abstraction)
+        # Aspettiamo di avere:
+        # input, pockets, balls, ghost_ball, aim_line, stick, player1_type
+        try:
+            input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = inputs
+        except Exception as e:
+            print("Errore nell'elaborazione dell'astrazione:", e)
+            return
+
         if debug:
             return matcher.canny_threshold
 
+        # Soluzione ottenuta dal modulo DLVSolution (codice commentato di gestione errori)
         solution = DLVSolution()
+        # Se necessario, qui si potrebbe invocare solution.call_asp(...)
+        # e gestire eventuali eccezioni, come indicato nel blocco commentato
 
-        """try:
-            moves = solution.call_asp(balls, pockets, aim_situation)
-            if len(moves) == 0:
-                print("No moves found.")
-                return
-        except Exception as e:
-            raise e"""
-
-    
+        # Cambio della directory di lavoro (assicurarsi che CLIENT_PATH sia definito)
         os.chdir(CLIENT_PATH)
-        coordinates = []
-        
-        
-        # Per ogni mossa individuata, esegue le operazioni necessarie
-        s_x1, s_y1, s_x2, s_y2 = stick.get_coordinates()
 
+        # Ottieni le coordinate dello stick
+        s_x1, s_y1, s_x2, s_y2 = stick.get_coordinates()
+        pool_power = s_y2
+
+        # Itera sulle pocket per eseguire le mosse
         for pk in pockets:
-            # Estrae l'ID della pallina da colpire, quello della pocket di destinazione e dello stick
             if len(pk.get_all_balls()) == 0:
                 continue
-            ball = pk.get_ball(0)
-            x_target, y_target = ball.get_x(), ball.get_y()
+            # Ottieni la pallina target
+            target_ball = pk.get_ball(0)
+            x_target, y_target = target_ball.get_x(), target_ball.get_y()
 
-            # Ottieni le coordinate dello stick (necessarie per eseguire lo swipe finale)
-
-            # Ottiene le coordinate attuali della ghost ball
+            # Recupera la posizione corrente della ghost ball
             g_x, g_y = ghost_ball.get_coordinates()
 
-            
-            # Ricava le coordinate della pallina da colpire
+            # Imposta il fattore iniziale di swipe
+            swipe_factor = 0.7
 
-            swipe_factor = 0.7  # Fattore di spostamento: 70% della distanza residua
-
-            # Ciclo per spostare la ghost ball verso la posizione target finché non è sufficientemente vicina
+            # Ciclo per muovere la ghost ball verso il target
             while True:
-                dist = math.sqrt((x_target - g_x)**2 + (y_target - g_y)**2)
+                if iteration == 1:
+                    pool_power = s_y2
+                    break 
+                dist = math.sqrt((x_target - g_x) ** 2 + (y_target - g_y) ** 2)
                 if target_ball is not None:
-                    print(f"Palla da colpire:  {ball.get_x()} {ball.get_y()}   {ball.get_type()}")
-                    print(f"Pocket di destinazione:  {pk.get_x(), pk.get_y()}")
-
+                    print(f"Palla da colpire: {target_ball.get_x(), target_ball.get_y()} {target_ball.get_type()}")
+                    print(f"Pocket di destinazione: {pk.get_x(), pk.get_y()}")
+                else:
+                    print("Target ball NONE")
                 print("Distanza ghost ball:", dist)
                 if dist < 50:
+                    pool_power = pool_power
                     break
-                
-                # Fattore dinamico: maggiore se la ghost ball è lontana, minore se è vicina
-                if dist > 200:
-                    swipe_factor = 3.35
-                elif dist > 100:
-                    swipe_factor = 1.95
-                else:
-                    swipe_factor = 1.75
 
+                # Aggiorna dinamicamente il fattore di swipe
+                swipe_factor *= (dist * 0.3)
+
+                # Calcola nuove coordinate intermedie
                 dx = abs(x_target - g_x)
                 dy = abs(y_target - g_y)
                 new_x = int(g_x + dx * swipe_factor)
                 new_y = int(g_y + dy * swipe_factor)
 
-                matcher.show_result()
+                #matcher.show_result()
 
-                ## Esegue il comando swipe per muovere la ghost ball verso il nuovo punto intermedio
-                os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'")
+                # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
+                os.system(
+                    f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'"
+                )
 
-                # Aggiorna la posizione della ghost ball acquisendo nuovamente l'immagine e ricavando le nuove coordinate
+                # Aggiorna la posizione della ghost ball acquisendo un nuovo screenshot
                 feedback.take_screenshot()
-                #matcher = MatchingBallPool(screenshot_path, debug=True, validation= vision_val!= None, iteration=iteration)
-                
                 vision = matcher.vision(iteration)
-                abstraction, g_ball_detected = matcher.abstraction(vision)
-                #1655, 260   1044, 260
+                abstraction = matcher.abstraction(vision)
                 if abstraction is not None:
-                    _, _, _, ghost_ball, _, _, _, _ = asp_input(abstraction)
-                if not g_ball_detected:
-                    print("Ghost ball non rilevata.")
-                    g_x, g_y = 1044, 260
-                else:
-                    g_x, g_y = ghost_ball.get_coordinates()
-            
-                # Esegue lo swipe finale
-                """plt.imshow( matcher.full_image)
-                plt.title(f"VISION")
-                plt.pause(0.1)
+                    inputs = asp_input(abstraction)
+                    try:
+                        input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = inputs
+                    except Exception as e:
+                        print("Errore nell'aggiornamento dell'astrazione:", e)
+                        break
 
-                plt.show()"""
+                g_x, g_y = ghost_ball.get_coordinates()
 
-            # Esegue lo swipe finale con lo stick per colpire la pallina verso la pocket
+            # Swipe finale con lo stick per tirare la pallina verso la pocket
             print("TIRANDO")
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(s_y2//1.2)}'")
+            os.system(
+                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(s_y2 // 1.2)}'"
+            )
             time.sleep(7)
-            iteration +=1
+            iteration += 1
+
+        # Al termine del ciclo per ogni pocket, acquisisce un nuovo screenshot
         feedback.take_screenshot()

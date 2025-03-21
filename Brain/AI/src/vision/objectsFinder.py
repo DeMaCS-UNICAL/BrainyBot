@@ -368,7 +368,7 @@ class ObjectsFinder:
         return circularity >= circularity_threshold
     
 
-    def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.27):
+    def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57):
         """
         Rileva le palle della pool table tramite rilevamento dei contorni e clustering.
         
@@ -390,7 +390,6 @@ class ObjectsFinder:
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY,15, 3
         )
-
 
         # Estrazione dei contorni
         # Utilizziamo la modalità RETR_TREE per avere la gerarchia completa dei contorni
@@ -419,8 +418,8 @@ class ObjectsFinder:
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
 
-            """if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                continue"""
+            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+                continue
 
             # Filtro per area e raggio se search_info è specificato
             if search_info is not None:
@@ -461,7 +460,7 @@ class ObjectsFinder:
 
             balls.append(OutputCircle(x, y, radius, dominant_color, white_ratio))
 
-        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=0)
+        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=3)
 
 
     
@@ -492,7 +491,7 @@ class ObjectsFinder:
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Filtra i contorni in base alla circularità
-        circles = [cnt for cnt in contours if self.__bp_is_circle(cnt, circularity_threshold=0.55, area_threshold=70)]
+        circles = [cnt for cnt in contours if self.__bp_is_circle(cnt, circularity_threshold=0.65, area_threshold=70)]
         pockets = []
         for cnt in circles:
             (center), r = cv2.minEnclosingCircle(cnt)
@@ -536,214 +535,204 @@ class ObjectsFinder:
     def detect_illegal_ghost_ball(self, 
                               search_info: Circle = None,
                               area_threshold=50, 
-                              circularity_threshold=0.2,
-                              red_ratio_threshold=0.5):
+                              circularity_threshold=0.4,
+                              border_intensity_threshold=70,    # soglia massima per il bordo (nero)
+                              red_inner_threshold=50):            # soglia minima in percentuale di pixel rossi nell'interno
         """
-        Rileva la ghost ball (palla divieto) analizzando i contorni dell'immagine in self.image.
-        La funzione cerca contorni esterni neri che contengono contorni interni rossi.
-        
+        Rileva la illegal ghost ball in un'immagine, caratterizzata da:
+        - contorno esterno (nero) sottile,
+        - interno rosso,
+        - presenza di una linea centrale (simile al simbolo del divieto).
+
         Parametri:
-        - search_info: oggetto con attributi:
-                * area: una tupla (x_min, y_min, x_max, y_max) che definisce l'area di interesse
-                * min_radius e max_radius per limitare il raggio accettabile.
-        - area_threshold: area minima del contorno da considerare.
-        - circularity_threshold: rapporto minimo (area contorno / area del cerchio racchiudente).
-        - red_ratio_threshold: soglia minima del rapporto di pixel rossi all'interno del contorno interno.
-        
-        Restituisce:
-        - Un candidato del tipo (int(x), int(y), int(radius), False) se viene rilevata una ghost ball valida,
-        - Altrimenti None.
+        - area_threshold: area minima del contorno esterno.
+        - circularity_threshold: rapporto minimo (area_contorno / area_cerchio inscritto) per considerare la forma sufficientemente circolare.
+        - border_intensity_threshold: valore massimo medio (0-255) lungo il bordo.
+        - red_inner_threshold: percentuale minima (0-100) di pixel rossi attesi nell'interno.
+
+        Ritorna:
+        Una tupla (x, y, r, True/False) per il candidato rilevato oppure None se non viene trovato.
         """
-        
-        # Conversione in scala di grigi e applicazione di un filtro Gaussiano
+        # Copie delle immagini di lavoro
         gray = self.__gray.copy()
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        frame = self.__img_matrix.copy()
         
-        # Sogliatura automatica (Otsu) per ottenere un'immagine binaria
-        ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV)
+        # Pre-elaborazione: blur e sogliatura adattativa
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        thresh_balls = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, 15, 3
+        )
         
-        # Troviamo i contorni e la relativa gerarchia
-        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Trova contorni e gerarchia
+        contours, hierarchy = cv2.findContours(
+            thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+        )
         if hierarchy is None:
             return None
         hierarchy = hierarchy[0]
-        
-        # Prepara una maschera HSV per rilevare il rosso
-        hsv = cv2.cvtColor(self.get_image(), cv2.COLOR_BGR2HSV)
-        mask_red1 = cv2.inRange(hsv, np.array([0, 70, 50]), np.array([10, 255, 255]))
-        mask_red2 = cv2.inRange(hsv, np.array([170, 70, 50]), np.array([180, 255, 255]))
-        mask_red = cv2.bitwise_or(mask_red1, mask_red2)
-        
-        # Soglia per considerare un colore come nero (in ciascun canale)
-        black_threshold = 50
-        
+
         candidate = None
+        # Valori ideali di riferimento per confronti
+        inner_ideal_value = 110
+        border_ideal_value = 30
+        best_inner_diff = float('inf')
+        best_border_diff = float('inf')
+
+        # Funzione helper per creare maschera da contorno
+        def create_mask(cnt):
+            mask = np.zeros_like(gray)
+            cv2.drawContours(mask, [cnt], -1, 255, -1)
+            return mask
+
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
-            area_outer = cv2.contourArea(cnt)
-            print(f"x {x}, y {y}, r {radius}")
-            # Filtraggio per area e raggio se search_info è fornito
+
+            # Se search_info è fornito, limitiamo il candidato per area e raggio
             if search_info is not None:
                 x_min, y_min, x_max, y_max = search_info.area
                 if not (x_min <= x <= x_max and y_min <= y <= y_max):
                     continue
                 if not (search_info.min_radius <= radius <= search_info.max_radius):
                     continue
+
+            # Se si desidera, si potrebbe verificare la circularità (opzionale)
+            # if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+            #     continue
+
+            # Recupero del contorno interno (primo figlio)
+            inner_index = hierarchy[i][2]
+            if inner_index == -1:
+                continue
+            inner_cnt = contours[inner_index]
+
+            # Creazione delle maschere per esterno, interno e bordo
+            mask_outer = create_mask(cnt)
+            mask_inner = create_mask(inner_cnt)
+            mask_border = cv2.subtract(mask_outer, mask_inner)
             
-            # Verifica che il contorno sia esterno (senza genitore) E che abbia almeno un figlio
-            if hierarchy[i][3] != -1 or hierarchy[i][2] == -1:
+            mean_border = cv2.mean(gray, mask=mask_border)[0]
+
+            # Verifica sui contorni figli (eventuali ulteriori interni)
+            child_index = hierarchy[i][2]
+            children_intensities = []
+            while child_index != -1:
+                child_cnt = contours[child_index]
+                mask_child = create_mask(child_cnt)
+                children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
+                child_index = hierarchy[child_index][0]
+
+            # Esige esattamente un contorno figlio ed una certa intensità interna
+            if len(children_intensities) != 1:
                 continue
-            
-            # Filtraggio per area minima
-            if area_outer < area_threshold:
+            mean_inner = children_intensities[0]
+            if not (85 <= mean_inner < 140):
                 continue
-            
-            # Verifica della forma circolare: rapporto area_contorno / area del cerchio racchiudente
-            if radius <= 0:
+            if mean_border >= 50:
                 continue
-            circle_area = np.pi * (radius ** 2)
-            circ_ratio = area_outer / circle_area
-            if circ_ratio < circularity_threshold:
-                continue
-            
-            # Verifica che il contorno esterno sia nero:
-            # Creiamo una maschera per disegnare il bordo del contorno (con thickness = 2)
-            ext_mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.drawContours(ext_mask, [cnt], -1, 255, thickness=2)
-            mean_color = cv2.mean(self.get_image(), mask=ext_mask)  # Restituisce (B, G, R, α)
-            if max(mean_color[:3]) > black_threshold:
-                continue
-            
-            # Verifica che il contorno interno (primo figlio) sia rosso:
-            child_idx = hierarchy[i][2]
-            child_cnt = contours[child_idx]
-            child_mask = np.zeros(gray.shape, dtype=np.uint8)
-            cv2.drawContours(child_mask, [child_cnt], -1, 255, thickness=-1)
-            total_child_pixels = cv2.countNonZero(child_mask)
-            if total_child_pixels == 0:
-                continue
-            red_pixels = cv2.countNonZero(cv2.bitwise_and(mask_red, child_mask))
-            red_ratio = red_pixels / total_child_pixels
-            if red_ratio < red_ratio_threshold:
-                continue
-            
-            candidate = (int(x), int(y), int(radius), False)
-            return candidate
-        
-        return None
+
+            # Se i valori correnti sono più vicini ai target ideali, aggiorna il candidato
+            inner_diff = abs(mean_inner - inner_ideal_value)
+            border_diff = abs(mean_border - border_ideal_value)
+            if inner_diff < best_inner_diff and border_diff < best_border_diff:
+                best_inner_diff = inner_diff
+                best_border_diff = border_diff
+                candidate = (int(x), int(y), int(radius), False)
+
+        return candidate
+
 
 
     def detect_ghost_ball(self, 
-                           search_info:Circle = None,
-                       area_threshold=50, 
-                       circularity_threshold=0.4,
-                       border_intensity_threshold=25,   # soglia massima per il bordo (nero)
-                       inner_intensity_threshold=94):  # soglia minima per il bianco
+                      search_info: Circle = None,
+                      area_threshold=50, 
+                      circularity_threshold=0.4,
+                      border_intensity_threshold=25,   # soglia massima per il bordo (nero)
+                      inner_intensity_threshold=94):     # soglia minima per il bianco
         """
-        Rileva la palla mirino in un'immagine, caratterizzata da:
-        - un contorno esterno (nero) sottile,
-        - un interno (bianco).
-
-        Il metodo sfrutta la gerarchia dei contorni per individuare contorni che possiedono
-        un "figlio": il contorno esterno (nero) che racchiude un'area interna (bianca).
-
-        Parametri:
-        area_threshold: area minima del contorno esterno.
-        circularity_threshold: rapporto minimo (area_contorno / area_cerchio inscritto) per considerare
-                                la forma sufficientemente circolare.
-        border_intensity_threshold: valore massimo medio (0-255) lungo il bordo (da aspettarsi scuro).
-        inner_intensity_threshold: valore minimo medio (0-255) all'interno (da aspettarsi chiaro).
+        Rileva la ghost ball in un'immagine utilizzando:
+        - immagine in scala di grigi con blur e sogliatura automatica,
+        - verifica della circularità e dei contorni interni,
+        - analisi dell'intensità media per bordo e interno.
 
         Ritorna:
-        Una lista di tuple (x, y, r) per ogni candidato palla mirino rilevato.
+        Una tupla (x, y, r, True) per il candidato rilevato oppure None se non viene trovato.
         """
-        # Utilizzo dell'immagine in scala di grigi già presente in self.__gray
         gray = self.__gray.copy()
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Utilizziamo la sogliatura automatica (Otsu) per ottenere una immagine binaria.
+        # Sogliatura automatica con Otsu (inversione binaria)
         ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # Troviamo i contorni e la relativa gerarchia
+        # Trova contorni e la gerarchia
         contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if hierarchy is None:
-            return []
-        hierarchy = hierarchy[0]  # si lavora sulla prima (ed unica) dimensione della gerarchia
-        
+            return None
+        hierarchy = hierarchy[0]
+
         candidate = None
-        max_diff = -1
+        max_intensity_child = -1
+
+        def create_mask(cnt):
+            mask = np.zeros_like(gray)
+            cv2.drawContours(mask, [cnt], -1, 255, -1)
+            return mask
+
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
-            area_outer = cv2.contourArea(cnt)
 
-            if search_info != None:
+            # Filtra in base a search_info se fornito
+            if search_info is not None:
                 x_min, y_min, x_max, y_max = search_info.area
-                if not (x_min <= x <= x_max and
-                        y_min <= y <= y_max):
-                    #print("Scartata per area")
+                if not (x_min <= x <= x_max and y_min <= y <= y_max):
                     continue
-
                 if not (search_info.min_radius <= radius <= search_info.max_radius):
-                    #print("Scartata per radius")
                     continue
 
-                # Verifichiamo che sia un contorno esterno (padre = -1) che ha un figlio
-            if hierarchy[i][3] == -1 and hierarchy[i][2] == -1 :  # Se ha un genitore, non è un contorno esterno
-                """if hierarchy[i][2] == -1:
-                    print("Scartata per figlio")
-                if hierarchy[i][3] == -1:
-                    print("Scartata per padre")"""
-                continue
-            
+            # Verifica della circularità
             if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                #print("Scartata per circularità")
                 continue
-            
-            # Recupero del contorno interno (si prende il primo figlio)
+
+            # Recupera il contorno interno (primo figlio)
             inner_index = hierarchy[i][2]
+            if inner_index == -1:
+                continue
             inner_cnt = contours[inner_index]
-
             (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
-            
-            # Creazione di una maschera per il contorno esterno
-            mask_outer = np.zeros_like(gray)
-            cv2.drawContours(mask_outer, [cnt], -1, 255, -1)
 
-            # Creazione della maschera per il contorno interno
-            mask_inner = np.zeros_like(gray)
-            cv2.drawContours(mask_inner, [inner_cnt], -1, 255, -1)
-            
-            # La zona del bordo è data dalla differenza tra il contorno esterno e quello interno
+            # Crea maschere per contorni esterno, interno e per il bordo (differenza)
+            mask_outer = create_mask(cnt)
+            mask_inner = create_mask(inner_cnt)
             mask_border = cv2.subtract(mask_outer, mask_inner)
             
-            # Calcolo dell'intensità media lungo il bordo e all'interno
             mean_border = cv2.mean(gray, mask=mask_border)[0]
             mean_inner = cv2.mean(gray, mask=mask_inner)[0]
-            
-            # MODIFICATO: Controlliamo che il bordo sia sufficientemente CHIARO ed l'interno sufficientemente chiaro
-            print(f"x {x}, y {y}, r {radius}")
 
-            print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
-            diff = mean_inner - mean_border
-            print(f"Diff {diff} max diff {max_diff}")
+            # Analisi di eventuali ulteriori contorni interni (figli)
+            child_index = hierarchy[i][2]
+            children_intensities = []
+            while child_index != -1:
+                child_cnt = contours[child_index]
+                mask_child = create_mask(child_cnt)
+                children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
+                child_index = hierarchy[child_index][0]
 
-            if mean_border > border_intensity_threshold: #or mean_inner < inner_intensity_threshold: #25
-                if diff < 25:
-                    print("Scartata per differenza")
-                    print("----------------------------")
+            # Se non sono presenti figli, applica un criterio diretto basato sulla differenza di intensità
+            if len(children_intensities) == 0:
+                if mean_inner - mean_border < 160:
                     continue
-            
-
-            if diff > max_diff:
-                max_diff = diff
                 candidate = (int(x), int(y), int(radius), True)
-                #print(f"Mean border: {mean_border}/ {border_intensity_threshold}, Mean inner: {mean_inner} / {inner_intensity_threshold}")
-                
-            else:
-                """"print("Scartata per diff")
-                print("Max diff: ", max_diff)"""
-            print("----------------------------")
-            
+                continue
+
+            # Se sono presenti, seleziona il candidato basandosi sul massimo valore interno
+            max_child_value = max(children_intensities)
+            if max_child_value < 84:
+                continue
+            if max_child_value < max_intensity_child:
+                continue
+
+            max_intensity_child = max_child_value 
+            candidate = (int(x), int(y), int(radius), True)
+
         return candidate
 
     def detect_square_boxes(self) -> list:

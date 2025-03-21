@@ -142,29 +142,18 @@ class MatchingBallPool:
                    )
         )
         if ghost_ball == None:
-            print("Ghost ball not found")
-            """ghost_ball = self.finder._template_matching(
-               TemplateMatch(
-                     {
-                        "red_ghost_ball": getImg(os.path.join(SPRITE_PATH, "red_ghost_ball.png"), gray=True)
-                     },
-                     {
-                        "red_ghost_ball": 0.4
-                     },
-                     find_all=True,
-                     grayscale=True
-               )
-
+    
+            ghost_ball = self.finder.detect_illegal_ghost_ball(
+                Circle(17, 100, 23,
+                   (self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max),
+                   )
             )
-            for gb in ghost_ball:
-                print(f"x {gb.x} y {gb.y} labels {gb.label} confidance {gb.confidence}")"""
             
-        
+            if ghost_ball == None:
+                ghost_ball = (400, 400, 0, False)
+            
+        self.gx, self.gy, self.gr, self.isWhite = ghost_ball
         aim_line = None
-        if ghost_ball != None:
-            self.gx, self.gy, self.gr, self.isWhite = ghost_ball 
-       
-            
 
         #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
 
@@ -199,6 +188,7 @@ class MatchingBallPool:
         self.__ghost_balls = ghost_ball
         self.__player_squares = player_squares
         self.__player_balls = players_balls
+        self.player1_type = "solid" if len(players_balls) == 7 else "striped"
         
         if self.player1_turn:
             print("Player 1 turn")
@@ -206,27 +196,28 @@ class MatchingBallPool:
             print("Player 2 turn")
 
         print(f"{len(self.__pockets)} Pockets")
-        print(f"{ghost_ball} Ghost ball")
+        if ghost_ball[3] == True:
+            print(f"WHITE Ghost Ball")
+        elif ghost_ball[0] == 400:
+            print(f"FAKE Ghost Ball")
+        else:
+            print(f"RED Ghost Ball")
+
+        
         print(f"{len(ball_circles)} Balls")
         print(f"{len(players_balls)} Player balls")
-        #print(f"{len(aim_line) if aim_line != None else None} Aim line")
 
-        result =  {"balls": ball_circles, "ghost_ball": ghost_ball, 
-                     "aim_line": aim_line, "player_ball_type": "solid"}
-        
-        # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
-        return result
+        return  ball_circles, ghost_ball, aim_line,self.player1_type
+
     
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
         if reset:
             Ball.reset()
             Pocket.reset()
-            Color.reset()
+            BPoolColor.reset()
+            #MoveAndShoot.reset()
         
-        result = {"balls": [], "pockets": [], "ghost_ball":Ball , "aim_line": [] ,"aimed_ball": Ball}
-
-        ball_circles = vision_output["balls"]
-        ghost_ball = vision_output["ghost_ball"]
+        ball_circles, ghost_ball, aim_line, player1_type = vision_output
         
 
         final_balls, red_ghost = self.abstract_balls(ball_circles)
@@ -243,7 +234,7 @@ class MatchingBallPool:
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
-        result["pockets"] = self.__pockets
+        pockets = self.__pockets
 
         ghost_ball = Ball()
         ghost_ball.set_x(self.gx)
@@ -258,19 +249,13 @@ class MatchingBallPool:
                                                 )
             
         
-        result["balls"] = final_balls
-        result["stick"] = AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
+        
+        stick =  AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
 
-        result["ghost_ball"] = ghost_ball
-        result["aim_line"] = aim_line
-        result["aimed_ball"] = aimed_ball
-        self.__aim_line = result["aim_line"]
+        self.__aim_line = aim_line
 
-        # Salviamo il risultato in un attributo interno
-        self.__result = result
-
-        self.__balls = result["balls"]
-        self.__ghost_balls = result["ghost_ball"]
+        self.__balls = final_balls
+        self.__ghost_balls = ghost_ball
 
         
         # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
@@ -299,7 +284,7 @@ class MatchingBallPool:
         """if not self.validation is None and self.debug:
             self.show_result()  # Nessun parametro"""
 
-        return result, self.gx != 400
+        return  final_balls, pockets, ghost_ball, aim_line, stick, player1_type
     
     def __detect_players_pic(self, area=None):
         squares = self.finder.detect_square_boxes()
