@@ -23,7 +23,7 @@ def asp_input(balls_chart):
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
     balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
 
-    pocket_ord = get_pockets_and_near_ball(balls, pockets)
+    pocket_ord = get_pockets_and_near_ball(balls, pockets, player1_type)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
     input = pocket_ord.copy()
@@ -85,6 +85,12 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         vision = matcher.vision(iteration)
         return matcher.abstraction(vision)
 
+    TOLERANCE = 50         # Soglia minima per considerare raggiunto il target
+    MAX_ITERATIONS = 100   # Per evitare loop infiniti
+    MIN_STEP_FACTOR = 0.8  # Valore minimo dello step factor
+    BASE_STEP_FACTOR = 2.0 # Step factor di base
+
+    iteration = 1
 
     while True:
         feedback = Feedback()
@@ -138,33 +144,51 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             # Recupera la posizione corrente della ghost ball
             g_x, g_y = ghost_ball.get_coordinates()
 
-            # Imposta il fattore iniziale di swipe
-            swipe_factor = 0.7
-
+    
             # Ciclo per muovere la ghost ball verso il target
-            while True:
-                if iteration == 1:
+            while iteration <= MAX_ITERATIONS:
+                """if iteration == 1:
                     pool_power = s_y2
-                    break 
-                dist = math.sqrt((x_target - g_x) ** 2 + (y_target - g_y) ** 2)
+                    break """
+                # Calcola la distanza corrente tra ghost ball (g_x, g_y) e target (x_target, y_target)
+                dx_total = abs(x_target - g_x)
+                dy_total = abs(y_target - g_y)
+                dist = math.hypot(dx_total, dy_total)
+                
+                # Debug
                 if target_ball is not None:
                     print(f"Palla da colpire: {target_ball.get_x(), target_ball.get_y()} {target_ball.get_type()}")
                     print(f"Pocket di destinazione: {pk.get_x(), pk.get_y()}")
                 else:
                     print("Target ball NONE")
                 print("Distanza ghost ball:", dist)
-                if dist < 50:
-                    pool_power = pool_power
+
+                # Se siamo entro la soglia, interrompi il ciclo
+                if dist < TOLERANCE:
+                    pool_power = s_y2
                     break
+                step_factor = max(MIN_STEP_FACTOR, BASE_STEP_FACTOR * (dist / 300))
 
-                # Aggiorna dinamicamente il fattore di swipe
-                swipe_factor *= (dist * 0.3)
-
-                # Calcola nuove coordinate intermedie
-                dx = abs(x_target - g_x)
-                dy = abs(y_target - g_y)
-                new_x = int(g_x + dx * swipe_factor)
-                new_y = int(g_y + dy * swipe_factor)
+                # Calcola il passo da effettuare in base alla differenza tra le coordinate
+                if dy_total > 2 * dx_total:
+                    # Movimento prevalentemente verticale
+                    new_x = g_x
+                    step_y = dy_total * step_factor
+                    new_y = int(g_y + step_y)
+                    print(f"[DEBUG] Swipe verticale: g_y {g_y} -> new_y {new_y} (dy_total: {dy_total:.2f})")
+                elif dx_total > 2 * dy_total:
+                    # Movimento prevalentemente orizzontale
+                    new_y = g_y
+                    step_x = dx_total * step_factor
+                    new_x = int(g_x + step_x)
+                    print(f"[DEBUG] Swipe orizzontale: g_x {g_x} -> new_x {new_x} (dx_total: {dx_total:.2f})")
+                else:
+                    # Movimento diagonale (normale)
+                    step_x = dx_total * step_factor
+                    step_y = dy_total * step_factor
+                    new_x = int(g_x + step_x)
+                    new_y = int(g_y + step_y)
+                    print(f"[DEBUG] Swipe diagonale: da ({g_x}, {g_y}) a ({new_x}, {new_y})")
 
                 #matcher.show_result()
 

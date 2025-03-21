@@ -70,6 +70,10 @@ class MatchingBallPool:
         self.__balls: list = []
         self.__pockets: list = []  # Ora i pocket verranno rilevati via circle detection
         self.player1_turn = False
+        self.player1_type = None
+        self.assign_ball_step = 1
+        self.player1_white_ratio = 0.0
+        self.player2_white_ratio = 0.0
 
         #self.table_area = MatchingBallPool.X_MIN, MatchingBallPool.Y_MIN, MatchingBallPool.X_MAX, MatchingBallPool.Y_MAX 
 
@@ -174,21 +178,34 @@ class MatchingBallPool:
                    (self.gx, self.gy, self.gr) if ghost_ball != None else None,
                    )
         )
+        
+        if 1 <= self.assign_ball_step <= 3 and iteration > 1:
 
-        players_balls = self.finder.find_balls_pool_contour(
-            Circle(self.BALLS_MIN_RADIUS-1, 70, self.BALLS_MAX_RADIUS+2,
-                   (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA),
-                   None,
-                   ), area_threshold=10,circularity_threshold=0.5
-        )
+            players_balls = self.finder.find_assigned_balls(
+                Circle(self.BALLS_MIN_RADIUS-1, 70, self.BALLS_MAX_RADIUS+2,
+                    (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA),
+                    None,
+                    ), area_threshold=10,circularity_threshold=0.5
+            )
+            if players_balls[0].white_ratio > 0.0:
+                self.player1_white_ratio = players_balls[0].white_ratio
+                self.assign_ball_step += 1
+
+            if players_balls[1].white_ratio > 0.0:
+                self.player2_white_ratio = players_balls[0].white_ratio
+                self.assign_ball_step += 1
+
+            if self.assign_ball_step == 3:
+                self.player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
+                self.assign_ball_step += 1
+                print(f"Player 1 type: {self.player1_type.upper()}")
+                
 
         # Assegniamo per riferimento interno
         self.__balls = ball_circles
         
         self.__ghost_balls = ghost_ball
         self.__player_squares = player_squares
-        self.__player_balls = players_balls
-        self.player1_type = "solid" if len(players_balls) == 7 else "striped"
         
         if self.player1_turn:
             print("Player 1 turn")
@@ -203,9 +220,7 @@ class MatchingBallPool:
         else:
             print(f"RED Ghost Ball")
 
-        
         print(f"{len(ball_circles)} Balls")
-        print(f"{len(players_balls)} Player balls")
 
         return  ball_circles, ghost_ball, aim_line,self.player1_type
 
@@ -388,16 +403,6 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
         
-        for ball in self.__player_balls:
-            x, y, r = ball.x, ball.y, ball.radius
-            cv2.circle(img_copy, (x, y), r, (255, 0, 0), 3)
-            cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
-            # Testo con bordo nero e testo verde
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 4)
-            cv2.putText(img_copy, f"({x}, {y}) {r}", (x + r, y),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-
         # Disegna i pocket (in giallo)
         for pocket in self.__pockets:
             x, y, r = pocket.get_x(), pocket.get_y(), pocket.get_r()

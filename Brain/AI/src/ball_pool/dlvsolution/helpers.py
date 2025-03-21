@@ -504,43 +504,96 @@ def choose_dlv_system() -> DesktopHandler:
 def choose_clingo_system() -> DesktopHandler:
     return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
+def is_in_between(white, target, other):
+    """
+    Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'white'
+    e la pallina target, considerando la soglia BALL_RADIUS.
+    """
+    # Vettore dal punto di partenza (white) al target
+    dx = target.get_x() - white.get_x()
+    dy = target.get_y() - white.get_y()
+    segment_length = sqrt(dx**2 + dy**2)
+    if segment_length == 0:
+        return False
+
+    # Calcola la proiezione del vettore (other - white) su (target - white)
+    t = ((other.get_x() - white.get_x()) * dx + (other.get_y() - white.get_y()) * dy) / (segment_length**2)
+    
+    # Se la proiezione non cade sul segmento, non è in mezzo
+    if t < 0 or t > 1:
+        return False
+
+    # Punto di proiezione sul segmento
+    proj_x = white.get_x() + t * dx
+    proj_y = white.get_y() + t * dy
+
+    # Distanza tra il punto proiettato e il centro della pallina 'other'
+    dist = sqrt((other.get_x() - proj_x)**2 + (other.get_y() - proj_y)**2)
+    
+    return dist < 25
+
+def is_path_clear(white, target, balls):
+    """
+    Verifica che non esista nessuna pallina diversa da quella bianca e dalla pallina target
+    che si trovi tra la palla bianca e la pallina target.
+    """
+    for other in balls:
+        if other == white or other == target:
+            continue
+        if is_in_between(white, target, other):
+            return False
+    return True
+
 def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
     """
     Per ogni pallina del tipo indicato, individua la pocket più vicina (rispetto a tutte le pocket)
     e la associa a quella pocket tramite il metodo add_ball. 
-    Una pallina viene assegnata alla pocket per cui la distanza è minima.
+    Viene esclusa la pallina se, tra essa e la palla bianca, è presente un'altra pallina.
     
     Restituisce la lista delle pocket ordinate in base al numero di palline associate.
     """
-    # Per ogni pallina, determina la pocket più vicina
+    # Individua la palla bianca
+    white_ball = next((b for b in balls if b.get_type() == "cue"), None)
+    if white_ball is None:
+        # Se non esiste la palla bianca, procediamo senza il controllo
+        white_ball = None
+
+    # Per ogni pallina, determina la pocket più vicina se il percorso dalla palla bianca è libero
     for ball in balls:
-        if ball.get_type() != ball_type:
+        if ball.get_type() == "cue":
+            continue  # salta la palla bianca
+        
+        # Se è specificato un ball_type, consideriamo solo quelle palline
+        if ball_type is not None and ball.get_type() != ball_type:
             continue
         
+        # Se esiste la palla bianca, controlla che non ci siano palline in mezzo
+        if white_ball and not is_path_clear(white_ball, ball, balls):
+            continue  # esclude la pallina se il percorso non è libero
+
         min_distance = float('inf')
         nearest_pkt = None
-        
-        # Cerca tra tutte le pocket quella con la distanza minima
+
+        # Cerca tra tutte le pocket quella con la distanza minima dalla pallina
         for pkt in pockets:
             distance = sqrt((pkt.get_x() - ball.get_x())**2 + (pkt.get_y() - ball.get_y())**2)
             if distance < min_distance:
                 min_distance = distance
                 nearest_pkt = pkt
-        
+
         # Se è stata trovata una pocket, associa la pallina ad essa
         if nearest_pkt is not None:
             nearest_pkt.add_ball(ball)
             #print(f"Ball id {ball.get_id()} associata a Pocket at ({nearest_pkt.get_x()}, {nearest_pkt.get_y()}) con distanza {min_distance:.2f}")
-    
+
     # Funzione ausiliaria: restituisce il numero di palline associate a una pocket
     def pocket_ball_count(pkt):
-        # Si assume che pkt.get_ball() restituisca una lista di palline associate
+        # Si assume che pkt.get_all_balls() restituisca una lista di palline associate
         return len(pkt.get_all_balls())
-    
+
     # Ordina le pocket in base al numero di palline associate (in ordine crescente)
     sorted_pockets = sorted(pockets, key=pocket_ball_count)
     return sorted_pockets
-
 
 
 
