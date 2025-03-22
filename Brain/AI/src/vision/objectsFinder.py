@@ -461,7 +461,7 @@ class ObjectsFinder:
 
             balls.append(OutputCircle(x, y, radius, dominant_color, white_ratio))
 
-        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=3)
+        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
 
     def find_assigned_balls(self, search_info: Circle, area_threshold=10, circularity_threshold=0.57):
         balls = self.find_balls_pool_contour(search_info, area_threshold, circularity_threshold)
@@ -742,6 +742,7 @@ class ObjectsFinder:
             if max_child_value < 90:
                 #print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
                 continue
+
             #print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
             if max_child_value <= max_intensity_child:
                 #print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
@@ -753,79 +754,80 @@ class ObjectsFinder:
         return candidate
 
     def detect_square_boxes(self) -> list:
+        """
+        Rileva e restituisce una lista di rettangoli quadrati presenti nell'immagine.
+        
+        La funzione esegue i seguenti passaggi:
+        1. Applica l'algoritmo Canny per rilevare i bordi e li dilata.
+        2. Trova i contorni e, per ciascuno, approssima il poligono.
+        3. Verifica che il contorno abbia un'area minima e che sia un quadrilatero (altrimenti, 
+            prova a ricostruirlo con il convex hull).
+        4. Controlla che il rettangolo ottenuto sia quasi quadrato (tolleranza di 6 pixel).
+        5. Estrae la regione d'interesse (ROI) e la converte in spazio HSV per verificare la presenza 
+            di pixel "chiari" (definiti tramite range per verde, arancione e bianco) lungo i bordi.
+        6. Registra il rettangolo (con il relativo conteggio dei pixel "chiari") se soddisfa le condizioni.
+        7. Ordina le box rilevate secondo una metrica che somma le coordinate e le dimensioni.
+
+        Ritorna:
+            Una lista di tuple (OutputRectangle, clear_count) ordinate in ordine decrescente.
+        """
         # Rileva i bordi con Canny e li dilata
-        contour = cv2.Canny(self.__img_matrix, 55, 120)
-        contour = cv2.dilate(contour, None, iterations=1)
-        contours, _ = cv2.findContours(contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        edges = cv2.Canny(self.__img_matrix, 55, 120)
+        dilated_edges = cv2.dilate(edges, None, iterations=1)
+        contours, _ = cv2.findContours(dilated_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        
         boxes = []
         
         for cnt in contours:
-            per = cv2.arcLength(cnt, True)
-            epsilon = 0.05 * per
+            # Calcola la lunghezza del contorno e approssima il poligono
+            perimeter = cv2.arcLength(cnt, True)
+            epsilon = 0.05 * perimeter
             approx = cv2.approxPolyDP(cnt, epsilon, True)
             x, y, w, h = cv2.boundingRect(approx)
             
-            # Controlla l'area minima
+            # Salta contorni con area troppo piccola
             if cv2.contourArea(approx) < 3000:
                 continue
             
-            # Se il contorno non è un quadrilatero, prova a ricostruirlo usando il convex hull
+            # Se il contorno non è un quadrilatero, prova a ricostruirlo con il convex hull
             if len(approx) != 4:
                 hull = cv2.convexHull(cnt)
                 epsilon = 0.05 * cv2.arcLength(hull, True)
                 approx = cv2.approxPolyDP(hull, epsilon, True)
                 if len(approx) != 4:
                     continue
-
+            
             # Verifica che il rettangolo sia quasi quadrato (tolleranza di 6 pixel)
             if not (h - 6 <= w <= h + 6):
-
                 continue
             
-            #print(f"Found square box: ({x}, {y}, {w}, {h})")
-            
-            # Controlla che la box sia quadrata (lati uguali con una tolleranza)
-            if not (h - 6 <= w <= h + 6):
-                #print("Scartata per non quadrata")
-                #print(f" w {w}, h {h}")
-                #print("----------------------------")
-                
-                continue
-
-            #print(f"Found square box: ({x}, {y}, {w}, {h})")
-
-            
-            # Estrae la regione d'interesse (ROI)
+            # Estrae la regione d'interesse (ROI) e converte in spazio HSV
             roi = self.__img_matrix[y:y+h, x:x+w]
             hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
             
             # Definisce i range HSV per verde, arancione e bianco
             lower_green = np.array([40, 40, 40])
             upper_green = np.array([80, 255, 255])
-            
             lower_orange = np.array([5, 100, 100])
             upper_orange = np.array([25, 255, 255])
-            
             lower_white = np.array([0, 0, 200])
             upper_white = np.array([180, 55, 255])
             
-            # Crea le maschere per ogni colore
+            # Crea le maschere per ogni colore e le combina per ottenere i pixel "chiari"
             mask_green = cv2.inRange(hsv_roi, lower_green, upper_green)
             mask_orange = cv2.inRange(hsv_roi, lower_orange, upper_orange)
             mask_white = cv2.inRange(hsv_roi, lower_white, upper_white)
-            
-            # Combina le maschere per ottenere i pixel "chiari"
             mask_clear = cv2.bitwise_or(mask_green, mask_orange)
             mask_clear = cv2.bitwise_or(mask_clear, mask_white)
             
-            # Definisce lo spessore del bordo (10% della larghezza, almeno 1 pixel)
+            # Calcola lo spessore del bordo (il 10% della larghezza, almeno 1 pixel)
             border_thickness = max(1, int(0.1 * w))
             top_border = mask_clear[0:border_thickness, :]
             bottom_border = mask_clear[-border_thickness:, :]
             left_border = mask_clear[:, 0:border_thickness]
             right_border = mask_clear[:, -border_thickness:]
             
-            # Combina i pixel dei bordi e calcola la percentuale di pixel chiari
+            # Combina i pixel dei bordi e calcola il numero di pixel "chiari"
             border_pixels = np.concatenate((
                 top_border.flatten(),
                 bottom_border.flatten(),
@@ -836,16 +838,23 @@ class ObjectsFinder:
             clear_count = np.count_nonzero(border_pixels)
             total_count = border_pixels.size
             
-            # Ad esempio, se meno del 50% dei pixel del bordo sono "chiari", scarta la box
-            #print(f"Clear count: {clear_count}, Total count: {total_count}")
+            # Se necessario, qui si potrebbe verificare che una certa percentuale di pixel sia "chiara"
+            # ad esempio:
+            # if clear_count / total_count < 0.5:
+            #     continue
             
             current_box = OutputRectangle(x, y, w, h)
             boxes.append((current_box, clear_count))
-            #print("----------------------------")
+        
+        # Ordina le box in ordine decrescente basandosi su una metrica combinata delle coordinate e dimensioni
+        sorted_boxes = sorted(
+            boxes,
+            key=lambda item: item[0].x + item[0].width + item[0].y + item[0].heigth,
+            reverse=True
+        )
+        
+        return sorted_boxes
 
-        #print(f"len square boxes {len(boxes)}")
-            
-        return sorted(boxes, key=lambda item: item[0].x +item[0].width +item[0].y +item[0].heigth, reverse=True)
 
     def compute_target_direction(self,all_balls : list[Ball], ghost_ball, area, collision_tolerance=8.0, line_length=100):
         """

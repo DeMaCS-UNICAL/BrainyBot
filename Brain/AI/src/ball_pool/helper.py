@@ -65,11 +65,11 @@ def persist_threshold(value):
 
 
 
+
 def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True, iteration=0):
 
     # Inizializzazione dei target e della ghost ball
     x_target, y_target = 1, 1
-    iteration = 1
     target_ball = None
 
     # Inizializza il matcher per il Ball Pool
@@ -80,21 +80,26 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         iteration=iteration
     )
 
-    # Helper per acquisire e processare la visione e l'astrazione
-    def acquire_abstraction():
-        vision = matcher.vision(iteration)
-        return matcher.abstraction(vision)
 
-    TOLERANCE = 50         # Soglia minima per considerare raggiunto il target
+    TOLERANCE = 60         # Soglia minima per considerare raggiunto il target
     MAX_ITERATIONS = 100   # Per evitare loop infiniti
     MIN_STEP_FACTOR = 0.8  # Valore minimo dello step factor
     BASE_STEP_FACTOR = 2.0 # Step factor di base
 
     iteration = 1
+    
+    
 
     while True:
         feedback = Feedback()
-        abstraction = acquire_abstraction()
+        if iteration >1:
+            feedback.take_screenshot()
+        
+        vision = matcher.vision(iteration)
+        abstraction = matcher.abstraction(vision)
+
+        s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
+
 
         # Verifica il turno del giocatore
         player1_turn = matcher.player1_turn
@@ -102,122 +107,71 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         if not player1_turn:
             time.sleep(1.5)
             continue
-
-        # Se non sono state rilevate palline, termina l'esecuzione
-        if abstraction is None:
-            print("No balls found.")
-            return
-
-        # Ottieni gli input necessari dall'astrazione
-        inputs = asp_input(abstraction)
-        # Aspettiamo di avere:
-        # input, pockets, balls, ghost_ball, aim_line, stick, player1_type
-        try:
-            input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = inputs
-        except Exception as e:
-            print("Errore nell'elaborazione dell'astrazione:", e)
-            return
-
-        if debug:
-            return matcher.canny_threshold
-
-        # Soluzione ottenuta dal modulo DLVSolution (codice commentato di gestione errori)
-        solution = DLVSolution()
-        # Se necessario, qui si potrebbe invocare solution.call_asp(...)
-        # e gestire eventuali eccezioni, come indicato nel blocco commentato
-
-        # Cambio della directory di lavoro (assicurarsi che CLIENT_PATH sia definito)
-        os.chdir(CLIENT_PATH)
-
-        # Ottieni le coordinate dello stick
-        s_x1, s_y1, s_x2, s_y2 = stick.get_coordinates()
-        pool_power = s_y2
-
-        # Itera sulle pocket per eseguire le mosse
-        for pk in pockets:
-            if len(pk.get_all_balls()) == 0:
-                continue
-            # Ottieni la pallina target
-            target_ball = pk.get_ball(0)
-            x_target, y_target = target_ball.get_x(), target_ball.get_y()
-
-            # Recupera la posizione corrente della ghost ball
-            g_x, g_y = ghost_ball.get_coordinates()
-
-    
-            # Ciclo per muovere la ghost ball verso il target
-            while iteration <= MAX_ITERATIONS:
-                """if iteration == 1:
-                    pool_power = s_y2
-                    break """
-                # Calcola la distanza corrente tra ghost ball (g_x, g_y) e target (x_target, y_target)
-                dx_total = abs(x_target - g_x)
-                dy_total = abs(y_target - g_y)
-                dist = math.hypot(dx_total, dy_total)
-                
-                # Debug
-                if target_ball is not None:
-                    print(f"Palla da colpire: {target_ball.get_x(), target_ball.get_y()} {target_ball.get_type()}")
-                    print(f"Pocket di destinazione: {pk.get_x(), pk.get_y()}")
-                else:
-                    print("Target ball NONE")
-                print("Distanza ghost ball:", dist)
-
-                # Se siamo entro la soglia, interrompi il ciclo
-                if dist < TOLERANCE:
-                    pool_power = s_y2
-                    break
-                step_factor = max(MIN_STEP_FACTOR, BASE_STEP_FACTOR * (dist / 300))
-
-                # Calcola il passo da effettuare in base alla differenza tra le coordinate
-                if dy_total > 2 * dx_total:
-                    # Movimento prevalentemente verticale
-                    new_x = g_x
-                    step_y = dy_total * step_factor
-                    new_y = int(g_y + step_y)
-                    print(f"[DEBUG] Swipe verticale: g_y {g_y} -> new_y {new_y} (dy_total: {dy_total:.2f})")
-                elif dx_total > 2 * dy_total:
-                    # Movimento prevalentemente orizzontale
-                    new_y = g_y
-                    step_x = dx_total * step_factor
-                    new_x = int(g_x + step_x)
-                    print(f"[DEBUG] Swipe orizzontale: g_x {g_x} -> new_x {new_x} (dx_total: {dx_total:.2f})")
-                else:
-                    # Movimento diagonale (normale)
-                    step_x = dx_total * step_factor
-                    step_y = dy_total * step_factor
-                    new_x = int(g_x + step_x)
-                    new_y = int(g_y + step_y)
-                    print(f"[DEBUG] Swipe diagonale: da ({g_x}, {g_y}) a ({new_x}, {new_y})")
-
-                #matcher.show_result()
-
-                # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
-                os.system(
-                    f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'"
-                )
-
-                # Aggiorna la posizione della ghost ball acquisendo un nuovo screenshot
-                feedback.take_screenshot()
-                vision = matcher.vision(iteration)
-                abstraction = matcher.abstraction(vision)
-                if abstraction is not None:
-                    inputs = asp_input(abstraction)
-                    try:
-                        input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = inputs
-                    except Exception as e:
-                        print("Errore nell'aggiornamento dell'astrazione:", e)
+        if iteration > 1:
+            try:
+                input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = asp_input(abstraction)
+                for p in pockets:
+                    if len(p.get_all_balls()) > 0:
+                        pocket = p
+                        target_ball = pocket.get_all_balls()[0]
+                        x_target, y_target = target_ball.get_x(), target_ball.get_y()
                         break
 
+                # Recupera la posizione corrente della ghost ball
                 g_x, g_y = ghost_ball.get_coordinates()
+            except Exception as e:
+                print("Errore nell'elaborazione dell'astrazione:", e)
+                return
 
-            # Swipe finale con lo stick per tirare la pallina verso la pocket
-            print("TIRANDO")
+        moves_before_shoot = 0
+        while moves_before_shoot < MAX_ITERATIONS:
+            if iteration == 1:
+                shoot_power = s_y2
+                break
+            
+            # Calcola la distanza corrente tra ghost ball (g_x, g_y) e target (x_target, y_target)
+            dx_total = abs(g_x - x_target)
+            dy_total = abs(g_y - y_target)
+            dist = math.sqrt(dx_total ** 2 + dy_total ** 2)
+
+            print(f"Target ball: {target_ball.get_type()} in posizione ({x_target}, {y_target})")
+            print(f"Distanza tra ghost ball e target: {dist}")
+            if dist < TOLERANCE:
+                shoot_power = s_y2
+                break
+            
+            # Calcola lo spostamento del 20% della differenza tra ghost ball e target,
+            # applicando il segno corretto in base alla posizione della ghost ball.
+            new_x = x_target + int(0.20 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
+            new_y = y_target + int(0.20 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
+
+            matcher.show_result()
+
+            # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
+            os.chdir(CLIENT_PATH)
             os.system(
-                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(s_y2 // 1.2)}'"
+                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'"
             )
-            time.sleep(7)
-            iteration += 1
 
-        # Al termine del ciclo per ogni pocket, acquisisce un nuovo screenshot
-        feedback.take_screenshot()
+            feedback.take_screenshot()
+            vision = matcher.vision(iteration)
+            abstraction = matcher.abstraction(vision)
+
+            g_x, g_y = matcher.ghost_ball.get_coordinates()
+            moves_before_shoot += 1
+
+
+        # Swipe finale con lo stick per tirare la pallina verso la pocket
+        print("TIRANDO")
+        os.chdir(CLIENT_PATH)
+        os.system(
+            f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(shoot_power)}'"
+        )
+        iteration += 1
+        time.sleep(7)
+        
+
+            
+            
+
+

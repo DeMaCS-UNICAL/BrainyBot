@@ -44,7 +44,7 @@ class MatchingBallPool:
 
     # Parametri per la rilevazione delle palline
     BALLS_MIN_DIST = 1
-    BALLS_MIN_RADIUS = 20
+    BALLS_MIN_RADIUS = 19
     BALLS_MAX_RADIUS = 25
     
     # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
@@ -62,167 +62,180 @@ class MatchingBallPool:
         self.debug = debug
         self.validation = validation
         self.iteration = iteration
+
         self.image = None
-        self.__gray = None
-        self.__output = None
+        self.gray = None
+        self.output = None
 
         self.detection_result = None
-        self.__balls: list = []
-        self.__pockets: list = []  # Ora i pocket verranno rilevati via circle detection
+        self.balls = []      # Lista delle palline rilevate
+        self.__pockets = []    # Lista dei pocket rilevati
         self.player1_turn = False
         self.player1_type = None
         self.assign_ball_step = 1
         self.player1_white_ratio = 0.0
         self.player2_white_ratio = 0.0
+        self.ghost_ball = None
 
-        #self.table_area = MatchingBallPool.X_MIN, MatchingBallPool.Y_MIN, MatchingBallPool.X_MAX, MatchingBallPool.Y_MAX 
+        # Valori calcolati successivamente in vision()
+        self.pool_coords = None
+        self.pool_coords = None
+        self.player_area = None
+        self.STICK_COORDS = None
+        self.img_width = None
 
-        # Recupera la configurazione dal file config
+        # Recupera la configurazione dal file e regola la soglia canny
         self.canny_threshold, self.proportion_tolerance, self.size_tolerance = self.retrieve_config()
-        
         self.canny_threshold = self.adjust_threshold(iteration)
-        
 
     def adjust_threshold(self, iteration):
+        """
+        Regola la soglia Canny in base al numero di iterazione.
+        """
         if iteration == 0:
             return self.canny_threshold
         return self.canny_threshold + iteration * 10
 
     def retrieve_config(self):
-        with open(os.path.join(SRC_PATH, "config"), "r") as f:
-            x = f.read()
-        canny_threshold = int(re.search("CANNY_THRESHOLD=([^\n]+)", x, flags=re.M).group(1))
-        # Anche se non usiamo template per i pocket, manteniamo la configurazione per eventuali usi futuri
-        proportion_tolerance = (
-            float(re.search("POCKET_PROPORTION_TOLERANCE=([^\n]+)", x, flags=re.M).group(1))
-            if re.search("POCKET_PROPORTION_TOLERANCE=([^\n]+)", x, flags=re.M)
-            else 0.1
-        )
-        size_tolerance = (
-            float(re.search("POCKET_SIZE_TOLERANCE=([^\n]+)", x, flags=re.M).group(1))
-            if re.search("POCKET_SIZE_TOLERANCE=([^\n]+)", x, flags=re.M)
-            else 0.1
-        )
+        """
+        Recupera i parametri di configurazione da un file di configurazione.
+        Il file deve contenere, ad esempio:
+            CANNY_THRESHOLD=<valore>
+            POCKET_PROPORTION_TOLERANCE=<valore> (opzionale, default 0.1)
+            POCKET_SIZE_TOLERANCE=<valore> (opzionale, default 0.1)
+        """
+        config_path = os.path.join(SRC_PATH, "config")
+        with open(config_path, "r") as f:
+            config_data = f.read()
+
+        canny_threshold = int(re.search(r"CANNY_THRESHOLD=([^\n]+)", config_data, flags=re.M).group(1))
+        proportion_match = re.search(r"POCKET_PROPORTION_TOLERANCE=([^\n]+)", config_data, flags=re.M)
+        proportion_tolerance = float(proportion_match.group(1)) if proportion_match else 0.1
+        size_match = re.search(r"POCKET_SIZE_TOLERANCE=([^\n]+)", config_data, flags=re.M)
+        size_tolerance = float(size_match.group(1)) if size_match else 0.1
+
         return canny_threshold, proportion_tolerance, size_tolerance
 
+    def config_area(self):
+        img_height, img_width = self.image.shape[:2]
+        self.img_width = img_width
+
+        # Definisce le aree di interesse per il campo e per il giocatore
+        self.pool_coords = (
+            int(self.PERC_X_MIN * img_width),
+            int(self.PERC_Y_MIN * img_height),
+            int(self.PERC_X_MAX * img_width),
+            int(self.PERC_Y_MAX * img_height)
+        )
+        self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max = self.pool_coords
+
+        self.player_area = (
+            int(self.PERC_X_MIN_PLAYER_AREA * img_width),
+            0,
+            int(self.PERC_X_MAX_PLAYER_AREA * img_width),
+            int(self.PERC_Y_MAX_PLAYER_AREA * img_height)
+        )
+        self.X_MIN_PLAYER_AREA, self.Y_MIN_PLAYER_AREA, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA = self.player_area
+
+        self.STICK_COORDS = (
+            int(self.PERC_STICK_COORDS[0] * img_width),
+            int(self.PERC_STICK_COORDS[1] * img_height),
+            int(self.PERC_STICK_COORDS[2] * img_width),
+            int(self.PERC_STICK_COORDS[3] * img_height)
+        )
 
     def vision(self, iteration=1):
-        self.iteration = iteration
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
+        self.iteration = iteration
+        # Carica lo screenshot a colori
+        screenshot_full_path = os.path.join(SCREENSHOT_PATH, self.screenshot)
+        self.image = getImg(screenshot_full_path)
+        self.full_image = self.image.copy()  # Conserva una copia per la visualizzazione finale
 
-        self.image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
-        self.full_image = self.image.copy()  # conserva l'immagine completa per la visualizzazione
-        
         if not self.debug and self.validation is None:
             plt.imshow(cv2.cvtColor(self.image, cv2.COLOR_BGR2RGB))
             plt.title("Screenshot")
             plt.show()
-        
-        # Carica la versione in scala di grigi e applica pre-elaborazione
-        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot), gray=True)
-        self.__gray = cv2.GaussianBlur(self.__gray, (5, 5), 0)
-        self.__gray = cv2.equalizeHist(self.__gray)
-        
-        img_height = self.image.shape[0]
-        img_width = self.image.shape[1]
 
-        self.table_area = int(self.PERC_X_MIN * img_width), int(self.PERC_Y_MIN * img_height), int (self.PERC_X_MAX * img_width), int(self.PERC_Y_MAX * img_height)
-        self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max = self.table_area
+        # Carica l'immagine in scala di grigi e applica la pre-elaborazione
+        self.gray = getImg(screenshot_full_path, gray=True)
+        self.gray = cv2.GaussianBlur(self.gray, (5, 5), 0)
+        self.gray = cv2.equalizeHist(self.gray)
 
-        self.player_area = int(self.PERC_X_MIN_PLAYER_AREA * img_width), 0, int(self.PERC_X_MAX_PLAYER_AREA * img_width), int(self.PERC_Y_MAX_PLAYER_AREA * img_height)
-        self.X_MIN_PLAYER_AREA, self.Y_MIN_PLAYER_AREA, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA = self.player_area
-
-        self.STICK_COORDS = int(self.PERC_STICK_COORDS[0] * img_width), int(self.PERC_STICK_COORDS[1] * img_height), int(self.PERC_STICK_COORDS[2] * img_width), int(self.PERC_STICK_COORDS[3] * img_height)
-    
-        # Salviamo self.__output come immagine completa per la visualizzazione finale
+        # Prepara l'immagine di output per la visualizzazione finale
         self.__output = self.image.copy()
-        self.img_width = self.image.shape[1]
 
-        player_squares = self.__detect_players_pic(area=( self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max))
+        # Config dell'area e rilevamento dei pocket solo alla prima iterazione
+        if self.iteration == 1:
+            self.config_area()
 
+            pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS + 2, self.pool_coords)
+            self.__pockets = self.finder.find_pockets_pool_contour(pocket_circle)
+
+        player_squares = self.__detect_players_pic(area=self.player_area)
+
+        # Rileva la ghost ball
+        print("Detecting ghost ball...")
         ghost_ball = self.finder.detect_ghost_ball(
-            Circle(17, 100, 23,
-                   (self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max),
-                   )
+            Circle(17, 100, 23, self.pool_coords)
         )
-        if ghost_ball == None:
-    
+        if ghost_ball is None:
             ghost_ball = self.finder.detect_illegal_ghost_ball(
-                Circle(17, 100, 23,
-                   (self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max),
-                   )
+                Circle(17, 100, 23, self.pool_coords)
             )
-            
-            if ghost_ball == None:
+            if ghost_ball is None:
                 ghost_ball = (400, 400, 0, False)
-            
+
         self.gx, self.gy, self.gr, self.isWhite = ghost_ball
         aim_line = None
 
-        #pocket_circles = self.find_pocket_pool_houghCircles(area=(x,y,w,h))
-
-        if self.iteration == 1:
-            pocket_circles = self.finder.find_pockets_pool_contour(
-                Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS+2,
-                    ( self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max),
-                    )
-            )
-
-            self.__pockets = pocket_circles
-
-        ball_circles = self.finder.find_balls_pool_contour(
-            Circle(self.BALLS_MIN_RADIUS-1, 100, self.BALLS_MAX_RADIUS+2,
-                   ( self.pool_x_min + 60, self.pool_y_min + 60,
-                     self.pool_x_max - 60, self.pool_y_max - 60),
-
-                   (self.gx, self.gy, self.gr) if ghost_ball != None else None,
-                   )
+        # Definisce l'area di ricerca per le palline (evitando i bordi)
+        ball_search_area = (
+            self.pool_coords[0] + 60,
+            self.pool_coords[1] + 60,
+            self.pool_coords[2] - 60,
+            self.pool_coords[3] - 60
         )
+        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS + 2, ball_search_area,
+                             (self.gx, self.gy, self.gr))
         
-        if 1 <= self.assign_ball_step <= 3 and iteration > 1:
+        ball_circles = self.finder.find_balls_pool_contour(ball_circle)
 
-            players_balls = self.finder.find_assigned_balls(
-                Circle(self.BALLS_MIN_RADIUS-1, 70, self.BALLS_MAX_RADIUS+2,
-                    (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA),
-                    None,
-                    ), area_threshold=10,circularity_threshold=0.5
+        # Assegna le palline ai giocatori se necessario
+        if 1 <= self.assign_ball_step <= 3 and iteration > 1:
+            player_ball_circle = Circle(
+                self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
+                (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
             )
+            players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
+
             if players_balls[0].white_ratio > 0.0:
                 self.player1_white_ratio = players_balls[0].white_ratio
                 self.assign_ball_step += 1
 
             if players_balls[1].white_ratio > 0.0:
-                self.player2_white_ratio = players_balls[0].white_ratio
+                self.player2_white_ratio = players_balls[1].white_ratio
                 self.assign_ball_step += 1
 
             if self.assign_ball_step == 3:
                 self.player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
                 self.assign_ball_step += 1
                 print(f"Player 1 type: {self.player1_type.upper()}")
-                
 
-        # Assegniamo per riferimento interno
-        self.__balls = ball_circles
-        
-        self.__ghost_balls = ghost_ball
+        self.balls = ball_circles
         self.__player_squares = player_squares
-        
-        if self.player1_turn:
-            print("Player 1 turn")
-        else:
-            print("Player 2 turn")
 
+        print("Player 1 turn" if self.player1_turn else "Player 2 turn")
         print(f"{len(self.__pockets)} Pockets")
-        if ghost_ball[3] == True:
-            print(f"WHITE Ghost Ball")
+        if ghost_ball[3]:
+            print("WHITE Ghost Ball")
         elif ghost_ball[0] == 400:
-            print(f"FAKE Ghost Ball")
+            print("FAKE Ghost Ball")
         else:
-            print(f"RED Ghost Ball")
-
+            print("RED Ghost Ball")
         print(f"{len(ball_circles)} Balls")
 
-        return  ball_circles, ghost_ball, aim_line,self.player1_type
+        return ball_circles, ghost_ball, aim_line, self.player1_type
 
     
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
@@ -234,70 +247,41 @@ class MatchingBallPool:
         
         ball_circles, ghost_ball, aim_line, player1_type = vision_output
         
-
-        final_balls, red_ghost = self.abstract_balls(ball_circles)
-
-        if self.__ghost_balls == None:
-
-            if red_ghost != None:
-                self.__ghost_balls = red_ghost
-                self.gx, self.gy, self.gr, self.isWhite = red_ghost.get_x(), red_ghost.get_y(), red_ghost.get_r(), False
-            else:
-                ghost_ball = (400, 400, 0, False)
-                self.gx, self.gy, self.gr, self.isWhite = ghost_ball
-
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
+        final_balls, ghost_ball = self.abstract_balls(ball_circles)
+
         pockets = self.__pockets
 
-        ghost_ball = Ball()
-        ghost_ball.set_x(self.gx)
-        ghost_ball.set_y(self.gy)
-        ghost_ball.set_r(self.gr)
-        ghost_ball.set_ghost_type("GHOST" if self.isWhite else "RED GHOST")
 
         aim_line, aimed_ball = self.finder.compute_target_direction(
                                                     all_balls=final_balls,
                                                     ghost_ball=(self.gx, self.gy, self.gr),
-                                                    area=(self.pool_x_min, self.pool_y_min, self.pool_x_max, self.pool_y_max)
+                                                    area=self.pool_coords,
                                                 )
-            
-        
         
         stick =  AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
-
         self.__aim_line = aim_line
 
         self.__balls = final_balls
-        self.__ghost_balls = ghost_ball
+        self.ghost_ball = ghost_ball
 
-        
-        # Se non vengono rilevate pocket, definisci alcune pocket di default (per test)
         piena = 0
-        nera = 0
         mezza = 0
+        otto = 0
         bianca = 0
-
-        for ball in final_balls:
-            #print(f"Ball in loop{ball}")
-            if ball.get_type() == "solid":
+        for b in final_balls:
+            if b.get_type() == "solid":
                 piena += 1
-                
-            elif ball.get_type() == "striped":
+            elif b.get_type() == "striped":
                 mezza += 1
-
-            elif ball.get_type() == "eight":
-                nera += 1
-            
-            elif ball.get_type() == "cue":
+            elif b.get_type() ==  "eight":
+                otto += 1
+            elif b.get_type() == "cue":
                 bianca += 1
-            
-            #print(f"x = {ball.get_x()}, y = {ball.get_y()}")
-            
-        print ("Piena:", piena, "Nera:", nera, "Mezza:", mezza, "Bianca:", bianca)
-        """if not self.validation is None and self.debug:
-            self.show_result()  # Nessun parametro"""
+        
+        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}")
 
         return  final_balls, pockets, ghost_ball, aim_line, stick, player1_type
     
@@ -355,8 +339,15 @@ class MatchingBallPool:
             raw_balls.append(ball_obj)
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
-        final_balls, red_ghost = BPoolColor.assign_ball_types(raw_balls)
-        return final_balls,red_ghost
+        final_balls = BPoolColor.assign_ball_types(raw_balls)
+
+        ghost_ball = Ball()
+        ghost_ball.set_x(self.gx)
+        ghost_ball.set_y(self.gy)
+        ghost_ball.set_r(self.gr)
+        ghost_ball.set_type("GHOST" if self.isWhite else "RED GHOST")
+
+        return final_balls, ghost_ball
 
     def abstract_pockets(self, circles):
         """
@@ -373,10 +364,6 @@ class MatchingBallPool:
             raw_pockets.append(p)
 
         return raw_pockets
-    
-
-    
-
     
 
     def show_result(self):
@@ -434,7 +421,7 @@ class MatchingBallPool:
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
 
 
-        x, y, r, type = self.__ghost_balls.get_x(), self.__ghost_balls.get_y(), self.__ghost_balls.get_r(), self.__ghost_balls.get_ghost_type()
+        x, y, r, type = self.ghost_ball.get_x(), self.ghost_ball.get_y(), self.ghost_ball.get_r(), self.ghost_ball.get_type()
         
         cv2.circle(img_copy, (x, y), r, (60,20,220) if type == "GHOST"  else (255,255,255), 4)
         cv2.circle(img_copy, (x, y), 6, (0, 0, 0), 1)
@@ -469,7 +456,7 @@ class MatchingBallPool:
 
         # Ridimensionamento per la visualizzazione
         resized_input = cv2.cvtColor(cv2.resize(self.image, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
-        resized_gray = cv2.cvtColor(cv2.resize(self.__gray, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_GRAY2RGB)
+        resized_gray = cv2.cvtColor(cv2.resize(self.gray, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_GRAY2RGB)
         resized_output = cv2.cvtColor(cv2.resize(img_copy, dim, interpolation=cv2.INTER_LINEAR), cv2.COLOR_BGR2RGB)
 
         # Mostra i risultati
