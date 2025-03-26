@@ -45,7 +45,7 @@ class MatchingBallPool:
     # Parametri per la rilevazione delle palline
     BALLS_MIN_DIST = 1
     BALLS_MIN_RADIUS = 19
-    BALLS_MAX_RADIUS = 25
+    BALLS_MAX_RADIUS = 26
     
     # Parametri per la rilevazione dei pocket (buche) tramite rilevamento dei cerchi
     POCKETS_MIN_DIST = 400        # Distanza minima tra le buche
@@ -176,11 +176,11 @@ class MatchingBallPool:
 
         # Rileva la ghost ball
         print("Detecting ghost ball...")
-        ghost_ball = self.finder.detect_ghost_ball(
+        ghost_ball = self.finder.find_ghost_ball(
             Circle(17, 100, 23, self.pool_coords)
         )
         if ghost_ball is None:
-            ghost_ball = self.finder.detect_illegal_ghost_ball(
+            ghost_ball = self.finder.find_illegal_ghost_ball(
                 Circle(17, 100, 23, self.pool_coords)
             )
             if ghost_ball is None:
@@ -196,7 +196,7 @@ class MatchingBallPool:
             self.pool_coords[2] - 60,
             self.pool_coords[3] - 60
         )
-        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS + 2, ball_search_area,
+        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, ball_search_area,
                              (self.gx, self.gy, self.gr))
         
         ball_circles = self.finder.find_balls_pool_contour(ball_circle)

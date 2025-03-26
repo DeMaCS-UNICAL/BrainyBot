@@ -367,6 +367,27 @@ class ObjectsFinder:
         circularity = 4 * math.pi * area / (perimeter ** 2)
         return circularity >= circularity_threshold
     
+    def __valid_coordinates(self, search_info, coord):
+        x, y, r = coord
+        x_min, y_min, x_max, y_max = search_info.area
+        if not (x_min <= x <= x_max and y_min <= y <= y_max):
+            return False
+        if not (search_info.min_radius <= r <= search_info.max_radius):
+            return False
+        
+        if search_info.not_this_coordinates is not None:
+            x_not, y_not, r_not = search_info.not_this_coordinates
+            dist = np.sqrt((x - x_not) ** 2 + (y - y_not) ** 2)
+            if dist <= r * 0.9 or dist <= r_not * 0.9:
+                return False
+        return True
+
+
+    def __bp_is_valid_cnt(self, contour, circularity_threshold=0.65, area_threshold=None, search_info = None, coord = None):
+        if not self.__bp_is_circle(contour, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+            return False
+        
+        return self.__valid_coordinates(search_info, coord)
 
     def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57):
         """
@@ -380,6 +401,7 @@ class ObjectsFinder:
         """
         # Pre-elaborazione: blur sull'immagine in scala di grigi
         blurred = cv2.GaussianBlur(self.__gray, (3, 3), 0)
+        #blurred = self.__blurred    
 
         # Thresholding per la palla cue e per le altre palle
         thresh_cue = cv2.adaptiveThreshold(
@@ -418,22 +440,8 @@ class ObjectsFinder:
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
 
-            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold, search_info, (x, y, radius)):
                 continue
-
-            # Filtro per area e raggio se search_info è specificato
-            if search_info is not None:
-                x_min, y_min, x_max, y_max = search_info.area
-                if not (x_min <= x <= x_max and y_min <= y <= y_max):
-                    continue
-                if not (search_info.min_radius <= radius <= search_info.max_radius):
-                    continue
-
-                if search_info.not_this_coordinates is not None:
-                    x_not, y_not, r_not = search_info.not_this_coordinates
-                    dist = np.sqrt((x - x_not) ** 2 + (y - y_not) ** 2)
-                    if dist <= radius * 0.9 or dist <= r_not * 0.9:
-                        continue
 
             # Escludi contorni esterni (senza genitore)
             if hierarchy[i][3] == -1:
@@ -482,6 +490,7 @@ class ObjectsFinder:
 
         # Pre-elaborazione: blur e thresholding adattivo (inversione per evidenziare le zone scure)
         blurred = cv2.GaussianBlur(self.__gray, (3, 3), 0)
+
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
             cv2.THRESH_BINARY_INV, 77, 27
@@ -503,10 +512,8 @@ class ObjectsFinder:
                 continue
 
             x, y, r = int(center[0]), int(center[1]), int(r)
-            if search_info.area is not None:
-                x_min, y_min, x_max, y_max = search_info.area
-                if not (x_min <= x <= x_max and y_min <= y <= y_max):
-                    continue
+            if not self.__valid_coordinates(search_info, (x, y, r)):
+                continue
 
             # Ottieni il colore del pixel centrale dalla versione già elaborata (blurred)
             color = self.__blurred[y, x].tolist()
@@ -536,7 +543,7 @@ class ObjectsFinder:
 
         return filtered
     
-    def detect_illegal_ghost_ball(self, 
+    def find_illegal_ghost_ball(self, 
                               search_info: Circle = None,
                               area_threshold=50, 
                               circularity_threshold=0.4,
@@ -647,7 +654,7 @@ class ObjectsFinder:
 
 
 
-    def detect_ghost_ball(self, 
+    def find_ghost_ball(self, 
                       search_info: Circle = None,
                       area_threshold=50, 
                       circularity_threshold=0.4,

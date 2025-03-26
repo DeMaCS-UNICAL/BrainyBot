@@ -227,6 +227,11 @@ class Ball(Predicate):
     def set_white_ratio(self, white_ratio: float):
         self.__white_ratio = white_ratio
     
+    def set_shot_score(self, score):
+        self.__shot_score = score
+    
+    def get_shot_score(self):
+        return self.__shot_score
     
     def get_x(self):
         return self.__x
@@ -254,12 +259,6 @@ class Ball(Predicate):
     
     def set_type(self, ball_type):
         self.__type = ball_type
-
-    def set_ghost_type(self, ghost_type):
-        self.__ghost_type = ghost_type
-    
-    def get_ghost_type(self):
-        return self.__ghost_type
 
     def set_aimed(self, aimed):
         self.__aimed = aimed
@@ -468,6 +467,91 @@ def choose_dlv_system() -> DesktopHandler:
 def choose_clingo_system() -> DesktopHandler:
     return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
+import math
+
+def calculate_shot_angle(white, target, pocket):
+    """
+    Calcola l'angolo (in gradi) tra il vettore white->target e target->pocket.
+    """
+    # Vettori
+    v1 = (target.get_x() - white.get_x(), target.get_y() - white.get_y())
+    v2 = (pocket.get_x() - target.get_x(), pocket.get_y() - target.get_y())
+    
+    # Prodotto scalare e magnitudini
+    dot = v1[0] * v2[0] + v1[1] * v2[1]
+    mag1 = math.sqrt(v1[0]**2 + v1[1]**2)
+    mag2 = math.sqrt(v2[0]**2 + v2[1]**2)
+    
+    if mag1 * mag2 == 0:
+        return 0
+    
+    # Calcola e converte l'angolo in gradi
+    angle_rad = math.acos(dot / (mag1 * mag2))
+    return math.degrees(angle_rad)
+
+def calculate_shot_score(white, target, pocket, balls):
+    """
+    Calcola un punteggio per il tiro basato sui seguenti criteri:
+      - Percorso bianca->target: bonus se libero, penalità altrimenti.
+      - Percorso target->pocket: bonus se libero, penalità altrimenti.
+      - Distanza target->pocket: bonus maggiore per distanze minori.
+      - Angolo del tiro: bonus per angoli piccoli, penalità per angoli elevati.
+    """
+    score = 0
+    
+    # Verifica il percorso dalla bianca al target
+    if is_path_clear(white, target, balls):
+        score += 50
+    
+    # Verifica il percorso dal target alla pocket
+    if is_path_clear(target, pocket, balls):
+        score += 50
+
+    # Bonus in base alla distanza target->pocket (maggiore bonus per distanze inferiori)
+    distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
+    score += max(0, 100 - distance)  # ad es., se la distanza è 60, aggiungiamo 40
+
+    # Bonus/penalità basati sull'angolo del tiro
+    angle = calculate_shot_angle(white, target, pocket)
+    if angle < 30:
+        score += (30 - angle) * 2  # bonus proporzionale per angoli piccoli
+
+    return score
+
+
+def get_best_shot(white, balls, pockets, ball_type="solid"):
+    """
+    Per ogni pallina (del tipo indicato) che non sia la bianca,
+    e per ogni pocket, calcola il punteggio del tiro.
+    Restituisce la combinazione (target, pocket) con il punteggio più alto.
+    """
+    best_score = -float('inf')
+    best_target = None
+    best_pocket = None
+
+    for target in balls:
+        if target.get_type() == "cue":
+            continue  # escludi la bianca
+        
+        if ball_type is not None and target.get_type() != ball_type:
+            continue  # filtra per tipo se necessario
+
+        # Controlla che la traiettoria bianca→target sia libera
+        if white is not None and not is_path_clear(white, target, balls):
+            continue
+        
+        for pocket in pockets:
+            # Calcola il punteggio per la combinazione target-pocket
+            shot_score = calculate_shot_score(white, target, pocket, balls)
+            # Debug: print(f"Tiro bianca->{target.get_id()}->pocket({pocket.get_x()}, {pocket.get_y()}): {shot_score:.2f}")
+            if shot_score > best_score:
+                best_score = shot_score
+                best_target = target
+                best_pocket = pocket
+
+    return best_target, best_pocket, best_score
+
+
 def is_in_between(white, target, other):
     """
     Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'white'
@@ -510,20 +594,26 @@ def is_path_clear(white, target, balls):
 
 def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
     """
-    Per ogni pallina del tipo indicato, individua la pocket più vicina (rispetto a tutte le pocket)
-    e la associa a quella pocket tramite il metodo add_ball. 
-    Viene esclusa la pallina se, tra essa e la palla bianca, è presente un'altra pallina.
+    Per ogni pallina del tipo indicato (esclusa la bianca), valuta il tiro verso ciascuna pocket
+    calcolando un punteggio basato su:
+      - Percorso libero: dalla bianca al target e dal target alla pocket.
+      - Distanza: bonus per distanze target->pocket minori.
+      - Angolo del tiro: bonus per traiettorie più lineari.
+    
+    La pallina viene associata alla pocket per cui il tiro ha il punteggio più alto.
     
     Restituisce la lista delle pocket ordinate in base al numero di palline associate.
     """
-    print(f"len pockets in getPockets_near_ball: {len(pockets)}")
     # Individua la palla bianca
     white_ball = next((b for b in balls if b.get_type() == "cue"), None)
+    
+    # Se non esiste la pallina bianca, procediamo senza il controllo di percorso bianca->target
     if white_ball is None:
-        # Se non esiste la palla bianca, procediamo senza il controllo
-        white_ball = None
-
-    # Per ogni pallina, determina la pocket più vicina se il percorso dalla palla bianca è libero
+        print("Attenzione: palla bianca non trovata!")
+    
+    best_score = -float('inf')
+    best_pocket = None
+    # Per ogni pallina target, valuta il tiro verso ogni pocket
     for ball in balls:
         if ball.get_type() == "cue":
             continue  # salta la palla bianca
@@ -532,35 +622,34 @@ def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
         if ball_type is not None and ball.get_type() != ball_type:
             continue
         
-        # Se esiste la palla bianca, controlla che non ci siano palline in mezzo
+        # Se esiste la palla bianca, controlla che non ci siano palline in mezzo (per il percorso bianca->target)
         if white_ball and not is_path_clear(white_ball, ball, balls):
             continue  # esclude la pallina se il percorso non è libero
-
-        min_distance = float('inf')
-        nearest_pkt = None
-
-        # Cerca tra tutte le pocket quella con la distanza minima dalla pallina
+        
+        best_curr_score = -float('inf')
+        best_curr_pocket = None
+        
+        # Per ogni pocket, calcola il punteggio del tiro (bianca -> target -> pocket)
         for pkt in pockets:
-            distance = sqrt((pkt.get_x() - ball.get_x())**2 + (pkt.get_y() - ball.get_y())**2)
-            if distance < min_distance:
-                min_distance = distance
-                nearest_pkt = pkt
-
-        # Se è stata trovata una pocket, associa la pallina ad essa
-        if nearest_pkt is not None:
-            nearest_pkt.add_ball(ball)
-            #print(f"Ball id {ball.get_id()} associata a Pocket at ({nearest_pkt.get_x()}, {nearest_pkt.get_y()}) con distanza {min_distance:.2f}")
-
-    # Funzione ausiliaria: restituisce il numero di palline associate a una pocket
-    def pocket_ball_count(pkt):
-        # Si assume che pkt.get_all_balls() restituisca una lista di palline associate
-        return len(pkt.get_all_balls())
-
-    # Ordina le pocket in base al numero di palline associate (in ordine crescente)
-    sorted_pockets = sorted(pockets, key=pocket_ball_count)
-    for pkt in sorted_pockets:
-        print(f"Pocket at ({pkt.get_x()}, {pkt.get_y()}) has {pocket_ball_count(pkt)} balls")
-    return sorted_pockets
+            # Calcola il punteggio: si parte dal presupposto che se la palla bianca non esiste, il punteggio sarà solo parziale
+            shot_score = calculate_shot_score(white_ball, ball, pkt, balls)
+            # Debug: print(f"Palla {ball.get_id()} -> Pocket ({pkt.get_x()},{pkt.get_y()}): score = {shot_score:.2f}")
+            if shot_score > best_score:
+                best_curr_score = shot_score
+                best_curr_pocket = pkt
+        
+        # Se è stata trovata una pocket migliore, associa la pallina ad essa
+        if best_curr_pocket is not None:
+            if best_curr_score > best_score:
+                ball.set_shot_score(best_curr_score)
+                best_score = best_curr_score
+                best_curr_pocket.add_ball(ball)
+                best_pocket = best_curr_pocket
+    print(f"Best pocket: {best_pocket.get_id()}")
+    for ball in best_pocket.get_all_balls():
+        print(f"Ball {ball.get_id()} associated with pocket {best_pocket.get_id()}")
+    print(f"Best score: {best_score}")
+    return best_pocket
 
 
 

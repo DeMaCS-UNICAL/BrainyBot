@@ -26,10 +26,8 @@ def asp_input(balls_chart):
     pocket_ord = get_pockets_and_near_ball(balls, pockets, player1_type)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
-    input = pocket_ord.copy()
-    input.extend(balls)
 
-    return input, pocket_ord, balls, ghost_ball, aim_line, stick, player1_type
+    return  pocket_ord, balls, ghost_ball, aim_line, stick, player1_type
  
 
 
@@ -109,14 +107,12 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             continue
         if iteration > 1:
             try:
-                input_data, pockets, balls, ghost_ball, aim_line, stick, player1_type = asp_input(abstraction)
-                for p in pockets:
-                    if len(p.get_all_balls()) > 0:
-                        pocket = p
-                        target_ball = pocket.get_all_balls()[0]
-                        x_target, y_target = target_ball.get_x(), target_ball.get_y()
-                        break
-
+                pocket, balls, ghost_ball, aim_line, stick, player1_type = asp_input(abstraction)
+    
+                if len(pocket.get_all_balls()) > 0:
+                    print(f"Palla rilevata in pocket: {pocket.get_all_balls()[0].get_type()}")
+                    target_ball = pocket.get_all_balls()[0]
+                    x_target, y_target = target_ball.get_x(), target_ball.get_y()
                 # Recupera la posizione corrente della ghost ball
                 g_x, g_y = ghost_ball.get_coordinates()
             except Exception as e:
