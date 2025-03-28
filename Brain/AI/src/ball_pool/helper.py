@@ -7,7 +7,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 # Importa le classi aggiornate per ball_pool
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
-from AI.src.ball_pool.dlvsolution.helpers import  get_pockets_and_near_ball, get_aimed_ball_and_aim_line
+from AI.src.ball_pool.dlvsolution.helpers import  get_best_pair_to_shoot, get_aimed_ball_and_aim_line
 from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
@@ -23,7 +23,7 @@ def asp_input(balls_chart):
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
     balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
 
-    pocket_ord = get_pockets_and_near_ball(balls, pockets, player1_type)
+    pocket_ord = get_best_pair_to_shoot(balls, pockets, player1_type)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
 
@@ -62,8 +62,6 @@ def persist_threshold(value):
     print("threshold set to:", value)
 
 
-
-
 def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True, iteration=0):
 
     # Inizializzazione dei target e della ghost ball
@@ -86,8 +84,6 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
     iteration = 1
     
-    
-
     while True:
         feedback = Feedback()
         if iteration >1:

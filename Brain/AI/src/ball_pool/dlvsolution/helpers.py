@@ -533,13 +533,6 @@ def get_best_shot(white, balls, pockets, ball_type="solid"):
         if target.get_type() == "cue":
             continue  # escludi la bianca
         
-        if ball_type is not None and target.get_type() != ball_type:
-            continue  # filtra per tipo se necessario
-
-        # Controlla che la traiettoria bianca→target sia libera
-        if white is not None and not is_path_clear(white, target, balls):
-            continue
-        
         for pocket in pockets:
             # Calcola il punteggio per la combinazione target-pocket
             shot_score = calculate_shot_score(white, target, pocket, balls)
@@ -592,7 +585,7 @@ def is_path_clear(white, target, balls):
             return False
     return True
 
-def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
+def get_best_pair_to_shoot(balls: list, pockets: list, ball_type="solid"):
     """
     Per ogni pallina del tipo indicato (esclusa la bianca), valuta il tiro verso ciascuna pocket
     calcolando un punteggio basato su:
@@ -645,6 +638,7 @@ def get_pockets_and_near_ball(balls: list, pockets: list, ball_type="solid"):
                 best_score = best_curr_score
                 best_curr_pocket.add_ball(ball)
                 best_pocket = best_curr_pocket
+                
     print(f"Best pocket: {best_pocket.get_id()}")
     for ball in best_pocket.get_all_balls():
         print(f"Ball {ball.get_id()} associated with pocket {best_pocket.get_id()}")

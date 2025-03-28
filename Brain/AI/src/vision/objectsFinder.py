@@ -699,18 +699,18 @@ class ObjectsFinder:
                 if not (search_info.min_radius <= radius <= search_info.max_radius):
                     continue
             
-            """print("------------------")
-            print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")"""
+            print("------------------")
+            print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
             # Verifica della circularità
             if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                #print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
+                print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
                 continue
 
             # Recupera il contorno interno (primo figlio)
             inner_index = hierarchy[i][2]
             
             if inner_index == -1:
-                #print(f"[DEBUG] Contour {i} scartato: nessun contorno interno")
+                print(f"[DEBUG] Contour {i} scartato: nessun contorno interno")
                 continue
             inner_cnt = contours[inner_index]
             (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
@@ -722,7 +722,7 @@ class ObjectsFinder:
             
             mean_border = cv2.mean(gray, mask=mask_border)[0]
             mean_inner = cv2.mean(gray, mask=mask_inner)[0]
-            #print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
+            print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
 
             # Analisi di eventuali ulteriori contorni interni (figli)
             child_index = hierarchy[i][2]
@@ -733,26 +733,26 @@ class ObjectsFinder:
                 children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
                 child_index = hierarchy[child_index][0]
 
-            #print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
+            print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
             # Se non sono presenti figli, applica un criterio diretto basato sulla differenza di intensità
             if len(children_intensities) == 0:
-                #print(f"[DEBUG] Mean inner: {mean_inner:.2f}, Mean border: {mean_border:.2f}")
+                print(f"[DEBUG] Mean inner: {mean_inner:.2f}, Mean border: {mean_border:.2f}")
                 if mean_inner - mean_border < 160:
-                    #print(f"[DEBUG] Contour {i} scartato: differenza di intensità troppo bassa")
+                    print(f"[DEBUG] Contour {i} scartato: differenza di intensità troppo bassa")
                     continue
                 candidate = (int(x), int(y), int(radius), True)
                 continue
 
             # Se sono presenti, seleziona il candidato basandosi sul massimo valore interno
             max_child_value = max(children_intensities)
-            #print(f"[DEBUG] Max child value: {max_child_value:.2f}")
+            print(f"[DEBUG] Max child value: {max_child_value:.2f}")
             if max_child_value < 90:
-                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
+                print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
                 continue
 
-            #print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
+            print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
             if max_child_value <= max_intensity_child:
-                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
+                print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
                 continue
 
             max_intensity_child = max_child_value 
