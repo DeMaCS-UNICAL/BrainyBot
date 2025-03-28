@@ -7,7 +7,7 @@ from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 # Importa le classi aggiornate per ball_pool
 from AI.src.ball_pool.dlvsolution.dlvsolution import DLVSolution, Ball, Color, Pocket, MoveAndShoot
 # Funzioni helper per ottenere colori e per estrarre palline e pocket
-from AI.src.ball_pool.dlvsolution.helpers import  get_best_pair_to_shoot, get_aimed_ball_and_aim_line
+from AI.src.ball_pool.dlvsolution.helpers import  get_best_pair_to_shoot
 from AI.src.ball_pool.detect.new_detect import MatchingBallPool
 from AI.src.abstraction.elementsStack import ElementsStacks
 from AI.src.ball_pool.constants import SRC_PATH
@@ -109,6 +109,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                     print(f"Palla rilevata in pocket: {pocket.get_all_balls()[0].get_type()}")
                     target_ball = pocket.get_all_balls()[0]
                     x_target, y_target = target_ball.get_x(), target_ball.get_y()
+
                 # Recupera la posizione corrente della ghost ball
                 g_x, g_y = ghost_ball.get_coordinates()
             except Exception as e:

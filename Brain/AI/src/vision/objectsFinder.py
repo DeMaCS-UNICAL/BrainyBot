@@ -365,6 +365,7 @@ class ObjectsFinder:
             return False
 
         circularity = 4 * math.pi * area / (perimeter ** 2)
+        print(f"Circularity: {circularity}, Area: {area}, Perimeter: {perimeter}")
         return circularity >= circularity_threshold
     
     def __valid_coordinates(self, search_info, coord):
@@ -389,7 +390,7 @@ class ObjectsFinder:
         
         return self.__valid_coordinates(search_info, coord)
 
-    def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57):
+    def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57, plt_show = False):
         """
         Rileva le palle della pool table tramite rilevamento dei contorni e clustering.
         
@@ -400,8 +401,8 @@ class ObjectsFinder:
         - Restituisce una lista di OutputCircle.
         """
         # Pre-elaborazione: blur sull'immagine in scala di grigi
-        blurred = cv2.GaussianBlur(self.__gray, (3, 3), 0)
-        #blurred = self.__blurred    
+        blurred = cv2.GaussianBlur(self.__gray, (7, 7), 0)
+        #blurred = cv2.medianBlur(self.__gray,7)    
 
         # Thresholding per la palla cue e per le altre palle
         thresh_cue = cv2.adaptiveThreshold(
@@ -413,13 +414,39 @@ class ObjectsFinder:
             cv2.THRESH_BINARY,15, 3
         )
 
+        # Operazione di closing per colmare eventuali interruzioni nei contorni
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        closed_thresh_cue = cv2.morphologyEx(thresh_cue, cv2.MORPH_CLOSE, kernel)
+
+        #thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_OPEN, kernel)
+        thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_CLOSE, kernel)
+                # Visualizza le immagini
+        if plt_show:
+            plt.figure(figsize=(15, 5))
+            plt.subplot(1, 3, 1)
+            plt.imshow(self.__img_matrix, cmap='gray')
+            plt.title("Immagine originale")
+            plt.axis('off')
+
+            plt.subplot(1, 3, 2)
+            plt.imshow(blurred, cmap='gray')
+            plt.title("Dopo Gaussian Blur")
+            plt.axis('off')
+
+            plt.subplot(1, 3, 3)
+            plt.imshow(thresh_cue, cmap='gray')
+            plt.title("Dopo Adaptive Thresholding")
+            plt.axis('off')
+
+            plt.show()
+
         # Estrazione dei contorni
         # Utilizziamo la modalità RETR_TREE per avere la gerarchia completa dei contorni
         contours_balls, hierarchy_balls = cv2.findContours(
             thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
         contours_cue, hierarchy_cue = cv2.findContours(
-            thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            closed_thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
 
         # Se le gerarchie sono None, inizializzale come array vuoti
@@ -439,9 +466,11 @@ class ObjectsFinder:
         for i, cnt in enumerate(contours):
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
-
+            print("------------------")
+            print(f"Contour {i}: ({x}, {y}), radius: {radius}")
             if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold, search_info, (x, y, radius)):
                 continue
+            print(f"Valid circularity: ")
 
             # Escludi contorni esterni (senza genitore)
             if hierarchy[i][3] == -1:

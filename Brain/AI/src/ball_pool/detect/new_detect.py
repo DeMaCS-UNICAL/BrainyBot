@@ -191,15 +191,15 @@ class MatchingBallPool:
 
         # Definisce l'area di ricerca per le palline (evitando i bordi)
         ball_search_area = (
-            self.pool_coords[0] + 60,
-            self.pool_coords[1] + 60,
-            self.pool_coords[2] - 60,
-            self.pool_coords[3] - 60
+            self.pool_coords[0] + 80,
+            self.pool_coords[1] + 80,
+            self.pool_coords[2] - 80,
+            self.pool_coords[3] - 80
         )
         ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, ball_search_area,
                              (self.gx, self.gy, self.gr))
         
-        ball_circles = self.finder.find_balls_pool_contour(ball_circle)
+        ball_circles = self.finder.find_balls_pool_contour(ball_circle, plt_show=True)
 
         # Assegna le palline ai giocatori se necessario
         if 1 <= self.assign_ball_step <= 3 and iteration > 1:

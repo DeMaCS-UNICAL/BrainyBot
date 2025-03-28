@@ -644,25 +644,3 @@ def get_best_pair_to_shoot(balls: list, pockets: list, ball_type="solid"):
         print(f"Ball {ball.get_id()} associated with pocket {best_pocket.get_id()}")
     print(f"Best score: {best_score}")
     return best_pocket
-
-
-
-def get_aimed_ball_and_aim_line(ghost_ball : Ball, stick: AimLine, aimed_ball : Ball, aim_line: AimLine):
-
-    if aimed_ball == None:
-        aimed_ball_to_debug = 0
-        print("Aimed ball is None")
-    else:
-        print("Aimed ball is not None")
-        aimed_ball_to_debug = aimed_ball.get_id()
-
-    if aim_line == None:
-        aim_line_id_to_debug = 33
-        print("Aim line is None")
-    else:
-        print("Aim line is not None")
-        aim_line_id_to_debug = aim_line.get_id()
-
-    situation = [MoveAndShoot(ghost_ball.get_id(), stick.get_id(),ghost_ball.get_id(),
-                        aimed_ball_to_debug , aim_line_id_to_debug, step=1)]
-    return situation
