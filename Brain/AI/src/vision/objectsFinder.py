@@ -351,7 +351,7 @@ class ObjectsFinder:
             return None 
         
 
-    def __bp_is_circle(self, contour, circularity_threshold=0.65, area_threshold=None):
+    def __bp_is_circle(self, contour, circularity_threshold=0.75, area_threshold=None):
         """
         Verifica se un contorno è sufficientemente circolare.
         """
@@ -365,7 +365,6 @@ class ObjectsFinder:
             return False
 
         circularity = 4 * math.pi * area / (perimeter ** 2)
-        print(f"Circularity: {circularity}, Area: {area}, Perimeter: {perimeter}")
         return circularity >= circularity_threshold
     
     def __valid_coordinates(self, search_info, coord):
@@ -407,20 +406,19 @@ class ObjectsFinder:
         # Thresholding per la palla cue e per le altre palle
         thresh_cue = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV, 9, 2
+            cv2.THRESH_BINARY_INV, 5, 2
         )
         thresh_balls = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY,15, 3
+            cv2.THRESH_BINARY,9, 3
         )
 
         # Operazione di closing per colmare eventuali interruzioni nei contorni
         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
         closed_thresh_cue = cv2.morphologyEx(thresh_cue, cv2.MORPH_CLOSE, kernel)
-
-        #thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_OPEN, kernel)
-        thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_CLOSE, kernel)
-                # Visualizza le immagini
+        closed_thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_CLOSE, kernel)
+        
+        # Visualizza le immagini
         if plt_show:
             plt.figure(figsize=(15, 5))
             plt.subplot(1, 3, 1)
@@ -443,7 +441,7 @@ class ObjectsFinder:
         # Estrazione dei contorni
         # Utilizziamo la modalità RETR_TREE per avere la gerarchia completa dei contorni
         contours_balls, hierarchy_balls = cv2.findContours(
-            thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            closed_thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
         contours_cue, hierarchy_cue = cv2.findContours(
             closed_thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
@@ -466,11 +464,14 @@ class ObjectsFinder:
         for i, cnt in enumerate(contours):
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
-            print("------------------")
-            print(f"Contour {i}: ({x}, {y}), radius: {radius}")
-            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold, search_info, (x, y, radius)):
+            
+            if not self.__valid_coordinates(search_info, (x, y, radius)):
                 continue
-            print(f"Valid circularity: ")
+
+            
+            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+                continue
+            
 
             # Escludi contorni esterni (senza genitore)
             if hierarchy[i][3] == -1:
@@ -498,7 +499,7 @@ class ObjectsFinder:
 
             balls.append(OutputCircle(x, y, radius, dominant_color, white_ratio))
 
-        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=2)
+        return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=1)
 
     def find_assigned_balls(self, search_info: Circle, area_threshold=10, circularity_threshold=0.57):
         balls = self.find_balls_pool_contour(search_info, area_threshold, circularity_threshold)
@@ -728,18 +729,18 @@ class ObjectsFinder:
                 if not (search_info.min_radius <= radius <= search_info.max_radius):
                     continue
             
-            print("------------------")
-            print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
+            #print("------------------")
+            #print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
             # Verifica della circularità
             if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
+                #print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
                 continue
 
             # Recupera il contorno interno (primo figlio)
             inner_index = hierarchy[i][2]
             
             if inner_index == -1:
-                print(f"[DEBUG] Contour {i} scartato: nessun contorno interno")
+                #print(f"[DEBUG] Contour {i} scartato: nessun contorno interno")
                 continue
             inner_cnt = contours[inner_index]
             (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
@@ -751,7 +752,7 @@ class ObjectsFinder:
             
             mean_border = cv2.mean(gray, mask=mask_border)[0]
             mean_inner = cv2.mean(gray, mask=mask_inner)[0]
-            print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
+            #print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
 
             # Analisi di eventuali ulteriori contorni interni (figli)
             child_index = hierarchy[i][2]
@@ -762,26 +763,26 @@ class ObjectsFinder:
                 children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
                 child_index = hierarchy[child_index][0]
 
-            print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
+            #print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
             # Se non sono presenti figli, applica un criterio diretto basato sulla differenza di intensità
             if len(children_intensities) == 0:
-                print(f"[DEBUG] Mean inner: {mean_inner:.2f}, Mean border: {mean_border:.2f}")
+                #print(f"[DEBUG] Mean inner: {mean_inner:.2f}, Mean border: {mean_border:.2f}")
                 if mean_inner - mean_border < 160:
-                    print(f"[DEBUG] Contour {i} scartato: differenza di intensità troppo bassa")
+                    #print(f"[DEBUG] Contour {i} scartato: differenza di intensità troppo bassa")
                     continue
                 candidate = (int(x), int(y), int(radius), True)
                 continue
 
             # Se sono presenti, seleziona il candidato basandosi sul massimo valore interno
             max_child_value = max(children_intensities)
-            print(f"[DEBUG] Max child value: {max_child_value:.2f}")
+            #print(f"[DEBUG] Max child value: {max_child_value:.2f}")
             if max_child_value < 90:
-                print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
+                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
                 continue
 
-            print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
+            #print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
             if max_child_value <= max_intensity_child:
-                print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
+                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
                 continue
 
             max_intensity_child = max_child_value 

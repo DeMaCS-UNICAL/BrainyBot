@@ -139,7 +139,9 @@ class BPoolColor(Color):
             e quale "solid"; se c'è solo una palla, viene etichettata "striped" se il white_ratio è alto.
         """
         color_groups = {}
-        
+        solid_present = False
+        striped_present = False
+
         for ball in balls:
             color = ball.get_color()
             detected_color = np.array(color.get_bgr(), dtype=np.float32)
@@ -168,13 +170,15 @@ class BPoolColor(Color):
             else:
                 # Limita la lista a massimo 3 elementi, se ce ne sono di più.
                 ball_list_sorted = ball_list_sorted[:2]
+                ball1, d1, wr1 = ball_list_sorted[0]
                 
                 if len(ball_list_sorted) == 1:
-                    ball1, d1, wr1 = ball_list_sorted[0]
-                    ball1.set_type("striped") if wr1 > 0.9 else ball1.set_type("solid")
+                    if wr1 > 0.9:
+                        ball1.set_type("striped")
+                    else:
+                        ball1.set_type("solid")
                 
                 elif len(ball_list_sorted) == 2:
-                    ball1, d1, wr1 = ball_list_sorted[0]
                     ball2, d2, wr2 = ball_list_sorted[1]
                     if d1 > d2 or wr1 > wr2:
                         ball1.set_type("striped")
@@ -182,17 +186,11 @@ class BPoolColor(Color):
                     else:
                         ball1.set_type("solid")
                         ball2.set_type("striped")
-
             
                 for ball, _, _ in ball_list_sorted:
                     final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
 
-        for ball in final_balls:
-            bp_color = ball.get_color() if hasattr(ball, "get_color") else ball.color
-            #print(f"Ball at ({ball.get_x()}, {ball.get_y()}) is type: {bp_color.get_ball_type().upper()} and color: {ball.category.upper()}")
-
         return final_balls
-
 
 class Ball(Predicate):
     predicate_name = "ball"
@@ -473,7 +471,6 @@ def calculate_shot_angle(white, target, pocket):
     """
     Calcola l'angolo (in gradi) tra il vettore white->target e target->pocket.
     """
-    # Vettori
     v1 = (target.get_x() - white.get_x(), target.get_y() - white.get_y())
     v2 = (pocket.get_x() - target.get_x(), pocket.get_y() - target.get_y())
     
@@ -507,7 +504,6 @@ def calculate_shot_score(white, target, pocket, balls):
     if is_path_clear(target, pocket, balls):
         score += 50
 
-    # Bonus in base alla distanza target->pocket (maggiore bonus per distanze inferiori)
     distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
     score += max(0, 100 - distance)  # ad es., se la distanza è 60, aggiungiamo 40
 

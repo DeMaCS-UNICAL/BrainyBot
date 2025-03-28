@@ -199,30 +199,10 @@ class MatchingBallPool:
         ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, ball_search_area,
                              (self.gx, self.gy, self.gr))
         
-        ball_circles = self.finder.find_balls_pool_contour(ball_circle, plt_show=True)
+        ball_circles = self.finder.find_balls_pool_contour(ball_circle, plt_show=False)
 
         # Assegna le palline ai giocatori se necessario
-        if 1 <= self.assign_ball_step <= 3 and iteration > 1:
-            player_ball_circle = Circle(
-                self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
-                (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
-            )
-            players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
-
-            if players_balls[0].white_ratio > 0.0:
-                self.player1_white_ratio = players_balls[0].white_ratio
-                self.assign_ball_step += 1
-
-            if players_balls[1].white_ratio > 0.0:
-                self.player2_white_ratio = players_balls[1].white_ratio
-                self.assign_ball_step += 1
-
-            if self.assign_ball_step == 3:
-                self.player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
-                self.assign_ball_step += 1
-                print(f"Player 1 type: {self.player1_type.upper()}")
-
-        self.balls = ball_circles
+        
         self.__player_squares = player_squares
 
         print("Player 1 turn" if self.player1_turn else "Player 2 turn")
@@ -285,6 +265,32 @@ class MatchingBallPool:
 
         return  final_balls, pockets, ghost_ball, aim_line, stick, player1_type
     
+    def _assign_balls(self):
+        if self.iteration < 2:
+            return
+        
+        if 1 <= self.assign_ball_step <= 3:
+            player_ball_circle = Circle(
+                self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
+                (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
+            )
+            players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
+
+            if players_balls[0].white_ratio > 0.0:
+                self.player1_white_ratio = players_balls[0].white_ratio
+                self.assign_ball_step += 1
+
+            if players_balls[1].white_ratio > 0.0:
+                self.player2_white_ratio = players_balls[1].white_ratio
+                self.assign_ball_step += 1
+
+            if self.assign_ball_step == 3:
+                self.player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
+                self.assign_ball_step += 1
+                print(f"Player 1 type: {self.player1_type.upper()}")
+            
+
+
     def __detect_players_pic(self, area=None):
         squares = self.finder.detect_square_boxes()
         if area is not None:
@@ -340,6 +346,9 @@ class MatchingBallPool:
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
         final_balls = BPoolColor.assign_ball_types(raw_balls)
+        if self.player1_type is not None:
+            type_still_present = any(b.get_type() == self.player1_type for b in final_balls)
+            self.player1_type = "eight" if not type_still_present else self.player1_type
 
         ghost_ball = Ball()
         ghost_ball.set_x(self.gx)

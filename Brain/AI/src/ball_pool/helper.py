@@ -18,7 +18,7 @@ from matplotlib import pyplot as plt
 
 
 
-def asp_input(balls_chart):
+def choose_ball(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
     balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
@@ -26,7 +26,6 @@ def asp_input(balls_chart):
     pocket_ord = get_best_pair_to_shoot(balls, pockets, player1_type)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
-
     return  pocket_ord, balls, ghost_ball, aim_line, stick, player1_type
  
 
@@ -103,7 +102,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             continue
         if iteration > 1:
             try:
-                pocket, balls, ghost_ball, aim_line, stick, player1_type = asp_input(abstraction)
+                pocket, balls, ghost_ball, aim_line, stick, player1_type = choose_ball(abstraction)
     
                 if len(pocket.get_all_balls()) > 0:
                     print(f"Palla rilevata in pocket: {pocket.get_all_balls()[0].get_type()}")
@@ -113,7 +112,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                 # Recupera la posizione corrente della ghost ball
                 g_x, g_y = ghost_ball.get_coordinates()
             except Exception as e:
-                print("Errore nell'elaborazione dell'astrazione:", e)
+                print("Errore nell'elaborazione del solver:", e)
                 return
 
         moves_before_shoot = 0
@@ -161,7 +160,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(shoot_power)}'"
         )
         iteration += 1
-        time.sleep(7)
+        time.sleep(8)
         
 
             
