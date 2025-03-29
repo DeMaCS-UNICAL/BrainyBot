@@ -5,13 +5,14 @@ from math import sqrt
 from AI.src.vision.input_game_object import Rectangle,TextRectangle, OutputRectangle
 
 class Matching2048:
-    def __init__(self, screenshot_path, debug = False,validation=None,iteration=0):
+    def __init__(self, screenshot_path, debug = False,validation=None,iteration=0, calculate_metadata = True):
         self.__finder = ObjectsFinder(screenshot_path)
         self.__debug = debug
         self.__matrix = None
         self.__numbers_boxes = None
         self.__blank_box_color = None
-        self.__calculate_metadata()
+        if calculate_metadata:
+            self.__calculate_metadata()
     
     def get_image_width(self):
         return self.__finder.get_image_width()
@@ -70,14 +71,15 @@ class Matching2048:
     
     def find_numbers(self):
         numbers = []
-        if self.__numbers_boxes != None:
-            for box in self.__numbers_boxes:
-                x, y, w, h = box
-                number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
-                if number == None:
-                    numbers.append(0)
-                else:
-                    numbers.append(int(number))
+        if self.__numbers_boxes == None:
+            self.__calculate_metadata()
+        for box in self.__numbers_boxes:
+            x, y, w, h = box
+            number = self.__finder.find(TextRectangle(OutputRectangle(x,y,w,h),numeric=True))
+            if number == None:
+                numbers.append(0)
+            else:
+                numbers.append(int(number))
         return numbers
 
     
