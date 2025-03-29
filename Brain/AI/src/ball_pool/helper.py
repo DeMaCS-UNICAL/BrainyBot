@@ -18,15 +18,15 @@ from matplotlib import pyplot as plt
 
 
 
-def choose_ball(balls_chart):
+def choose_target_ball(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
     balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
 
-    pocket_ord = get_best_pair_to_shoot(balls, pockets, player1_type)
+    chosen_ball, chosen_pocket = get_best_pair_to_shoot(balls, pockets, player1_type)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
-    return  pocket_ord, balls, ghost_ball, aim_line, stick, player1_type
+    return  chosen_ball, chosen_pocket, ghost_ball, aim_line, stick, player1_type
  
 
 
@@ -93,21 +93,19 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
         s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
-
         # Verifica il turno del giocatore
         player1_turn = matcher.player1_turn
         player1_turn = True  # Forzatura per debugging
         if not player1_turn:
+            iteration += 1
             time.sleep(1.5)
             continue
         if iteration > 1:
             try:
-                pocket, balls, ghost_ball, aim_line, stick, player1_type = choose_ball(abstraction)
+                chosen_ball, chosen_pocket, ghost_ball, aim_line, stick, player1_type = choose_target_ball(abstraction)
     
-                if len(pocket.get_all_balls()) > 0:
-                    print(f"Palla rilevata in pocket: {pocket.get_all_balls()[0].get_type()}")
-                    target_ball = pocket.get_all_balls()[0]
-                    x_target, y_target = target_ball.get_x(), target_ball.get_y()
+                print(f"Palla rilevata in pocket: {chosen_pocket.get_id()}")
+                x_target, y_target = chosen_ball.get_x(), chosen_ball.get_y()
 
                 # Recupera la posizione corrente della ghost ball
                 g_x, g_y = ghost_ball.get_coordinates()
@@ -126,7 +124,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             dy_total = abs(g_y - y_target)
             dist = math.sqrt(dx_total ** 2 + dy_total ** 2)
 
-            print(f"Target ball: {target_ball.get_type()} in posizione ({x_target}, {y_target})")
+            print(f"Target ball: {chosen_ball.get_type()} in posizione ({x_target}, {y_target})")
             print(f"Distanza tra ghost ball e target: {dist}")
             if dist < TOLERANCE:
                 shoot_power = s_y2
@@ -151,6 +149,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
             g_x, g_y = matcher.ghost_ball.get_coordinates()
             moves_before_shoot += 1
+            iteration += 1
 
 
         # Swipe finale con lo stick per tirare la pallina verso la pocket

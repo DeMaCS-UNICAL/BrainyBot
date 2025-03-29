@@ -56,7 +56,6 @@ class MatchingBallPool:
     player2_pic_pos = 1356
 
     #Calibrerò meglio le costanti 
-
     def __init__(self, screenshot_path, debug=False, validation=False, iteration=1):
         self.screenshot = screenshot_path
         self.debug = debug
@@ -71,7 +70,7 @@ class MatchingBallPool:
         self.balls = []      # Lista delle palline rilevate
         self.__pockets = []    # Lista dei pocket rilevati
         self.player1_turn = False
-        self.player1_type = None
+        self.player1_type = "not assigned"
         self.assign_ball_step = 1
         self.player1_white_ratio = 0.0
         self.player2_white_ratio = 0.0
@@ -144,6 +143,13 @@ class MatchingBallPool:
             int(self.PERC_STICK_COORDS[3] * img_height)
         )
 
+        self.ball_search_area = (
+            self.pool_coords[0] + 80,
+            self.pool_coords[1] + 80,
+            self.pool_coords[2] - 80,
+            self.pool_coords[3] - 80
+        )
+
     def vision(self, iteration=1):
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
         self.iteration = iteration
@@ -166,6 +172,8 @@ class MatchingBallPool:
         self.__output = self.image.copy()
 
         # Config dell'area e rilevamento dei pocket solo alla prima iterazione
+        self.finder.preprocessing_image()
+        self.__assign_ball_type()
         if self.iteration == 1:
             self.config_area()
 
@@ -174,8 +182,6 @@ class MatchingBallPool:
 
         player_squares = self.__detect_players_pic(area=self.player_area)
 
-        # Rileva la ghost ball
-        print("Detecting ghost ball...")
         ghost_ball = self.finder.find_ghost_ball(
             Circle(17, 100, 23, self.pool_coords)
         )
@@ -190,19 +196,13 @@ class MatchingBallPool:
         aim_line = None
 
         # Definisce l'area di ricerca per le palline (evitando i bordi)
-        ball_search_area = (
-            self.pool_coords[0] + 80,
-            self.pool_coords[1] + 80,
-            self.pool_coords[2] - 80,
-            self.pool_coords[3] - 80
-        )
-        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, ball_search_area,
+        
+        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, self.ball_search_area,
                              (self.gx, self.gy, self.gr))
         
         ball_circles = self.finder.find_balls_pool_contour(ball_circle, plt_show=False)
 
         # Assegna le palline ai giocatori se necessario
-        
         self.__player_squares = player_squares
 
         print("Player 1 turn" if self.player1_turn else "Player 2 turn")
@@ -234,7 +234,6 @@ class MatchingBallPool:
 
         pockets = self.__pockets
 
-
         aim_line, aimed_ball = self.finder.compute_target_direction(
                                                     all_balls=final_balls,
                                                     ghost_ball=(self.gx, self.gy, self.gr),
@@ -263,9 +262,9 @@ class MatchingBallPool:
         
         print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}")
 
-        return  final_balls, pockets, ghost_ball, aim_line, stick, player1_type
+        return final_balls, pockets, ghost_ball, aim_line, stick, player1_type
     
-    def _assign_balls(self):
+    def __assign_ball_type(self):
         if self.iteration < 2:
             return
         
@@ -346,9 +345,10 @@ class MatchingBallPool:
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
         final_balls = BPoolColor.assign_ball_types(raw_balls)
-        if self.player1_type is not None:
+        if self.player1_type != "not assigned":
             type_still_present = any(b.get_type() == self.player1_type for b in final_balls)
-            self.player1_type = "eight" if not type_still_present else self.player1_type
+            if not type_still_present:
+                self.player1_type = "eight" 
 
         ghost_ball = Ball()
         ghost_ball.set_x(self.gx)

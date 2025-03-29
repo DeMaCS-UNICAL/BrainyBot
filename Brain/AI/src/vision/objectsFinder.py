@@ -29,6 +29,7 @@ class ObjectsFinder:
                         TextRectangle:self._find_text_or_number}
 
         self.validation=validation
+        self.screenshot = screenshot
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
         self.__output = self.__img_matrix.copy()  
         self.__blurred = cv2.medianBlur(self.__img_matrix,7)  # Used to find the color of the balls
@@ -388,7 +389,40 @@ class ObjectsFinder:
             return False
         
         return self.__valid_coordinates(search_info, coord)
+    
+    # Funzione helper per creare maschera da contorno
+    def create_mask(self, cnt, gray):
+        mask = np.zeros_like(gray)
+        cv2.drawContours(mask, [cnt], -1, 255, -1)
+        return mask
+    
+    def __init_gaussian_blur(self):
+        screenshot = self.screenshot
+        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
+        self.__gauss_blurred = cv2.GaussianBlur(self.__gray, (7, 7), 0)
 
+    def __init_thresholds(self):
+        # Thresholding per la palla cue e per le altre palle
+        self.thresh_cue = cv2.adaptiveThreshold(
+            self.__gauss_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, 5, 2
+        )
+        self.thresh_balls = cv2.adaptiveThreshold(
+            self.__gauss_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,9, 3
+        )
+    
+    def __init_closing_ops(self):
+        # Operazione di closing per colmare eventuali interruzioni nei contorni
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+        self.closed_thresh_cue = cv2.morphologyEx(self.thresh_cue, cv2.MORPH_CLOSE, kernel)
+        self.closed_thresh_balls = cv2.morphologyEx(self.thresh_balls, cv2.MORPH_CLOSE, kernel)
+
+    def preprocessing_image(self):
+        self.__init_gaussian_blur()
+        self.__init_thresholds()
+        self.__init_closing_ops()
+        
     def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57, plt_show = False):
         """
         Rileva le palle della pool table tramite rilevamento dei contorni e clustering.
@@ -399,24 +433,6 @@ class ObjectsFinder:
         - Effettua clustering k-means per determinare il colore dominante e calcola il white_ratio.
         - Restituisce una lista di OutputCircle.
         """
-        # Pre-elaborazione: blur sull'immagine in scala di grigi
-        blurred = cv2.GaussianBlur(self.__gray, (7, 7), 0)
-        #blurred = cv2.medianBlur(self.__gray,7)    
-
-        # Thresholding per la palla cue e per le altre palle
-        thresh_cue = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY_INV, 5, 2
-        )
-        thresh_balls = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY,9, 3
-        )
-
-        # Operazione di closing per colmare eventuali interruzioni nei contorni
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-        closed_thresh_cue = cv2.morphologyEx(thresh_cue, cv2.MORPH_CLOSE, kernel)
-        closed_thresh_balls = cv2.morphologyEx(thresh_balls, cv2.MORPH_CLOSE, kernel)
         
         # Visualizza le immagini
         if plt_show:
@@ -427,24 +443,23 @@ class ObjectsFinder:
             plt.axis('off')
 
             plt.subplot(1, 3, 2)
-            plt.imshow(blurred, cmap='gray')
+            plt.imshow(self.__gauss_blurred, cmap='gray')
             plt.title("Dopo Gaussian Blur")
             plt.axis('off')
 
             plt.subplot(1, 3, 3)
-            plt.imshow(thresh_cue, cmap='gray')
+            plt.imshow(self.closed_thresh_cue, cmap='gray')
             plt.title("Dopo Adaptive Thresholding")
             plt.axis('off')
-
             plt.show()
 
         # Estrazione dei contorni
         # Utilizziamo la modalità RETR_TREE per avere la gerarchia completa dei contorni
         contours_balls, hierarchy_balls = cv2.findContours(
-            closed_thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            self.closed_thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
         contours_cue, hierarchy_cue = cv2.findContours(
-            closed_thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            self.closed_thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
 
         # Se le gerarchie sono None, inizializzale come array vuoti
@@ -465,13 +480,9 @@ class ObjectsFinder:
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
             
-            if not self.__valid_coordinates(search_info, (x, y, radius)):
+            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold, 
+                                          search_info, (x, y, radius)):
                 continue
-
-            
-            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                continue
-            
 
             # Escludi contorni esterni (senza genitore)
             if hierarchy[i][3] == -1:
@@ -516,10 +527,9 @@ class ObjectsFinder:
         - Filtra i contorni in base a circularità e dimensioni.
         - Restituisce una lista di OutputCircle rappresentanti le buche.
         """
-        min_radius = search_info.min_radius
 
         # Pre-elaborazione: blur e thresholding adattivo (inversione per evidenziare le zone scure)
-        blurred = cv2.GaussianBlur(self.__gray, (3, 3), 0)
+        blurred = self.__gauss_blurred.copy()
 
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -532,22 +542,17 @@ class ObjectsFinder:
 
         # Estrazione dei contorni
         contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # Filtra i contorni in base alla circularità
-        circles = [cnt for cnt in contours if self.__bp_is_circle(cnt, circularity_threshold=0.65, area_threshold=70)]
         pockets = []
-        for cnt in circles:
-            (center), r = cv2.minEnclosingCircle(cnt)
-            if r < min_radius or (search_info.min_radius is not None and r > search_info.max_radius):
-                continue
-
-            x, y, r = int(center[0]), int(center[1]), int(r)
-            if not self.__valid_coordinates(search_info, (x, y, r)):
+        for cnt in contours:
+            (center), radius = cv2.minEnclosingCircle(cnt)
+            x, y, radius = int(center[0]), int(center[1]), int(radius)
+            if not self.__bp_is_valid_cnt(cnt,circularity_threshold= 0.65, area_threshold=70,
+                                          search_info=search_info, coord=(x, y, radius)):
                 continue
 
             # Ottieni il colore del pixel centrale dalla versione già elaborata (blurred)
             color = self.__blurred[y, x].tolist()
-            pockets.append(OutputCircle(x, y, r, color))
+            pockets.append(OutputCircle(x, y, radius, color))
 
         return self.__filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
     
@@ -594,20 +599,11 @@ class ObjectsFinder:
         Ritorna:
         Una tupla (x, y, r, True/False) per il candidato rilevato oppure None se non viene trovato.
         """
-        # Copie delle immagini di lavoro
+        #blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         gray = self.__gray.copy()
-        frame = self.__img_matrix.copy()
-        
-        # Pre-elaborazione: blur e sogliatura adattativa
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-        thresh_balls = cv2.adaptiveThreshold(
-            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-            cv2.THRESH_BINARY, 15, 3
-        )
-        
         # Trova contorni e gerarchia
         contours, hierarchy = cv2.findContours(
-            thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+            self.thresh_balls, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
         )
         if hierarchy is None:
             return None
@@ -620,22 +616,12 @@ class ObjectsFinder:
         best_inner_diff = float('inf')
         best_border_diff = float('inf')
 
-        # Funzione helper per creare maschera da contorno
-        def create_mask(cnt):
-            mask = np.zeros_like(gray)
-            cv2.drawContours(mask, [cnt], -1, 255, -1)
-            return mask
-
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
             # Se search_info è fornito, limitiamo il candidato per area e raggio
-            if search_info is not None:
-                x_min, y_min, x_max, y_max = search_info.area
-                if not (x_min <= x <= x_max and y_min <= y <= y_max):
-                    continue
-                if not (search_info.min_radius <= radius <= search_info.max_radius):
-                    continue
+            if not self.__valid_coordinates(search_info, (x, y, radius)):
+                continue
 
             # Se si desidera, si potrebbe verificare la circularità (opzionale)
             # if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
@@ -648,8 +634,8 @@ class ObjectsFinder:
             inner_cnt = contours[inner_index]
 
             # Creazione delle maschere per esterno, interno e bordo
-            mask_outer = create_mask(cnt)
-            mask_inner = create_mask(inner_cnt)
+            mask_outer = self.create_mask(cnt, gray)
+            mask_inner = self.create_mask(inner_cnt, gray)  
             mask_border = cv2.subtract(mask_outer, mask_inner)
             
             mean_border = cv2.mean(gray, mask=mask_border)[0]
@@ -659,7 +645,7 @@ class ObjectsFinder:
             children_intensities = []
             while child_index != -1:
                 child_cnt = contours[child_index]
-                mask_child = create_mask(child_cnt)
+                mask_child = self.create_mask(child_cnt, gray)
                 children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
                 child_index = hierarchy[child_index][0]
 
@@ -683,7 +669,6 @@ class ObjectsFinder:
         return candidate
 
 
-
     def find_ghost_ball(self, 
                       search_info: Circle = None,
                       area_threshold=50, 
@@ -700,7 +685,7 @@ class ObjectsFinder:
         Una tupla (x, y, r, True) per il candidato rilevato oppure None se non viene trovato.
         """
         gray = self.__gray.copy()
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        blurred = self.__gauss_blurred
         # Sogliatura automatica con Otsu (inversione binaria)
         ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
@@ -713,22 +698,13 @@ class ObjectsFinder:
         candidate = None
         max_intensity_child = -1
 
-        def create_mask(cnt):
-            mask = np.zeros_like(gray)
-            cv2.drawContours(mask, [cnt], -1, 255, -1)
-            return mask
-
         for i, cnt in enumerate(contours):
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
             # Filtra in base a search_info se fornito
-            if search_info is not None:
-                x_min, y_min, x_max, y_max = search_info.area
-                if not (x_min <= x <= x_max and y_min <= y <= y_max):
-                    continue
-                if not (search_info.min_radius <= radius <= search_info.max_radius):
-                    continue
-            
+            if not self.__valid_coordinates(search_info, (x, y, radius)):
+                continue
+
             #print("------------------")
             #print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
             # Verifica della circularità
@@ -746,8 +722,8 @@ class ObjectsFinder:
             (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
 
             # Crea maschere per contorni esterno, interno e per il bordo (differenza)
-            mask_outer = create_mask(cnt)
-            mask_inner = create_mask(inner_cnt)
+            mask_outer = self.create_mask(cnt, gray)
+            mask_inner = self.create_mask(inner_cnt, gray)
             mask_border = cv2.subtract(mask_outer, mask_inner)
             
             mean_border = cv2.mean(gray, mask=mask_border)[0]
@@ -759,7 +735,7 @@ class ObjectsFinder:
             children_intensities = []
             while child_index != -1:
                 child_cnt = contours[child_index]
-                mask_child = create_mask(child_cnt)
+                mask_child = self.create_mask(child_cnt, gray)
                 children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
                 child_index = hierarchy[child_index][0]
 

@@ -272,13 +272,16 @@ class Pocket(Predicate):
 
     def reset():
         Pocket.__ids = count(1, 1)
-
+        
     def __init__(self, x=None, y=None):
         Predicate.__init__(self, [("id", int)])
         self.__id = next(Pocket.__ids)
         self.__near_balls = []   
         self.__x = x
         self.__y = y
+
+    def reset_balls(self):
+        self.__near_balls = []
 
     def get_id(self) -> int:
         return self.__id
@@ -515,7 +518,7 @@ def calculate_shot_score(white, target, pocket, balls):
     return score
 
 
-def get_best_shot(white, balls, pockets, ball_type="solid"):
+def get_best_shot(white, balls, pockets, player_type="solid"):
     """
     Per ogni pallina (del tipo indicato) che non sia la bianca,
     e per ogni pocket, calcola il punteggio del tiro.
@@ -581,7 +584,7 @@ def is_path_clear(white, target, balls):
             return False
     return True
 
-def get_best_pair_to_shoot(balls: list, pockets: list, ball_type="solid"):
+def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid"):
     """
     Per ogni pallina del tipo indicato (esclusa la bianca), valuta il tiro verso ciascuna pocket
     calcolando un punteggio basato su:
@@ -600,43 +603,40 @@ def get_best_pair_to_shoot(balls: list, pockets: list, ball_type="solid"):
     if white_ball is None:
         print("Attenzione: palla bianca non trovata!")
     
-    best_score = -float('inf')
+    max_score_b_pkt = -float('inf')
+    best_ball = None
     best_pocket = None
+    print(f"Player type: {player_type}")
     # Per ogni pallina target, valuta il tiro verso ogni pocket
     for ball in balls:
-        if ball.get_type() == "cue":
+        b_type = ball.get_type()
+        if b_type == "cue":
             continue  # salta la palla bianca
         
-        # Se è specificato un ball_type, consideriamo solo quelle palline
-        if ball_type is not None and ball.get_type() != ball_type:
+        # Se è specificato un player_type, consideriamo solo quelle palline
+        if player_type != "" and b_type != player_type:
+            continue
+
+        if player_type == "" and b_type == "eight":
             continue
         
-        # Se esiste la palla bianca, controlla che non ci siano palline in mezzo (per il percorso bianca->target)
-        if white_ball and not is_path_clear(white_ball, ball, balls):
-            continue  # esclude la pallina se il percorso non è libero
-        
-        best_curr_score = -float('inf')
+        curr_score_b_pkt = -float('inf')
         best_curr_pocket = None
-        
         # Per ogni pocket, calcola il punteggio del tiro (bianca -> target -> pocket)
         for pkt in pockets:
             # Calcola il punteggio: si parte dal presupposto che se la palla bianca non esiste, il punteggio sarà solo parziale
             shot_score = calculate_shot_score(white_ball, ball, pkt, balls)
             # Debug: print(f"Palla {ball.get_id()} -> Pocket ({pkt.get_x()},{pkt.get_y()}): score = {shot_score:.2f}")
-            if shot_score > best_score:
-                best_curr_score = shot_score
+            if shot_score > curr_score_b_pkt:
+                curr_score_b_pkt = shot_score
                 best_curr_pocket = pkt
-        
+                
         # Se è stata trovata una pocket migliore, associa la pallina ad essa
         if best_curr_pocket is not None:
-            if best_curr_score > best_score:
-                ball.set_shot_score(best_curr_score)
-                best_score = best_curr_score
-                best_curr_pocket.add_ball(ball)
+            if curr_score_b_pkt > max_score_b_pkt:
+                best_ball = ball
                 best_pocket = best_curr_pocket
+
+                max_score_b_pkt = curr_score_b_pkt
                 
-    print(f"Best pocket: {best_pocket.get_id()}")
-    for ball in best_pocket.get_all_balls():
-        print(f"Ball {ball.get_id()} associated with pocket {best_pocket.get_id()}")
-    print(f"Best score: {best_score}")
-    return best_pocket
+    return best_ball, best_pocket
