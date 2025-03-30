@@ -108,7 +108,11 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                 x_target, y_target = chosen_ball.get_x(), chosen_ball.get_y()
 
                 # Recupera la posizione corrente della ghost ball
-                g_x, g_y = ghost_ball.get_coordinates()
+                temp_g_x, temp_g_y = ghost_ball.get_coordinates()
+                if temp_g_x == 400 and temp_g_y == 400:
+                    print("Ghost ball non trovata, uso le precedenti coordinate")
+                else:
+                    g_x, g_y = ghost_ball.get_coordinates()
             except Exception as e:
                 print("Errore nell'elaborazione del solver:", e)
                 return

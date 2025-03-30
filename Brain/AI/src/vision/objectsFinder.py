@@ -6,7 +6,7 @@ import mahotas
 import pytesseract as ts
 import multiprocessing
 from time import time
-from matplotlib import pyplot as plt
+from matplotlib import patches, pyplot as plt
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.ball_pool.dlvsolution.helpers import AimLine, Ball
@@ -398,7 +398,7 @@ class ObjectsFinder:
     
     def __init_gaussian_blur(self):
         screenshot = self.screenshot
-        self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
+        #self.__gray = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=cv2.COLOR_BGR2GRAY)  # Used to find the balls
         self.__gauss_blurred = cv2.GaussianBlur(self.__gray, (7, 7), 0)
 
     def __init_thresholds(self):
@@ -529,7 +529,8 @@ class ObjectsFinder:
         """
 
         # Pre-elaborazione: blur e thresholding adattivo (inversione per evidenziare le zone scure)
-        blurred = self.__gauss_blurred.copy()
+        # Pre-elaborazione: blur e thresholding adattivo (inversione per evidenziare le zone scure)
+        blurred = self.__gauss_blurred
 
         thresh = cv2.adaptiveThreshold(
             blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -546,15 +547,15 @@ class ObjectsFinder:
         for cnt in contours:
             (center), radius = cv2.minEnclosingCircle(cnt)
             x, y, radius = int(center[0]), int(center[1]), int(radius)
-            if not self.__bp_is_valid_cnt(cnt,circularity_threshold= 0.65, area_threshold=70,
-                                          search_info=search_info, coord=(x, y, radius)):
+            if not self.__valid_coordinates(search_info, (x, y, radius)):
                 continue
 
             # Ottieni il colore del pixel centrale dalla versione già elaborata (blurred)
             color = self.__blurred[y, x].tolist()
             pockets.append(OutputCircle(x, y, radius, color))
 
-        return self.__filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
+        pockets = self.__filter_duplicate_circles(pockets, CIRCLE_MIN_DISTANCE=700)
+        return pockets
     
 
     def __filter_duplicate_circles(self, circles, CIRCLE_MIN_DISTANCE=10):
@@ -578,12 +579,149 @@ class ObjectsFinder:
 
         return filtered
     
-    def find_illegal_ghost_ball(self, 
+
+    def detect_ghost_ball(self,search_info: Circle = None,area_threshold=50, circularity_threshold=0.4,
+                              border_intensity_threshold=70,    # soglia massima per il bordo (nero)
+                              red_inner_threshold=50):   
+        
+        ghost_ball = self.__detect_white_ghost_ball(search_info)
+
+        if ghost_ball is None:
+            ghost_ball = self.__detect_illegal_ghost_ball(search_info)
+        if ghost_ball is None:
+            ghost_ball = (400, 400, 0, False)
+        return ghost_ball
+
+    def __detect_white_ghost_ball(self, 
+                      search_info: Circle = None,
+                      area_threshold=50, 
+                      circularity_threshold=0.4,
+                      border_intensity_threshold=25,   # soglia massima per il bordo (nero)
+                      inner_intensity_threshold=94,
+                      plt_show = False):     # soglia minima per il bianco
+        """
+        Rileva la ghost ball in un'immagine utilizzando:
+        - immagine in scala di grigi con blur e sogliatura automatica,
+        - verifica della circularità e dei contorni interni,
+        - analisi dell'intensità media per bordo e interno.
+
+        Ritorna:
+        Una tupla (x, y, r, True) per il candidato rilevato oppure None se non viene trovato.
+        """
+        gray = self.__gray.copy()
+        blurred = self.__gauss_blurred
+        # Sogliatura automatica con Otsu (inversione binaria)
+        ret, thresh = cv2.threshold(blurred, 100, 255, cv2.THRESH_BINARY_INV)
+        
+        # Trova contorni e la gerarchia
+        contours, hierarchy = cv2.findContours(self.thresh_cue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if hierarchy is None:
+            return None
+        hierarchy = hierarchy[0]
+
+        candidate = None
+        max_intensity_child = -1
+
+        if plt_show:
+            # Crea figura e asse prima del ciclo
+            fig, ax = plt.subplots(figsize=(8, 8))
+            ax.imshow(self.__img_matrix, cmap='gray')
+
+        max_candiate_points = 0
+        candidate = None
+        for i, cnt in enumerate(contours):
+            candidate_points = 0
+            (x, y), radius = cv2.minEnclosingCircle(cnt)
+
+            # Filtra in base a search_info se fornito
+            if not self.__valid_coordinates(search_info, (x, y, radius)):
+                continue
+
+            #print("------------------")
+            #print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
+            # Verifica della circularità
+            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
+                #print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
+                continue
+
+            # Recupera il contorno interno (primo figlio)
+            inner_index = hierarchy[i][2]
+            
+            inner_cnt = contours[inner_index]
+            (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
+
+            # Crea maschere per contorni esterno, interno e per il bordo (differenza)
+            mask_outer = self.create_mask(cnt, gray)
+            mask_inner = self.create_mask(inner_cnt, gray)
+            mask_border = cv2.subtract(mask_outer, mask_inner)
+            
+            mean_border = cv2.mean(gray, mask=mask_border)[0]
+            mean_inner = cv2.mean(gray, mask=mask_inner)[0]
+            print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
+
+            M_border = cv2.moments(mask_border)
+            M_inner = cv2.moments(mask_inner)
+
+            # Verifica che i momenti non siano zero per evitare divisioni per zero
+            if M_border['m00'] == 0 or M_inner['m00'] == 0:
+                continue
+
+            cx_border = int(M_border['m10'] / M_border['m00'])
+            cy_border = int(M_border['m01'] / M_border['m00'])
+            cx_inner = int(M_inner['m10'] / M_inner['m00'])
+            cy_inner = int(M_inner['m01'] / M_inner['m00'])
+            
+            # Calcola la distanza euclidea tra i centroidi
+            distance = ((cx_border - cx_inner) ** 2 + (cy_border - cy_inner) ** 2) ** 0.5
+            
+            # Analisi di eventuali ulteriori contorni interni (figli)
+            child_index = hierarchy[i][2]
+            children_intensities = []
+            while child_index != -1:
+                child_cnt = contours[child_index]
+                mask_child = self.create_mask(child_cnt, gray)
+                children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
+                child_index = hierarchy[child_index][0]
+
+            #print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
+            candidate_points += int(100 - distance)
+            candidate_points += 80 / len(children_intensities) if len(children_intensities) > 0 else 0
+            candidate_points += 20 if 15 <= mean_border <= 45 else 0
+
+            if candidate_points > max_candiate_points:
+                #print(f"[DEBUG] Nuovo candidato trovato: {candidate_points} punti / {max_candiate_points} punti")
+                max_candiate_points = candidate_points
+                candidate = (int(x), int(y), int(radius), True)
+                
+            # Se vuoi disegnare tutti i contorni, anche quelli scartati,
+            # puoi aggiungere qui il disegno
+            if plt_show:
+                # Disegna il cerchio esterno (bordo)
+                outer_circle = patches.Circle((x, y), radius, edgecolor='blue', facecolor='none', linewidth=2)
+                ax.add_patch(outer_circle)
+                
+                # Disegna il cerchio interno
+                inner_circle = patches.Circle((inner_x, inner_y), inner_r, edgecolor='red', facecolor='none', linewidth=2)
+                ax.add_patch(inner_circle)
+                
+                # Annotazioni: disegna solo le coordinate
+
+        # Dopo il ciclo, mostra la figura se plt_show è True
+        if plt_show:
+            plt.title("Coordinate dei contorni rilevati")
+            plt.axis('off')
+            plt.show()
+        #mean inner 89 mean border 35 r 19
+        #            72             33
+        return candidate
+    
+    def __detect_illegal_ghost_ball(self, 
                               search_info: Circle = None,
                               area_threshold=50, 
                               circularity_threshold=0.4,
                               border_intensity_threshold=70,    # soglia massima per il bordo (nero)
-                              red_inner_threshold=50):            # soglia minima in percentuale di pixel rossi nell'interno
+                              red_inner_threshold=50,
+                              plt_show = True):            # soglia minima in percentuale di pixel rossi nell'interno
         """
         Rileva la illegal ghost ball in un'immagine, caratterizzata da:
         - contorno esterno (nero) sottile,
@@ -666,105 +804,26 @@ class ObjectsFinder:
                 best_border_diff = border_diff
                 candidate = (int(x), int(y), int(radius), False)
 
-        return candidate
+        if plt_show:
+            plt.figure(figsize=(15, 5))
+            plt.subplot(1, 3, 1)
+            plt.imshow(self.__img_matrix, cmap='gray')
+            plt.title("Immagine originale")
+            plt.axis('off')
 
+            plt.subplot(1, 3, 2)
+            plt.imshow(self.__gauss_blurred, cmap='gray')
+            plt.title("Dopo Gaussian Blur")
+            plt.axis('off')
 
-    def find_ghost_ball(self, 
-                      search_info: Circle = None,
-                      area_threshold=50, 
-                      circularity_threshold=0.4,
-                      border_intensity_threshold=25,   # soglia massima per il bordo (nero)
-                      inner_intensity_threshold=94):     # soglia minima per il bianco
-        """
-        Rileva la ghost ball in un'immagine utilizzando:
-        - immagine in scala di grigi con blur e sogliatura automatica,
-        - verifica della circularità e dei contorni interni,
-        - analisi dell'intensità media per bordo e interno.
-
-        Ritorna:
-        Una tupla (x, y, r, True) per il candidato rilevato oppure None se non viene trovato.
-        """
-        gray = self.__gray.copy()
-        blurred = self.__gauss_blurred
-        # Sogliatura automatica con Otsu (inversione binaria)
-        ret, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        
-        # Trova contorni e la gerarchia
-        contours, hierarchy = cv2.findContours(thresh.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        if hierarchy is None:
-            return None
-        hierarchy = hierarchy[0]
-
-        candidate = None
-        max_intensity_child = -1
-
-        for i, cnt in enumerate(contours):
-            (x, y), radius = cv2.minEnclosingCircle(cnt)
-
-            # Filtra in base a search_info se fornito
-            if not self.__valid_coordinates(search_info, (x, y, radius)):
-                continue
-
-            #print("------------------")
-            #print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
-            # Verifica della circularità
-            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                #print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
-                continue
-
-            # Recupera il contorno interno (primo figlio)
-            inner_index = hierarchy[i][2]
-            
-            if inner_index == -1:
-                #print(f"[DEBUG] Contour {i} scartato: nessun contorno interno")
-                continue
-            inner_cnt = contours[inner_index]
-            (inner_x, inner_y), inner_r = cv2.minEnclosingCircle(inner_cnt)
-
-            # Crea maschere per contorni esterno, interno e per il bordo (differenza)
-            mask_outer = self.create_mask(cnt, gray)
-            mask_inner = self.create_mask(inner_cnt, gray)
-            mask_border = cv2.subtract(mask_outer, mask_inner)
-            
-            mean_border = cv2.mean(gray, mask=mask_border)[0]
-            mean_inner = cv2.mean(gray, mask=mask_inner)[0]
-            #print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
-
-            # Analisi di eventuali ulteriori contorni interni (figli)
-            child_index = hierarchy[i][2]
-            children_intensities = []
-            while child_index != -1:
-                child_cnt = contours[child_index]
-                mask_child = self.create_mask(child_cnt, gray)
-                children_intensities.append(cv2.mean(gray, mask=mask_child)[0])
-                child_index = hierarchy[child_index][0]
-
-            #print(f"[DEBUG] Contour {i}: Children intensities={children_intensities}")
-            # Se non sono presenti figli, applica un criterio diretto basato sulla differenza di intensità
-            if len(children_intensities) == 0:
-                #print(f"[DEBUG] Mean inner: {mean_inner:.2f}, Mean border: {mean_border:.2f}")
-                if mean_inner - mean_border < 160:
-                    #print(f"[DEBUG] Contour {i} scartato: differenza di intensità troppo bassa")
-                    continue
-                candidate = (int(x), int(y), int(radius), True)
-                continue
-
-            # Se sono presenti, seleziona il candidato basandosi sul massimo valore interno
-            max_child_value = max(children_intensities)
-            #print(f"[DEBUG] Max child value: {max_child_value:.2f}")
-            if max_child_value < 90:
-                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna troppo bassa")
-                continue
-
-            #print(f"[DEBUG] Max intensity child: {max_child_value:.2f}")
-            if max_child_value <= max_intensity_child:
-                #print(f"[DEBUG] Contour {i} scartato: massima intensità interna inferiore al precedente")
-                continue
-
-            max_intensity_child = max_child_value 
-            candidate = (int(x), int(y), int(radius), True)
+            plt.subplot(1, 3, 3)
+            plt.imshow(self.thresh_balls, cmap='gray')
+            plt.title("Dopo Thresholding")
+            plt.axis('off')
+            plt.show()
 
         return candidate
+
 
     def detect_square_boxes(self) -> list:
         """
@@ -865,7 +924,6 @@ class ObjectsFinder:
             key=lambda item: item[0].x + item[0].width + item[0].y + item[0].heigth,
             reverse=True
         )
-        
         return sorted_boxes
 
 

@@ -70,7 +70,7 @@ class MatchingBallPool:
         self.balls = []      # Lista delle palline rilevate
         self.__pockets = []    # Lista dei pocket rilevati
         self.player1_turn = False
-        self.player1_type = "not assigned"
+        self.__player1_type = "not assigned"
         self.assign_ball_step = 1
         self.player1_white_ratio = 0.0
         self.player2_white_ratio = 0.0
@@ -173,24 +173,19 @@ class MatchingBallPool:
 
         # Config dell'area e rilevamento dei pocket solo alla prima iterazione
         self.finder.preprocessing_image()
-        self.__assign_ball_type()
+        
         if self.iteration == 1:
+            print("Configuring area...")
             self.config_area()
 
-            pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS + 2, self.pool_coords)
+            pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS, self.pool_coords)
             self.__pockets = self.finder.find_pockets_pool_contour(pocket_circle)
 
         player_squares = self.__detect_players_pic(area=self.player_area)
 
-        ghost_ball = self.finder.find_ghost_ball(
+        ghost_ball = self.finder.detect_ghost_ball(
             Circle(17, 100, 23, self.pool_coords)
         )
-        if ghost_ball is None:
-            ghost_ball = self.finder.find_illegal_ghost_ball(
-                Circle(17, 100, 23, self.pool_coords)
-            )
-            if ghost_ball is None:
-                ghost_ball = (400, 400, 0, False)
 
         self.gx, self.gy, self.gr, self.isWhite = ghost_ball
         aim_line = None
@@ -215,7 +210,7 @@ class MatchingBallPool:
             print("RED Ghost Ball")
         print(f"{len(ball_circles)} Balls")
 
-        return ball_circles, ghost_ball, aim_line, self.player1_type
+        return ball_circles, ghost_ball, aim_line, self.__player1_type
 
     
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
@@ -231,6 +226,10 @@ class MatchingBallPool:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
         final_balls, ghost_ball = self.abstract_balls(ball_circles)
+
+        self.__assign_player_b_type(final_balls)
+
+        player1_type = self.__player1_type
 
         pockets = self.__pockets
 
@@ -264,7 +263,7 @@ class MatchingBallPool:
 
         return final_balls, pockets, ghost_ball, aim_line, stick, player1_type
     
-    def __assign_ball_type(self):
+    def __assign_player_b_type(self, final_balls):
         if self.iteration < 2:
             return
         
@@ -282,12 +281,18 @@ class MatchingBallPool:
             if players_balls[1].white_ratio > 0.0:
                 self.player2_white_ratio = players_balls[1].white_ratio
                 self.assign_ball_step += 1
-
-            if self.assign_ball_step == 3:
-                self.player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
-                self.assign_ball_step += 1
-                print(f"Player 1 type: {self.player1_type.upper()}")
             
+            if self.assign_ball_step == 3:
+                self.__player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
+                self.assign_ball_step += 1
+                print(f"Player 1 type assigned: {self.__player1_type.upper()}")
+                return
+        
+        if self.assign_ball_step == 4:
+            if self.__player1_type != "not assigned":
+                type_still_present = any(b.get_type() == self.__player1_type for b in final_balls)
+            if not type_still_present:
+                self.__player1_type = "eight" 
 
 
     def __detect_players_pic(self, area=None):
@@ -345,10 +350,6 @@ class MatchingBallPool:
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
         final_balls = BPoolColor.assign_ball_types(raw_balls)
-        if self.player1_type != "not assigned":
-            type_still_present = any(b.get_type() == self.player1_type for b in final_balls)
-            if not type_still_present:
-                self.player1_type = "eight" 
 
         ghost_ball = Ball()
         ghost_ball.set_x(self.gx)

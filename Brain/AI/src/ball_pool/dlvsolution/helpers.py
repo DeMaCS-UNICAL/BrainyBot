@@ -508,12 +508,13 @@ def calculate_shot_score(white, target, pocket, balls):
         score += 50
 
     distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
-    score += max(0, 100 - distance)  # ad es., se la distanza è 60, aggiungiamo 40
+    score += max(0, 100 - int(distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
 
     # Bonus/penalità basati sull'angolo del tiro
-    angle = calculate_shot_angle(white, target, pocket)
-    if angle < 30:
-        score += (30 - angle) * 2  # bonus proporzionale per angoli piccoli
+    if white is not None:
+        angle = calculate_shot_angle(white, target, pocket)
+        if angle < 30:
+            score += (30 - angle) * 2  # bonus proporzionale per angoli piccoli
 
     return score
 
@@ -577,11 +578,15 @@ def is_path_clear(white, target, balls):
     Verifica che non esista nessuna pallina diversa da quella bianca e dalla pallina target
     che si trovi tra la palla bianca e la pallina target.
     """
+
     for other in balls:
-        if other == white or other == target:
+        if other == target:
             continue
-        if is_in_between(white, target, other):
-            return False
+        if white != None:
+            if other == white:
+                continue
+            if is_in_between(white, target, other):
+                return False
     return True
 
 def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid"):
@@ -614,10 +619,10 @@ def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid"):
             continue  # salta la palla bianca
         
         # Se è specificato un player_type, consideriamo solo quelle palline
-        if player_type != "" and b_type != player_type:
+        if player_type != "not assigned" and b_type != player_type:
             continue
 
-        if player_type == "" and b_type == "eight":
+        if player_type == "not assigned" and b_type == "eight":
             continue
         
         curr_score_b_pkt = -float('inf')
@@ -626,7 +631,7 @@ def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid"):
         for pkt in pockets:
             # Calcola il punteggio: si parte dal presupposto che se la palla bianca non esiste, il punteggio sarà solo parziale
             shot_score = calculate_shot_score(white_ball, ball, pkt, balls)
-            # Debug: print(f"Palla {ball.get_id()} -> Pocket ({pkt.get_x()},{pkt.get_y()}): score = {shot_score:.2f}")
+            #print(f"Palla {ball.get_id()} -> Pocket ({pkt.get_x()},{pkt.get_y()}): score = {shot_score:.2f}, score_b_pkt = {curr_score_b_pkt:.2f}")
             if shot_score > curr_score_b_pkt:
                 curr_score_b_pkt = shot_score
                 best_curr_pocket = pkt
