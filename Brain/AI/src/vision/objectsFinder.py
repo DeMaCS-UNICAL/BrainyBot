@@ -423,7 +423,7 @@ class ObjectsFinder:
         self.__init_thresholds()
         self.__init_closing_ops()
         
-    def find_balls_pool_contour(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57, plt_show = False):
+    def find_pool_balls(self, search_info: Circle = None, area_threshold=10, circularity_threshold=0.57, plt_show = False):
         """
         Rileva le palle della pool table tramite rilevamento dei contorni e clustering.
         
@@ -513,12 +513,12 @@ class ObjectsFinder:
         return self.__filter_duplicate_circles(balls, CIRCLE_MIN_DISTANCE=1)
 
     def find_assigned_balls(self, search_info: Circle, area_threshold=10, circularity_threshold=0.57):
-        balls = self.find_balls_pool_contour(search_info, area_threshold, circularity_threshold)
+        balls = self.find_pool_balls(search_info, area_threshold, circularity_threshold)
         balls = sorted(balls, key=lambda b: b.x)
         return [balls[0], balls[len(balls) - 1]]
 
     
-    def find_pockets_pool_contour(self, search_info: 'Circle'):
+    def find_pool_pockets(self, search_info: 'Circle'):
         """
         Rileva le buche della pool table tramite rilevamento dei contorni.
         
@@ -633,16 +633,10 @@ class ObjectsFinder:
             candidate_points = 0
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
-            # Filtra in base a search_info se fornito
-            if not self.__valid_coordinates(search_info, (x, y, radius)):
+            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold):
+                #print(f"[DEBUG] Contour {i} scartato: area insufficiente")
                 continue
 
-            #print("------------------")
-            #print(f"[DEBUG] Contour {i}: Center=({x:.2f}, {y:.2f}), Radius={radius:.2f}")
-            # Verifica della circularità
-            if not self.__bp_is_circle(cnt, circularity_threshold=circularity_threshold, area_threshold=area_threshold):
-                #print(f"[DEBUG] Contour {i} scartato: circularità insufficiente")
-                continue
 
             # Recupera il contorno interno (primo figlio)
             inner_index = hierarchy[i][2]
@@ -672,7 +666,7 @@ class ObjectsFinder:
             cy_inner = int(M_inner['m01'] / M_inner['m00'])
             
             # Calcola la distanza euclidea tra i centroidi
-            distance = ((cx_border - cx_inner) ** 2 + (cy_border - cy_inner) ** 2) ** 0.5
+            distance = math.sqrt((cx_border - cx_inner) ** 2 + (cy_border - cy_inner) ** 2)
             
             # Analisi di eventuali ulteriori contorni interni (figli)
             child_index = hierarchy[i][2]

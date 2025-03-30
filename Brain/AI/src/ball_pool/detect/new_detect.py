@@ -179,7 +179,7 @@ class MatchingBallPool:
             self.config_area()
 
             pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS, self.pool_coords)
-            self.__pockets = self.finder.find_pockets_pool_contour(pocket_circle)
+            self.__pockets = self.finder.find_pool_pockets(pocket_circle)
 
         player_squares = self.__detect_players_pic(area=self.player_area)
 
@@ -192,10 +192,10 @@ class MatchingBallPool:
 
         # Definisce l'area di ricerca per le palline (evitando i bordi)
         
-        ball_circle = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, self.ball_search_area,
+        circle_props = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, self.ball_search_area,
                              (self.gx, self.gy, self.gr))
         
-        ball_circles = self.finder.find_balls_pool_contour(ball_circle, plt_show=False)
+        ball_circles = self.finder.find_pool_balls(circle_props, plt_show=False)
 
         # Assegna le palline ai giocatori se necessario
         self.__player_squares = player_squares

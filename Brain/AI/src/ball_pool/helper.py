@@ -65,7 +65,6 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
     # Inizializzazione dei target e della ghost ball
     x_target, y_target = 1, 1
-    target_ball = None
 
     # Inizializza il matcher per il Ball Pool
     matcher = MatchingBallPool(
@@ -75,14 +74,13 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         iteration=iteration
     )
 
-
     TOLERANCE = 60         # Soglia minima per considerare raggiunto il target
     MAX_ITERATIONS = 100   # Per evitare loop infiniti
     MIN_STEP_FACTOR = 0.8  # Valore minimo dello step factor
     BASE_STEP_FACTOR = 2.0 # Step factor di base
-
     iteration = 1
-    
+    s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
+
     while True:
         feedback = Feedback()
         if iteration >1:
@@ -90,8 +88,6 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         
         vision = matcher.vision(iteration)
         abstraction = matcher.abstraction(vision)
-
-        s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
         # Verifica il turno del giocatore
         player1_turn = matcher.player1_turn
