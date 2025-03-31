@@ -23,10 +23,10 @@ def choose_target_ball(balls_chart):
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
     balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
 
-    chosen_ball, chosen_pocket = get_best_pair_to_shoot(balls, pockets, player1_type)
+    chosen_ball, chosen_pocket, move_aim = get_best_pair_to_shoot(balls, pockets, player1_type, ghost_ball)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
-    return  chosen_ball, chosen_pocket, ghost_ball, aim_line, stick, player1_type
+    return  chosen_ball, chosen_pocket, ghost_ball, move_aim, stick, player1_type
  
 
 
@@ -64,7 +64,7 @@ def persist_threshold(value):
 def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True, iteration=0):
 
     # Inizializzazione dei target e della ghost ball
-    x_target, y_target = 1, 1
+    ball_x, y_target = 1, 1
 
     # Inizializza il matcher per il Ball Pool
     matcher = MatchingBallPool(
@@ -74,12 +74,10 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         iteration=iteration
     )
 
-    TOLERANCE = 60         # Soglia minima per considerare raggiunto il target
-    MAX_ITERATIONS = 100   # Per evitare loop infiniti
+    MAX_ITERATIONS = 6   # Per evitare loop infiniti
     MIN_STEP_FACTOR = 0.8  # Valore minimo dello step factor
     BASE_STEP_FACTOR = 2.0 # Step factor di base
     iteration = 1
-    s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
     while True:
         feedback = Feedback()
@@ -88,6 +86,8 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         
         vision = matcher.vision(iteration)
         abstraction = matcher.abstraction(vision)
+
+        s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
         # Verifica il turno del giocatore
         player1_turn = matcher.player1_turn
@@ -98,17 +98,33 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             continue
         if iteration > 1:
             try:
-                chosen_ball, chosen_pocket, ghost_ball, aim_line, stick, player1_type = choose_target_ball(abstraction)
+                print("Solving...")
+                chosen_ball, chosen_pocket, ghost_ball, move_aim, stick, player1_type = choose_target_ball(abstraction)
     
                 print(f"Palla rilevata in pocket: {chosen_pocket.get_id()}")
-                x_target, y_target = chosen_ball.get_x(), chosen_ball.get_y()
+                if move_aim is not None:
+                    print(f"Move aim: {move_aim}")
+                    x_target, y_target = move_aim[0], move_aim[1]
+                    tolerance = 16
+                else:
+                    x_target, y_target = chosen_pocket.get_x(), chosen_pocket.get_y()
+                    tolerance = 50
+                
 
                 # Recupera la posizione corrente della ghost ball
                 temp_g_x, temp_g_y = ghost_ball.get_coordinates()
                 if temp_g_x == 400 and temp_g_y == 400:
-                    print("Ghost ball non trovata, uso le precedenti coordinate")
+                    print("Ghost ball NON TROVATA, swipo e redetecto")
+                    need_to_redetect_cue_ball = True
+                    # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
+                    os.chdir(CLIENT_PATH)
+                    os.system(
+                        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {temp_g_x} {temp_g_y} {s_x1} {s_y1}'"
+                    )
+                    continue
                 else:
                     g_x, g_y = ghost_ball.get_coordinates()
+
             except Exception as e:
                 print("Errore nell'elaborazione del solver:", e)
                 return
@@ -126,16 +142,16 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
             print(f"Target ball: {chosen_ball.get_type()} in posizione ({x_target}, {y_target})")
             print(f"Distanza tra ghost ball e target: {dist}")
-            if dist < TOLERANCE:
+            if dist < tolerance:
                 shoot_power = s_y2
                 break
             
-            # Calcola lo spostamento del 20% della differenza tra ghost ball e target,
+            # Calcola lo spostamento del 30% della differenza tra ghost ball e target,
             # applicando il segno corretto in base alla posizione della ghost ball.
-            new_x = x_target + int(0.20 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
-            new_y = y_target + int(0.20 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
+            new_x = x_target + int(0.25 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
+            new_y = y_target + int(0.25 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
 
-            matcher.show_result()
+            #matcher.show_result()
 
             # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
             os.chdir(CLIENT_PATH)
@@ -147,19 +163,22 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             vision = matcher.vision(iteration)
             abstraction = matcher.abstraction(vision)
 
+
             g_x, g_y = matcher.ghost_ball.get_coordinates()
             moves_before_shoot += 1
             iteration += 1
+            print("++++++++++")
 
 
         # Swipe finale con lo stick per tirare la pallina verso la pocket
-        print("TIRANDO")
+        print(f"TIRANDO{' per tempo' if moves_before_shoot == MAX_ITERATIONS else ''}")
         os.chdir(CLIENT_PATH)
         os.system(
             f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(shoot_power)}'"
         )
         iteration += 1
-        time.sleep(8)
+        print("------------------------")
+        time.sleep(7.5)
         
 
             

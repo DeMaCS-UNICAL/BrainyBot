@@ -470,17 +470,17 @@ def choose_clingo_system() -> DesktopHandler:
 
 import math
 
-def calculate_shot_angle(white, target, pocket):
+def calculate_shot_angle(cue_ball, target, pocket):
     """
-    Calcola l'angolo (in gradi) tra il vettore white->target e target->pocket.
+    Calcola l'angolo (in gradi) tra il vettore cue_ball->target e target->pocket.
     """
-    v1 = (target.get_x() - white.get_x(), target.get_y() - white.get_y())
-    v2 = (pocket.get_x() - target.get_x(), pocket.get_y() - target.get_y())
+    t_w_vec = (target.get_x() - cue_ball.get_x(), target.get_y() - cue_ball.get_y())
+    p_t_vec = (pocket.get_x() - target.get_x(), pocket.get_y() - target.get_y())
     
     # Prodotto scalare e magnitudini
-    dot = v1[0] * v2[0] + v1[1] * v2[1]
-    mag1 = math.sqrt(v1[0]**2 + v1[1]**2)
-    mag2 = math.sqrt(v2[0]**2 + v2[1]**2)
+    dot = t_w_vec[0] * p_t_vec[0] + t_w_vec[1] * p_t_vec[1]
+    mag1 = math.sqrt(t_w_vec[0]**2 + t_w_vec[1]**2)
+    mag2 = math.sqrt(p_t_vec[0]**2 + p_t_vec[1]**2)
     
     if mag1 * mag2 == 0:
         return 0
@@ -489,7 +489,7 @@ def calculate_shot_angle(white, target, pocket):
     angle_rad = math.acos(dot / (mag1 * mag2))
     return math.degrees(angle_rad)
 
-def calculate_shot_score(white, target, pocket, balls):
+def calculate_shot_score(cue_ball, target, pocket, balls):
     """
     Calcola un punteggio per il tiro basato sui seguenti criteri:
       - Percorso bianca->target: bonus se libero, penalità altrimenti.
@@ -500,26 +500,30 @@ def calculate_shot_score(white, target, pocket, balls):
     score = 0
     
     # Verifica il percorso dalla bianca al target
-    if is_path_clear(white, target, balls):
+    if is_path_clear(cue_ball, target, balls):
         score += 50
     
     # Verifica il percorso dal target alla pocket
     if is_path_clear(target, pocket, balls):
         score += 50
 
-    distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
-    score += max(0, 100 - int(distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
+    pocket_distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
+    if cue_ball is not None:
+        cue_ball_b_distance = math.sqrt((cue_ball.get_x() - target.get_x())**2 + (cue_ball.get_y() - target.get_y())**2)
+        score += max(0, 70 - int(cue_ball_b_distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
+
+    score += max(0, 100 - int(pocket_distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
 
     # Bonus/penalità basati sull'angolo del tiro
-    if white is not None:
-        angle = calculate_shot_angle(white, target, pocket)
+    if cue_ball is not None:
+        angle = calculate_shot_angle(cue_ball, target, pocket)
         if angle < 30:
             score += (30 - angle) * 2  # bonus proporzionale per angoli piccoli
 
     return score
 
 
-def get_best_shot(white, balls, pockets, player_type="solid"):
+def get_best_shot(cue_ball, balls, pockets, player_type="solid"):
     """
     Per ogni pallina (del tipo indicato) che non sia la bianca,
     e per ogni pocket, calcola il punteggio del tiro.
@@ -535,7 +539,7 @@ def get_best_shot(white, balls, pockets, player_type="solid"):
         
         for pocket in pockets:
             # Calcola il punteggio per la combinazione target-pocket
-            shot_score = calculate_shot_score(white, target, pocket, balls)
+            shot_score = calculate_shot_score(cue_ball, target, pocket, balls)
             # Debug: print(f"Tiro bianca->{target.get_id()}->pocket({pocket.get_x()}, {pocket.get_y()}): {shot_score:.2f}")
             if shot_score > best_score:
                 best_score = shot_score
@@ -545,35 +549,35 @@ def get_best_shot(white, balls, pockets, player_type="solid"):
     return best_target, best_pocket, best_score
 
 
-def is_in_between(white, target, other):
+def is_in_between(cue_ball, target, other):
     """
-    Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'white'
+    Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'cue_ball'
     e la pallina target, considerando la soglia BALL_RADIUS.
     """
-    # Vettore dal punto di partenza (white) al target
-    dx = target.get_x() - white.get_x()
-    dy = target.get_y() - white.get_y()
+    # Vettore dal punto di partenza (cue_ball) al target
+    dx = target.get_x() - cue_ball.get_x()
+    dy = target.get_y() - cue_ball.get_y()
     segment_length = sqrt(dx**2 + dy**2)
     if segment_length == 0:
         return False
 
-    # Calcola la proiezione del vettore (other - white) su (target - white)
-    t = ((other.get_x() - white.get_x()) * dx + (other.get_y() - white.get_y()) * dy) / (segment_length**2)
+    # Calcola la proiezione del vettore (other - cue_ball) su (target - cue_ball)
+    t = ((other.get_x() - cue_ball.get_x()) * dx + (other.get_y() - cue_ball.get_y()) * dy) / (segment_length**2)
     
     # Se la proiezione non cade sul segmento, non è in mezzo
     if t < 0 or t > 1:
         return False
 
     # Punto di proiezione sul segmento
-    proj_x = white.get_x() + t * dx
-    proj_y = white.get_y() + t * dy
+    proj_x = cue_ball.get_x() + t * dx
+    proj_y = cue_ball.get_y() + t * dy
 
     # Distanza tra il punto proiettato e il centro della pallina 'other'
     dist = sqrt((other.get_x() - proj_x)**2 + (other.get_y() - proj_y)**2)
     
-    return dist < 25
+    return dist < max(other.get_r(), target.get_r())  # Considera il raggio della pallina
 
-def is_path_clear(white, target, balls):
+def is_path_clear(cue_ball, target, balls):
     """
     Verifica che non esista nessuna pallina diversa da quella bianca e dalla pallina target
     che si trovi tra la palla bianca e la pallina target.
@@ -582,66 +586,87 @@ def is_path_clear(white, target, balls):
     for other in balls:
         if other == target:
             continue
-        if white != None:
-            if other == white:
+        if cue_ball != None:
+            if other == cue_ball:
                 continue
-            if is_in_between(white, target, other):
+            if is_in_between(cue_ball, target, other):
                 return False
     return True
 
-def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid"):
+def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid", current_ghost_ball= None):
     """
-    Per ogni pallina del tipo indicato (esclusa la bianca), valuta il tiro verso ciascuna pocket
-    calcolando un punteggio basato su:
-      - Percorso libero: dalla bianca al target e dal target alla pocket.
-      - Distanza: bonus per distanze target->pocket minori.
-      - Angolo del tiro: bonus per traiettorie più lineari.
-    
-    La pallina viene associata alla pocket per cui il tiro ha il punteggio più alto.
-    
-    Restituisce la lista delle pocket ordinate in base al numero di palline associate.
+    Valuta per ogni pallina target (del tipo indicato) il tiro verso ciascuna pocket.
+    Restituisce:
+      - best_ball: la pallina target migliore;
+      - best_pocket: la pocket verso cui indirizzare il tiro;
+      - ghost_position: le coordinate (x, y) della ghost ball, ovvero
+          il punto in cui la bianca deve impattare la target ball affinché,
+          dopo il contatto, la target ball segua la direzione verso la pocket.
+          
+    La ghost ball viene calcolata come:
+       ghost_position = target_center - unit_vector(target -> pocket) * BALL_DIAMETER
+    Inoltre, potresti (opzionalmente) verificare che il percorso bianca -> ghost_position sia libero.
     """
-    # Individua la palla bianca
-    white_ball = next((b for b in balls if b.get_type() == "cue"), None)
+    cue_ball = next((b for b in balls if b.get_type() == "cue"), None)
     
-    # Se non esiste la pallina bianca, procediamo senza il controllo di percorso bianca->target
-    if white_ball is None:
+    if cue_ball is None:
         print("Attenzione: palla bianca non trovata!")
     
     max_score_b_pkt = -float('inf')
     best_ball = None
     best_pocket = None
     print(f"Player type: {player_type}")
-    # Per ogni pallina target, valuta il tiro verso ogni pocket
+
     for ball in balls:
         b_type = ball.get_type()
         if b_type == "cue":
-            continue  # salta la palla bianca
+            continue
         
-        # Se è specificato un player_type, consideriamo solo quelle palline
+        # Considera solo le palline del tipo specificato
         if player_type != "not assigned" and b_type != player_type:
             continue
-
         if player_type == "not assigned" and b_type == "eight":
             continue
         
         curr_score_b_pkt = -float('inf')
         best_curr_pocket = None
-        # Per ogni pocket, calcola il punteggio del tiro (bianca -> target -> pocket)
+        
         for pkt in pockets:
-            # Calcola il punteggio: si parte dal presupposto che se la palla bianca non esiste, il punteggio sarà solo parziale
-            shot_score = calculate_shot_score(white_ball, ball, pkt, balls)
-            #print(f"Palla {ball.get_id()} -> Pocket ({pkt.get_x()},{pkt.get_y()}): score = {shot_score:.2f}, score_b_pkt = {curr_score_b_pkt:.2f}")
+            shot_score = calculate_shot_score(cue_ball, ball, pkt, balls)
             if shot_score > curr_score_b_pkt:
                 curr_score_b_pkt = shot_score
                 best_curr_pocket = pkt
                 
-        # Se è stata trovata una pocket migliore, associa la pallina ad essa
         if best_curr_pocket is not None:
             if curr_score_b_pkt > max_score_b_pkt:
                 best_ball = ball
                 best_pocket = best_curr_pocket
-
                 max_score_b_pkt = curr_score_b_pkt
                 
-    return best_ball, best_pocket
+    # Calcolo della ghost ball basato su best_ball e best_pocket:
+    move_aim = None
+    if best_ball is not None and best_pocket is not None:
+        dx = best_pocket.get_x() - best_ball.get_x()
+        dy = best_pocket.get_y() - best_ball.get_y()
+        distance = np.sqrt(dx**2 + dy**2)
+        if distance != 0:
+            # Vettore unitario dalla target ball alla pocket
+            ux = dx / distance
+            uy = dy / distance
+            # La ghost ball si posiziona "dietro" la target ball, nella direzione opposta alla pocket,
+            # a una distanza pari al diametro della pallina.
+            ghost_x = best_ball.get_x() - int(ux * best_ball.get_r())
+            ghost_y = best_ball.get_y() - int(uy * best_ball.get_r())
+            move_aim = (ghost_x, ghost_y)
+            
+            # (Opzionale) Verifica che il percorso dalla cue ball alla ghost ball sia libero:
+            ghost_dummy = Ball()
+            ghost_dummy.set_x(ghost_x)
+            ghost_dummy.set_y(ghost_y)
+            ghost_dummy.set_r(best_ball.get_r())
+
+            if not is_path_clear(cue_ball, ghost_dummy, balls):
+                print("Percorso bianca -> ghost non libero!")
+                move_aim = None
+    
+    return best_ball, best_pocket, move_aim

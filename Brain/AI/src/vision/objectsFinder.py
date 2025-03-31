@@ -633,7 +633,8 @@ class ObjectsFinder:
             candidate_points = 0
             (x, y), radius = cv2.minEnclosingCircle(cnt)
 
-            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold):
+            if not self.__bp_is_valid_cnt(cnt, circularity_threshold, area_threshold, 
+                                          search_info, (x, y, radius)):
                 #print(f"[DEBUG] Contour {i} scartato: area insufficiente")
                 continue
 
@@ -651,7 +652,7 @@ class ObjectsFinder:
             
             mean_border = cv2.mean(gray, mask=mask_border)[0]
             mean_inner = cv2.mean(gray, mask=mask_inner)[0]
-            print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
+            #print(f"[DEBUG] Contour {i}: mean_inner={mean_inner:.2f}, mean_border={mean_border:.2f}")
 
             M_border = cv2.moments(mask_border)
             M_inner = cv2.moments(mask_inner)

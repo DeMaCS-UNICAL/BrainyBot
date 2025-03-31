@@ -163,6 +163,7 @@ class MatchingBallPool:
             plt.title("Screenshot")
             plt.show()
 
+        print("Vision...")
         # Carica l'immagine in scala di grigi e applica la pre-elaborazione
         self.gray = getImg(screenshot_full_path, gray=True)
         self.gray = cv2.GaussianBlur(self.gray, (5, 5), 0)
@@ -208,7 +209,7 @@ class MatchingBallPool:
             print("FAKE Ghost Ball")
         else:
             print("RED Ghost Ball")
-        print(f"{len(ball_circles)} Balls")
+        print(f"{len(ball_circles)} Balls\t")
 
         return ball_circles, ghost_ball, aim_line, self.__player1_type
 
@@ -221,7 +222,7 @@ class MatchingBallPool:
             #MoveAndShoot.reset()
         
         ball_circles, ghost_ball, aim_line, player1_type = vision_output
-        
+        print("Abstraction...")
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
@@ -259,9 +260,18 @@ class MatchingBallPool:
             elif b.get_type() == "cue":
                 bianca += 1
         
-        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}")
+        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}\t")
 
         return final_balls, pockets, ghost_ball, aim_line, stick, player1_type
+    
+    """def redetect_ghost_ball(self):
+        ghost_ball = self.finder.detect_ghost_ball(
+            Circle(17, 100, 23, self.pool_coords)
+        )
+        self.gx, self.gy, self.gr, self.isWhite = ghost_ball
+        ghost_ball = self.abstract_ghost_ball()
+
+        return ghost_ball"""
     
     def __assign_player_b_type(self, final_balls):
         if self.iteration < 2:
@@ -285,7 +295,7 @@ class MatchingBallPool:
             if self.assign_ball_step == 3:
                 self.__player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
                 self.assign_ball_step += 1
-                print(f"Player 1 type assigned: {self.__player1_type.upper()}")
+                print(f"---Player 1 type assigned: {self.__player1_type.upper()}---")
                 return
         
         if self.assign_ball_step == 4:
@@ -323,6 +333,14 @@ class MatchingBallPool:
 
         return squares
     
+    def abstract_ghost_ball(self):
+        ghost_ball = Ball()
+        ghost_ball.set_x(self.gx)
+        ghost_ball.set_y(self.gy)
+        ghost_ball.set_r(self.gr)
+        ghost_ball.set_type("GHOST" if self.isWhite else "RED GHOST")
+
+        return ghost_ball
 
     
     def abstract_balls(self, circles):
@@ -350,12 +368,7 @@ class MatchingBallPool:
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
         final_balls = BPoolColor.assign_ball_types(raw_balls)
-
-        ghost_ball = Ball()
-        ghost_ball.set_x(self.gx)
-        ghost_ball.set_y(self.gy)
-        ghost_ball.set_r(self.gr)
-        ghost_ball.set_type("GHOST" if self.isWhite else "RED GHOST")
+        ghost_ball = self.abstract_ghost_ball()
 
         return final_balls, ghost_ball
 
