@@ -153,10 +153,9 @@ class MatchingBallPool:
         player1_pic_pos = int(self.PERC_PLAYER1_PIC * img_width)
         player2_pic_pos = int(self.PERC_PLAYER2_PIC * img_width)
 
-
         self.__game = Game(player1_pic_pos, player2_pic_pos)
 
-    def vision(self, iteration=1):
+    def vision(self, iteration=1, target_found=False):
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
         self.iteration = iteration
         # Carica lo screenshot a colori
@@ -198,8 +197,9 @@ class MatchingBallPool:
 
         # Definisce l'area di ricerca per le palline (evitando i bordi)
         
+        
         circle_props = Circle(self.BALLS_MIN_RADIUS , 100, self.BALLS_MAX_RADIUS, self.ball_search_area,
-                             (self.gx, self.gy, self.gr))
+                            (self.gx, self.gy, self.gr))
         
         ball_circles = self.finder.find_pool_balls(circle_props, plt_show=False)
 

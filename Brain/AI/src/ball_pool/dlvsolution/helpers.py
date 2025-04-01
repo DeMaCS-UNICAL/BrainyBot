@@ -442,16 +442,22 @@ class Game(Predicate):
         players_balls = [players_balls[0], players_balls[len(players_balls) - 1]]
 
         #print(f"turno giocatore: {self.player_turn}")
-        if self.player_turn == 1 and players_balls[0].white_ratio > 0.0:
-            self.player_white_ratio[0] = players_balls[0].white_ratio
-            print(f"Assegnato {self.player_white_ratio[0]}")
+        detected_left_wr = players_balls[0].white_ratio
+        detected_right_wr = players_balls[1].white_ratio
+        if detected_left_wr == 0.0 and detected_right_wr == 0.0:
+            return
+        
+        if self.player_white_ratio[0] != 0 and self.player_turn == 1 and detected_left_wr > 0.0:
+            self.player_white_ratio[0] = detected_left_wr
+            print(f"Assegnato {detected_left_wr}")
 
-        if self.player_turn == 2 and players_balls[1].white_ratio > 0.0:
-            self.player_white_ratio[1] = players_balls[1].white_ratio
-            print(f"Assegnato {self.player_white_ratio[1]}")
+        elif self.player_white_ratio[1] != 0 and  self.player_turn == 2 and detected_right_wr > 0.0:
+            self.player_white_ratio[1] = detected_right_wr
+            print(f"Assegnato {detected_right_wr}")
+
 
         if self.player1_ball_type == "not assigned" and all(ratio > 0.0 for ratio in self.player_white_ratio):
-            self.player1_ball_type = "striped" if self.player_white_ratio[0] > self.player_white_ratio[1] else "solid"
+            self.player1_ball_type = "striped" if detected_left_wr > detected_right_wr else "solid"
             print(f"Tipo di palla assegnato: {self.player1_ball_type}")
             return
         

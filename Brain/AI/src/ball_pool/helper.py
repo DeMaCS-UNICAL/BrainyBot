@@ -60,6 +60,14 @@ def persist_threshold(value):
     print("threshold set to:", value)
 
 
+def swipe_command(x1, y1, x2, y2):
+    """Esegue il comando swipe tramite il client."""
+    os.chdir(CLIENT_PATH)
+    os.system(
+        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {x1} {y1} {x2} {y2}'"
+    )
+
+
 def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True, iteration=0):
 
     # Inizializzazione dei target e della ghost ball
@@ -74,8 +82,6 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
     )
 
     MAX_ITERATIONS = 6   # Per evitare loop infiniti
-    MIN_STEP_FACTOR = 0.8  # Valore minimo dello step factor
-    BASE_STEP_FACTOR = 2.0 # Step factor di base
     iteration = 1
 
     while True:
@@ -117,10 +123,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                     print("Ghost ball NON TROVATA, swipo e redetecto")
                     need_to_redetect_cue_ball = True
                     # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
-                    os.chdir(CLIENT_PATH)
-                    os.system(
-                        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {temp_g_x} {temp_g_y} {s_x1} {s_y1}'"
-                    )
+                    swipe_command(temp_g_x, temp_g_y, s_x1, s_y1)
                     continue
                 else:
                     g_x, g_y = ghost_ball.get_coordinates()
@@ -153,18 +156,15 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
             #matcher.show_result()
 
-            # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
-            os.chdir(CLIENT_PATH)
-            os.system(
-                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {g_x} {g_y} {new_x} {new_y}'"
-            )
+            # Esegue il comando swipe per muovere la ghost ball verso il nuovo punto intermedio
+            swipe_command(g_x, g_y, new_x, new_y)
 
             feedback.take_screenshot()
             vision = matcher.vision(iteration)
             abstraction = matcher.abstraction(vision)
 
-
             g_x, g_y = matcher.ghost_ball.get_coordinates()
+
             moves_before_shoot += 1
             iteration += 1
             print("++++++++++")
@@ -172,10 +172,8 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
         # Swipe finale con lo stick per tirare la pallina verso la pocket
         print(f"TIRANDO{' per tempo' if moves_before_shoot == MAX_ITERATIONS else ''}")
-        os.chdir(CLIENT_PATH)
-        os.system(
-            f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {s_x1} {s_y1} {s_x2} {int(shoot_power)}'"
-        )
+        swipe_command(s_x1, s_y1, s_x2, int(shoot_power))
+
         iteration += 1
         print("------------------------")
         time.sleep(7.5)
