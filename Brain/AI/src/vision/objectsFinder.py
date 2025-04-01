@@ -515,7 +515,7 @@ class ObjectsFinder:
     def find_assigned_balls(self, search_info: Circle, area_threshold=10, circularity_threshold=0.57):
         balls = self.find_pool_balls(search_info, area_threshold, circularity_threshold)
         balls = sorted(balls, key=lambda b: b.x)
-        return [balls[0], balls[len(balls) - 1]]
+        return balls
 
     
     def find_pool_pockets(self, search_info: 'Circle'):
@@ -844,7 +844,10 @@ class ObjectsFinder:
         contours, _ = cv2.findContours(dilated_edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         
         boxes = []
-        
+        # Se plt_show è abilitato, creiamo una copia dell'immagine per disegnarci sopra i quadrati
+        plt_show = False
+        if plt_show:
+            img_with_boxes = self.__img_matrix.copy()
         for cnt in contours:
             # Calcola la lunghezza del contorno e approssima il poligono
             perimeter = cv2.arcLength(cnt, True)
@@ -865,7 +868,7 @@ class ObjectsFinder:
                     continue
             
             # Verifica che il rettangolo sia quasi quadrato (tolleranza di 6 pixel)
-            if not (h - 6 <= w <= h + 6):
+            if not (h - 5 <= w <= h + 5):
                 continue
             
             # Estrae la regione d'interesse (ROI) e converte in spazio HSV
@@ -912,6 +915,10 @@ class ObjectsFinder:
             
             current_box = OutputRectangle(x, y, w, h)
             boxes.append((current_box, clear_count))
+
+            # Se plt_show è attivato, disegna il rettangolo sull'immagine di copia
+            if plt_show:
+                cv2.rectangle(img_with_boxes, (x, y), (x + w, y + h), (0, 255, 0), 2)
         
         # Ordina le box in ordine decrescente basandosi su una metrica combinata delle coordinate e dimensioni
         sorted_boxes = sorted(
@@ -919,6 +926,15 @@ class ObjectsFinder:
             key=lambda item: item[0].x + item[0].width + item[0].y + item[0].heigth,
             reverse=True
         )
+
+        # Se plt_show è attivo, mostra l'immagine con i quadrati disegnati
+        if plt_show:
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(10, 10))
+            # Converte da BGR a RGB per visualizzare correttamente i colori
+            plt.imshow(cv2.cvtColor(img_with_boxes, cv2.COLOR_BGR2RGB))
+            plt.axis("off")
+            plt.show()
         return sorted_boxes
 
 

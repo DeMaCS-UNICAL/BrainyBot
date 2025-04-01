@@ -21,13 +21,12 @@ from matplotlib import pyplot as plt
 def choose_target_ball(balls_chart):
     # Suppongo che balls_chart fornisca una lista di oggetti Ball con coordinate,
     # e che get_balls_and_pockets() restituisca due liste: una di Pocket e una di Ball.
-    balls, pockets, ghost_ball, aim_line, stick, player1_type = balls_chart
+    balls, pockets, ghost_ball, player1_type = balls_chart
 
     chosen_ball, chosen_pocket, move_aim = get_best_pair_to_shoot(balls, pockets, player1_type, ghost_ball)
     #aim_situation = get_aimed_ball_and_aim_line( ghost_ball,stick, aimed_ball, aim_line)
     
-    return  chosen_ball, chosen_pocket, ghost_ball, move_aim, stick, player1_type
- 
+    return  chosen_ball, chosen_pocket, ghost_ball, move_aim
 
 
 def check_if_to_revalidate(output, last_output):
@@ -90,7 +89,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
         # Verifica il turno del giocatore
-        player1_turn = matcher.player1_turn
+        player1_turn = matcher.player_turn
         player1_turn = True  # Forzatura per debugging
         if not player1_turn:
             iteration += 1
@@ -99,7 +98,8 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         if iteration > 1:
             try:
                 print("Solving...")
-                chosen_ball, chosen_pocket, ghost_ball, move_aim, stick, player1_type = choose_target_ball(abstraction)
+ 
+                chosen_ball, chosen_pocket, ghost_ball, move_aim = choose_target_ball(abstraction)
     
                 print(f"Palla rilevata in pocket: {chosen_pocket.get_id()}")
                 if move_aim is not None:

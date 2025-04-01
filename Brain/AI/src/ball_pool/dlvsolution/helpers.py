@@ -402,22 +402,64 @@ class MoveAndShoot(Predicate): #Da modificare
 
 
 class Game(Predicate):
-    def __init__(self):
-        self.current_player = 1
-        self.player_targets = {1: None, 2: None}
-        self.balls = []
-        self.pockets = []
+    def __init__(self, player1_pic_pos=None, player2_pic_pos=None):
+        self.player1_pic_pos = player1_pic_pos
+        self.player2_pic_pos = player2_pic_pos
 
-    def assign_targets(self,ball : Ball):
-        # Al primo tiro, il giocatore sceglie il target in base al tipo (solid o striped)
-        self.player_targets[self.current_player] = ball.get_type()
+        self.player_turn = 1
+        self.player_white_ratio = [0.0, 0.0]
+        self.player1_ball_type = "not assigned"
 
-    def check_target(self, ball: Ball):
-        # Controlla se la pallina colpita corrisponde al target del giocatore corrente
-        return ball.get_type() == self.player_targets[self.current_player]
+
+    def set_player_turn(self, player_turn):
+        self.player_turn = player_turn
     
-    def switch_player(self):
-        self.current_player = self.current_player % 2 + 1 
+
+    def set_player_white_ratio(self,player, white_ratio):
+        self.player_white_ratio[player-1] = white_ratio
+        
+    def set_player1_ball_type(self, ball_type):
+        self.player1_ball_type = ball_type
+    
+    def read_player_turn(self, squares):
+        squares= sorted(squares, key=lambda item: item[1], reverse=True)
+        squares = squares[:2]
+        pos_brighter_square = squares[0][0].x
+        if len(squares) > 1:
+            pos_second_square = squares[1][0].x
+            self.player_turn = 1 if pos_brighter_square < pos_second_square else 2
+            #print(f"Luminosità: {squares[0][1]} {squares[1][1]}")
+            #print(f"Posizione: {squares[0][0].x} {squares[1][0].x}")
+        else:
+            
+            if squares[0][0].x <= self.player2_pic_pos:
+                self.player_turn = 1
+            else:
+                self.player_turn = 2       
+                    
+
+    def assign_player1_ball_type(self, players_balls, final_balls  = None):
+        players_balls = [players_balls[0], players_balls[len(players_balls) - 1]]
+
+        #print(f"turno giocatore: {self.player_turn}")
+        if self.player_turn == 1 and players_balls[0].white_ratio > 0.0:
+            self.player_white_ratio[0] = players_balls[0].white_ratio
+            print(f"Assegnato {self.player_white_ratio[0]}")
+
+        if self.player_turn == 2 and players_balls[1].white_ratio > 0.0:
+            self.player_white_ratio[1] = players_balls[1].white_ratio
+            print(f"Assegnato {self.player_white_ratio[1]}")
+
+        if self.player1_ball_type == "not assigned" and all(ratio > 0.0 for ratio in self.player_white_ratio):
+            self.player1_ball_type = "striped" if self.player_white_ratio[0] > self.player_white_ratio[1] else "solid"
+            print(f"Tipo di palla assegnato: {self.player1_ball_type}")
+            return
+        
+        if self.player1_ball_type != "not assigned":
+            at_least_one_ball_left = any(ball.get_type() == self.player1_ball_type for ball in final_balls)
+            if not at_least_one_ball_left:
+                self.player1_ball_type = "eight"
+
     
 
 class GameOver(Predicate):

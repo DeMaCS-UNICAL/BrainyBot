@@ -15,7 +15,7 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
-from AI.src.ball_pool.dlvsolution.helpers import AimLine,Color, Ball, Pocket, MoveAndShoot, GameOver, PoolBallsColor
+from AI.src.ball_pool.dlvsolution.helpers import AimLine,Color, Ball, Game, Pocket, MoveAndShoot, GameOver, PoolBallsColor
 
 
 class MatchingBallPool:
@@ -52,8 +52,8 @@ class MatchingBallPool:
     POCKETS_MIN_RADIUS = 33       # Raggio minimo in pixel per i pocket
     POCKETS_MAX_RADIUS = 50
 
-    player1_pic_pos = 1018
-    player2_pic_pos = 1356
+    PERC_PLAYER1_PIC = 0.424
+    PERC_PLAYER2_PIC = 0.565
 
     #Calibrerò meglio le costanti 
     def __init__(self, screenshot_path, debug=False, validation=False, iteration=1):
@@ -69,7 +69,7 @@ class MatchingBallPool:
         self.detection_result = None
         self.balls = []      # Lista delle palline rilevate
         self.__pockets = []    # Lista dei pocket rilevati
-        self.player1_turn = False
+        self.player_turn = 1
         self.__player1_type = "not assigned"
         self.assign_ball_step = 1
         self.player1_white_ratio = 0.0
@@ -115,7 +115,7 @@ class MatchingBallPool:
 
         return canny_threshold, proportion_tolerance, size_tolerance
 
-    def config_area(self):
+    def init_game(self):
         img_height, img_width = self.image.shape[:2]
         self.img_width = img_width
 
@@ -150,6 +150,12 @@ class MatchingBallPool:
             self.pool_coords[3] - 80
         )
 
+        player1_pic_pos = int(self.PERC_PLAYER1_PIC * img_width)
+        player2_pic_pos = int(self.PERC_PLAYER2_PIC * img_width)
+
+
+        self.__game = Game(player1_pic_pos, player2_pic_pos)
+
     def vision(self, iteration=1):
         self.finder = ObjectsFinder(self.screenshot, debug=self.debug, threshold=0.8, validation=self.validation)
         self.iteration = iteration
@@ -175,12 +181,14 @@ class MatchingBallPool:
         self.finder.preprocessing_image()
         
         if self.iteration == 1:
-            self.config_area()
+            self.init_game()
 
             pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS, self.pool_coords)
             self.__pockets = self.finder.find_pool_pockets(pocket_circle)
 
-        player_squares = self.__detect_players_pic(area=self.player_area)
+        player_squares = self.__read_turn(area=self.player_area)
+
+        self.__player_squares = player_squares
 
         ghost_ball = self.finder.detect_ghost_ball(
             Circle(17, 100, 23, self.pool_coords)
@@ -196,9 +204,8 @@ class MatchingBallPool:
         ball_circles = self.finder.find_pool_balls(circle_props, plt_show=False)
 
         # Assegna le palline ai giocatori se necessario
-        self.__player_squares = player_squares
 
-        print("Player 1 turn" if self.player1_turn else "Player 2 turn")
+        print(f"Player {self.__game.player_turn} Turn")
         print(f"{len(self.__pockets)} Pockets")
         if ghost_ball[3]:
             print("WHITE Ghost Ball")
@@ -219,7 +226,6 @@ class MatchingBallPool:
             #MoveAndShoot.reset()
         
         ball_circles, ghost_ball, player1_type = vision_output
-        print("Abstraction...")
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
@@ -227,7 +233,7 @@ class MatchingBallPool:
 
         self.__assign_player_ball_type(final_balls)
 
-        player1_type = self.__player1_type
+        player1_type = self.__game.player1_ball_type
 
         pockets = self.__pockets
         
@@ -265,59 +271,23 @@ class MatchingBallPool:
         if self.iteration < 2:
             return
         
-        if 1 <= self.assign_ball_step <= 3:
-            player_ball_circle = Circle(
+        player_ball_circle = Circle(
                 self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
                 (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
             )
-            players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
-
-            if players_balls[0].white_ratio > 0.0:
-                self.player1_white_ratio = players_balls[0].white_ratio
-                self.assign_ball_step += 1
-
-            if players_balls[1].white_ratio > 0.0:
-                self.player2_white_ratio = players_balls[1].white_ratio
-                self.assign_ball_step += 1
-            
-            if self.assign_ball_step == 3:
-                self.__player1_type = "solid" if self.player1_white_ratio < self.player2_white_ratio else "striped"
-                self.assign_ball_step += 1
-                print(f"---Player 1 type assigned: {self.__player1_type.upper()}---")
-                return
-        
-        if self.assign_ball_step == 4:
-            if self.__player1_type != "not assigned":
-                type_still_present = any(b.get_type() == self.__player1_type for b in final_balls)
-            if not type_still_present:
-                self.__player1_type = "eight" 
+        players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
+        self.__game.assign_player1_ball_type(players_balls, final_balls)
 
 
-    def __detect_players_pic(self, area=None):
+    def __read_turn(self, area=None):
         squares = self.finder.detect_square_boxes()
         if area is not None:
-            x_min, y_min, x_max, y_max = area 
-            squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_min]
+            x_min, y_min, x_max, y_max = area[0], area[1], area[2], area[3]
+            squares = [sq for sq in squares if x_min <= sq[0].x <= x_max and sq[0].y <= y_max]
             
         if squares is not None and len(squares) > 0:
-            #print(f"len find squares {len(squares)}")
-            # Ordina la lista in base al clear_count (indice 1 della tupla), decrescente
-            squares= sorted(squares, key=lambda item: item[1], reverse=True)
-            squares = squares[:2]
-            brighter_square_x = squares[0][0].x
-            if len(squares) > 1:
-                second_square_x = squares[1][0].x
-                self.player1_turn = brighter_square_x < second_square_x
-            else:
-                if squares[0][1] > 50:
-                    if squares[0][0].x <= self.player1_pic_pos:
-                        self.player1_turn = True
-                    else:
-                        self.player1_turn = False
-
-        
-        """for sq in squares:
-            print(f"Square {sq[0].x} {sq[0].y} {sq[1]}")"""
+            self.__game.read_player_turn(squares)
+            self.player_turn = self.__game.player_turn
 
         return squares
     
