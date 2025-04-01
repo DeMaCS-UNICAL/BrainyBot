@@ -4,6 +4,8 @@ from math import sqrt
 import cv2
 import numpy as np
 
+import math
+
 
 from languages.predicate import Predicate
 from platforms.desktop.desktop_handler import DesktopHandler
@@ -26,7 +28,7 @@ from AI.src.asp_mapping.color import Color
 7: Marrone
 """
 
-class BPoolColor(Color):
+class PoolBallsColor(Color):
     """
     Estensione di Color per il biliardo (8-ball pool).
     Aggiunge il concetto di 'ball_type' (cue, eight, solid, striped)
@@ -39,7 +41,7 @@ class BPoolColor(Color):
     __MAX_DISTANCE = 20  # più tollerante rispetto a Color
 
     def reset():
-        BPoolColor.__ids = count(1, 1)
+        PoolBallsColor.__ids = count(1, 1)
 
     # Dizionario con colori in formato BGR (usato in OpenCV) ordinati dal più chiaro al più scuro
     POOL_REFERENCE_COLORS_BGR = {
@@ -56,10 +58,9 @@ class BPoolColor(Color):
 
     def __init__(self, bgr=None, ball_type=None):
         super().__init__(bgr)
-        self.set_id(next(BPoolColor.__ids))
+        self.set_id(next(PoolBallsColor.__ids))
         self.__ball_type = ball_type
   
-
         if isinstance(bgr, np.ndarray):
             if bgr.ndim == 1:
                 self.__mean_color = bgr
@@ -67,20 +68,6 @@ class BPoolColor(Color):
                 self.__mean_color = np.mean(bgr, axis=(0, 1))
         else:
             self.__mean_color = np.array(bgr, dtype=np.float32)
-
-
-    def get_white_ratio(self):
-        return self.__white_ratio
-    
-    def set_white_ratio(self, white_ratio: float):
-        self.__white_ratio = white_ratio
-
-
-    def get_ball_type(self):
-        return self.__ball_type
-
-    def set_ball_type(self, ball_type):
-        self.__ball_type = ball_type
 
     @staticmethod
     def __euclidean_distance(color1, color2):
@@ -93,8 +80,8 @@ class BPoolColor(Color):
         Dato un colore (BGR) rilevato, restituisce la categoria (stringa)
         del colore più vicino tra quelle di POOL_REFERENCE_COLORS.
         """
-        return min(BPoolColor.POOL_REFERENCE_COLORS_BGR.items(),
-                key=lambda item: BPoolColor.__euclidean_distance(
+        return min(PoolBallsColor.POOL_REFERENCE_COLORS_BGR.items(),
+                key=lambda item: PoolBallsColor.__euclidean_distance(
                     detected_color, item[1]
                 ))[0]
 
@@ -104,10 +91,10 @@ class BPoolColor(Color):
         #print(f"White ratio: {white_ratio:.4f}")
 
         """
-        Estrae (o crea) un BPoolColor dalla patch, assegnando solo il valore BGR.
+        Estrae (o crea) un PoolBallsColor dalla patch, assegnando solo il valore BGR.
         La classificazione (ball type) verrà gestita successivamente.
         """
-        if isinstance(patch, BPoolColor):
+        if isinstance(patch, PoolBallsColor):
             return patch
 
         if isinstance(patch, Color):
@@ -122,41 +109,46 @@ class BPoolColor(Color):
         # Calcola il colore medio; se la patch è vuota usa [0, 0, 0]
         mean_color = np.mean(patch, axis=(0, 1)) 
 
-        new_color = BPoolColor(mean_color)  
+        new_color = PoolBallsColor(mean_color)  
         
-        BPoolColor.__colors.append(new_color)
+        PoolBallsColor.__colors.append(new_color)
         return new_color
 
 
     @classmethod
-    def assign_ball_types(cls, balls):
+    def group_balls_by_color(cls, balls):
         """
-        Raggruppa le palle per categoria di colore e, per ciascuna:
-          - "white": viene mantenuta una sola palla (tipo "cue").
-          - "black": viene mantenuta una sola palla (tipo "eight").
-          - Altri colori: se ci sono due palle, si usa sia la distanza dal colore di riferimento
-            che il white_ratio per determinare quale viene etichettata "striped" (maggiore white_ratio)
-            e quale "solid"; se c'è solo una palla, viene etichettata "striped" se il white_ratio è alto.
+        Raggruppa le palle per categoria di colore.
+        Per ogni palla, viene calcolata la distanza dal colore di riferimento e
+        il white_ratio. Restituisce un dizionario con chiave la categoria e valore
+        una lista di tuple (ball, distanza, white_ratio).
         """
         color_groups = {}
-        solid_present = False
-        striped_present = False
-
         for ball in balls:
-            color = ball.get_color()
-            detected_color = np.array(color.get_bgr(), dtype=np.float32)
+            detected_color = np.array(ball.get_color().get_bgr(), dtype=np.float32)
             category = cls.find_closest_color_category(detected_color)
-
             ball.category = category  # Salva la categoria nell'oggetto
+
             ref_color = cls.POOL_REFERENCE_COLORS_BGR[category]
-            distance = BPoolColor.__euclidean_distance(detected_color, ref_color)
-            white_ratio = ball.get_white_ratio()
+            distance = cls.__euclidean_distance(detected_color, ref_color)
+            white_ratio = ball.get_white_ratio()  # Metodo atteso sull'oggetto palla
 
             color_groups.setdefault(category, []).append((ball, distance, white_ratio))
-           
+        return color_groups
+
+    @classmethod
+    def assign_types_from_groups(cls, color_groups):
+        """
+        Assegna il ball type per ogni gruppo di colore.
+        - Per "white" e "black", viene mantenuta una sola palla.
+        - Per le altre categorie, se sono presenti due palle vengono valutate distanza e white_ratio
+          per decidere quale etichettare come "solid" o "striped"; se c'è una sola palla, il tipo
+          viene assegnato in base al white_ratio.
+        Restituisce la lista delle palle finali con il ball type assegnato.
+        """
         final_balls = []
         for category, ball_list in color_groups.items():
-            # Ordina in base alla distanza dal colore di riferimento (minore è migliore)
+            # Ordina per distanza dal colore di riferimento (minore è migliore)
             ball_list_sorted = sorted(ball_list, key=lambda x: x[1])
 
             if category in ("white", "black"):
@@ -164,21 +156,18 @@ class BPoolColor(Color):
                 ball_type = "cue" if category == "white" else "eight"
                 chosen_ball.set_type(ball_type)
                 final_balls.append(chosen_ball)
-
                 if len(ball_list_sorted) > 1:
                     print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
             else:
-                # Limita la lista a massimo 3 elementi, se ce ne sono di più.
+                # Limita a massimo 2 palle per categoria
                 ball_list_sorted = ball_list_sorted[:2]
-                ball1, d1, wr1 = ball_list_sorted[0]
-                
                 if len(ball_list_sorted) == 1:
-                    if wr1 > 0.9:
-                        ball1.set_type("striped")
-                    else:
-                        ball1.set_type("solid")
-                
+                    ball_obj, _, wr = ball_list_sorted[0]
+                    ball_obj.set_type("striped" if wr > 0.9 else "solid")
+                    final_balls.append(ball_obj)
+                    
                 elif len(ball_list_sorted) == 2:
+                    ball1, d1, wr1 = ball_list_sorted[0]
                     ball2, d2, wr2 = ball_list_sorted[1]
                     if d1 > d2 or wr1 > wr2:
                         ball1.set_type("striped")
@@ -186,11 +175,18 @@ class BPoolColor(Color):
                     else:
                         ball1.set_type("solid")
                         ball2.set_type("striped")
-            
-                for ball, _, _ in ball_list_sorted:
-                    final_balls.append(ball)        # Stampa il tipo di palla e il colore per ogni palla finale
-
+                    final_balls.extend([ball1, ball2])
         return final_balls
+
+    @classmethod
+    def assign_ball_types(cls, balls):
+        """
+        Funzione wrapper che raggruppa le palle per colore e assegna il ball type.
+        Restituisce la lista delle palle finali con il ball type assegnato.
+        """
+        groups = cls.group_balls_by_color(balls)
+        return cls.assign_types_from_groups(groups)
+    
 
 class Ball(Predicate):
     predicate_name = "ball"
@@ -205,7 +201,6 @@ class Ball(Predicate):
         self.__id = next(Ball.__ids)
         self.__x = None
         self.__y = None
-
 
     def get_id(self) -> int:
         return self.__id
@@ -224,12 +219,6 @@ class Ball(Predicate):
 
     def set_white_ratio(self, white_ratio: float):
         self.__white_ratio = white_ratio
-    
-    def set_shot_score(self, score):
-        self.__shot_score = score
-    
-    def get_shot_score(self):
-        return self.__shot_score
     
     def get_x(self):
         return self.__x
@@ -257,12 +246,6 @@ class Ball(Predicate):
     
     def set_type(self, ball_type):
         self.__type = ball_type
-
-    def set_aimed(self, aimed):
-        self.__aimed = aimed
-    
-    def is_aimed(self):
-        return self.__aimed
         
 
 class Pocket(Predicate):
@@ -468,18 +451,16 @@ def choose_dlv_system() -> DesktopHandler:
 def choose_clingo_system() -> DesktopHandler:
     return DesktopHandler(ClingoDesktopService("/usr/bin/clingo"))
 
-import math
-
 def calculate_shot_angle(cue_ball, target, pocket):
     """
     Calcola l'angolo (in gradi) tra il vettore cue_ball->target e target->pocket.
     """
-    t_w_vec = (target.get_x() - cue_ball.get_x(), target.get_y() - cue_ball.get_y())
+    t_c_vec = (target.get_x() - cue_ball.get_x(), target.get_y() - cue_ball.get_y())
     p_t_vec = (pocket.get_x() - target.get_x(), pocket.get_y() - target.get_y())
     
     # Prodotto scalare e magnitudini
-    dot = t_w_vec[0] * p_t_vec[0] + t_w_vec[1] * p_t_vec[1]
-    mag1 = math.sqrt(t_w_vec[0]**2 + t_w_vec[1]**2)
+    dot = t_c_vec[0] * p_t_vec[0] + t_c_vec[1] * p_t_vec[1]
+    mag1 = math.sqrt(t_c_vec[0]**2 + t_c_vec[1]**2)
     mag2 = math.sqrt(p_t_vec[0]**2 + p_t_vec[1]**2)
     
     if mag1 * mag2 == 0:
@@ -488,6 +469,51 @@ def calculate_shot_angle(cue_ball, target, pocket):
     # Calcola e converte l'angolo in gradi
     angle_rad = math.acos(dot / (mag1 * mag2))
     return math.degrees(angle_rad)
+
+def is_in_between(cue_ball, target, other):
+    """
+    Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'cue_ball'
+    e la pallina target, considerando la soglia BALL_RADIUS.
+    """
+    # Vettore dal punto di partenza (cue_ball) al target
+    dx = target.get_x() - cue_ball.get_x()
+    dy = target.get_y() - cue_ball.get_y()
+    segment_length = sqrt(dx**2 + dy**2)
+    if segment_length == 0:
+        return False
+
+    # Calcola la proiezione del vettore (other - cue_ball) su (target - cue_ball)
+    t = ((other.get_x() - cue_ball.get_x()) * dx + (other.get_y() - cue_ball.get_y()) * dy) / (segment_length**2)
+    
+    # Se la proiezione non cade sul segmento, non è in mezzo
+    if not (0 <= t <= 1):
+        return False
+
+    # Punto di proiezione sul segmento
+    proj_x = cue_ball.get_x() + t * dx
+    proj_y = cue_ball.get_y() + t * dy
+
+    # Distanza tra il punto proiettato e il centro della pallina 'other'
+    dist = math.sqrt((other.get_x() - proj_x)**2 + (other.get_y() - proj_y)**2)
+    
+    return dist < max(other.get_r(), target.get_r())  # Considera il raggio della pallina
+
+
+def is_path_clear(cue_ball, target, balls):
+    """
+    Verifica che non esista nessuna pallina diversa da quella bianca e dalla pallina target
+    che si trovi tra la palla bianca e la pallina target.
+    """
+
+    for other in balls:
+        if other == target:
+            continue
+        if cue_ball != None:
+            if other == cue_ball:
+                continue
+            if is_in_between(cue_ball, target, other):
+                return False
+    return True
 
 def calculate_shot_score(cue_ball, target, pocket, balls):
     """
@@ -542,56 +568,38 @@ def get_best_shot(cue_ball, balls, pockets, player_type="solid"):
             shot_score = calculate_shot_score(cue_ball, target, pocket, balls)
             # Debug: print(f"Tiro bianca->{target.get_id()}->pocket({pocket.get_x()}, {pocket.get_y()}): {shot_score:.2f}")
             if shot_score > best_score:
-                best_score = shot_score
-                best_target = target
-                best_pocket = pocket
+                best_score, best_target, best_pocket = shot_score, target, pocket
+
 
     return best_target, best_pocket, best_score
 
 
-def is_in_between(cue_ball, target, other):
-    """
-    Verifica se la pallina 'other' si trova sul segmento tra la pallina bianca 'cue_ball'
-    e la pallina target, considerando la soglia BALL_RADIUS.
-    """
-    # Vettore dal punto di partenza (cue_ball) al target
-    dx = target.get_x() - cue_ball.get_x()
-    dy = target.get_y() - cue_ball.get_y()
-    segment_length = sqrt(dx**2 + dy**2)
-    if segment_length == 0:
-        return False
+def get_target_aim(ball, pocket, cue_ball, balls):
+    move_aim = None
+    if ball and pocket:
+        dx, dy = pocket.get_x() - ball.get_x(), pocket.get_y() - ball.get_y()
+        distance = np.sqrt(dx**2 + dy**2)
+        if distance != 0:
+            # Vettore unitario dalla target ball alla pocket
+            ux = dx / distance
+            uy = dy / distance
+            # La ghost ball si posiziona "dietro" la target ball, nella direzione opposta alla pocket,
+            # a una distanza pari al diametro della pallina.
+            ghost_x = ball.get_x() - int(ux * ball.get_r())
+            ghost_y = ball.get_y() - int(uy * ball.get_r())
+            move_aim = (ghost_x, ghost_y)
+            
+            # (Opzionale) Verifica che il percorso dalla cue ball alla ghost ball sia libero:
+            ghost_dummy = Ball()
+            ghost_dummy.set_x(ghost_x)
+            ghost_dummy.set_y(ghost_y)
+            ghost_dummy.set_r(ball.get_r())
 
-    # Calcola la proiezione del vettore (other - cue_ball) su (target - cue_ball)
-    t = ((other.get_x() - cue_ball.get_x()) * dx + (other.get_y() - cue_ball.get_y()) * dy) / (segment_length**2)
+            if not is_path_clear(cue_ball, ghost_dummy, balls):
+                print("Percorso bianca -> ghost non libero!")
     
-    # Se la proiezione non cade sul segmento, non è in mezzo
-    if t < 0 or t > 1:
-        return False
+    return move_aim
 
-    # Punto di proiezione sul segmento
-    proj_x = cue_ball.get_x() + t * dx
-    proj_y = cue_ball.get_y() + t * dy
-
-    # Distanza tra il punto proiettato e il centro della pallina 'other'
-    dist = sqrt((other.get_x() - proj_x)**2 + (other.get_y() - proj_y)**2)
-    
-    return dist < max(other.get_r(), target.get_r())  # Considera il raggio della pallina
-
-def is_path_clear(cue_ball, target, balls):
-    """
-    Verifica che non esista nessuna pallina diversa da quella bianca e dalla pallina target
-    che si trovi tra la palla bianca e la pallina target.
-    """
-
-    for other in balls:
-        if other == target:
-            continue
-        if cue_ball != None:
-            if other == cue_ball:
-                continue
-            if is_in_between(cue_ball, target, other):
-                return False
-    return True
 
 def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid", current_ghost_ball= None):
     """
@@ -612,9 +620,8 @@ def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid", curr
     if cue_ball is None:
         print("Attenzione: palla bianca non trovata!")
     
-    max_score_b_pkt = -float('inf')
-    best_ball = None
-    best_pocket = None
+    best_ball, best_pocket, max_score = None, None, -float('inf')
+
     print(f"Player type: {player_type}")
 
     for ball in balls:
@@ -628,45 +635,18 @@ def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid", curr
         if player_type == "not assigned" and b_type == "eight":
             continue
         
-        curr_score_b_pkt = -float('inf')
-        best_curr_pocket = None
+        best_curr_pocket, curr_score = None, -float('inf')
         
         for pkt in pockets:
             shot_score = calculate_shot_score(cue_ball, ball, pkt, balls)
-            if shot_score > curr_score_b_pkt:
-                curr_score_b_pkt = shot_score
-                best_curr_pocket = pkt
+            if shot_score > curr_score:
+                curr_score, best_curr_pocket = shot_score, pkt
+        
                 
-        if best_curr_pocket is not None:
-            if curr_score_b_pkt > max_score_b_pkt:
-                best_ball = ball
-                best_pocket = best_curr_pocket
-                max_score_b_pkt = curr_score_b_pkt
-                
-    # Calcolo della ghost ball basato su best_ball e best_pocket:
-    move_aim = None
-    if best_ball is not None and best_pocket is not None:
-        dx = best_pocket.get_x() - best_ball.get_x()
-        dy = best_pocket.get_y() - best_ball.get_y()
-        distance = np.sqrt(dx**2 + dy**2)
-        if distance != 0:
-            # Vettore unitario dalla target ball alla pocket
-            ux = dx / distance
-            uy = dy / distance
-            # La ghost ball si posiziona "dietro" la target ball, nella direzione opposta alla pocket,
-            # a una distanza pari al diametro della pallina.
-            ghost_x = best_ball.get_x() - int(ux * best_ball.get_r())
-            ghost_y = best_ball.get_y() - int(uy * best_ball.get_r())
-            move_aim = (ghost_x, ghost_y)
-            
-            # (Opzionale) Verifica che il percorso dalla cue ball alla ghost ball sia libero:
-            ghost_dummy = Ball()
-            ghost_dummy.set_x(ghost_x)
-            ghost_dummy.set_y(ghost_y)
-            ghost_dummy.set_r(best_ball.get_r())
-
-            if not is_path_clear(cue_ball, ghost_dummy, balls):
-                print("Percorso bianca -> ghost non libero!")
-                move_aim = None
+        if best_curr_pocket and curr_score > max_score:
+            best_ball, best_pocket, max_score = ball, best_curr_pocket, curr_score
+    
+    
+    move_aim = get_target_aim(best_ball, best_pocket, cue_ball, balls)
     
     return best_ball, best_pocket, move_aim

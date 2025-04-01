@@ -15,7 +15,7 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.abstraction.abstraction import Abstraction
 from AI.src.abstraction.stack import Stack
 from AI.src.abstraction.elementsStack import ElementsStacks
-from AI.src.ball_pool.dlvsolution.helpers import AimLine, BPoolColor, Color, Ball, Pocket, MoveAndShoot, GameOver
+from AI.src.ball_pool.dlvsolution.helpers import AimLine,Color, Ball, Pocket, MoveAndShoot, GameOver, PoolBallsColor
 
 
 class MatchingBallPool:
@@ -163,7 +163,6 @@ class MatchingBallPool:
             plt.title("Screenshot")
             plt.show()
 
-        print("Vision...")
         # Carica l'immagine in scala di grigi e applica la pre-elaborazione
         self.gray = getImg(screenshot_full_path, gray=True)
         self.gray = cv2.GaussianBlur(self.gray, (5, 5), 0)
@@ -176,7 +175,6 @@ class MatchingBallPool:
         self.finder.preprocessing_image()
         
         if self.iteration == 1:
-            print("Configuring area...")
             self.config_area()
 
             pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS, self.pool_coords)
@@ -189,7 +187,6 @@ class MatchingBallPool:
         )
 
         self.gx, self.gy, self.gr, self.isWhite = ghost_ball
-        aim_line = None
 
         # Definisce l'area di ricerca per le palline (evitando i bordi)
         
@@ -209,40 +206,31 @@ class MatchingBallPool:
             print("FAKE Ghost Ball")
         else:
             print("RED Ghost Ball")
-        print(f"{len(ball_circles)} Balls\t")
+        print(f"{len(ball_circles)} Balls\n")
 
-        return ball_circles, ghost_ball, aim_line, self.__player1_type
+        return ball_circles, ghost_ball, self.__player1_type
 
     
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
         if reset:
             Ball.reset()
             Pocket.reset()
-            BPoolColor.reset()
+            PoolBallsColor.reset()
             #MoveAndShoot.reset()
         
-        ball_circles, ghost_ball, aim_line, player1_type = vision_output
+        ball_circles, ghost_ball, player1_type = vision_output
         print("Abstraction...")
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
         final_balls, ghost_ball = self.abstract_balls(ball_circles)
 
-        self.__assign_player_b_type(final_balls)
+        self.__assign_player_ball_type(final_balls)
 
         player1_type = self.__player1_type
 
         pockets = self.__pockets
-
-        aim_line, aimed_ball = self.finder.compute_target_direction(
-                                                    all_balls=final_balls,
-                                                    ghost_ball=(self.gx, self.gy, self.gr),
-                                                    area=self.pool_coords,
-                                                )
         
-        stick =  AimLine(self.STICK_COORDS[0], self.STICK_COORDS[1], self.STICK_COORDS[2], self.STICK_COORDS[3])
-        self.__aim_line = aim_line
-
         self.__balls = final_balls
         self.ghost_ball = ghost_ball
 
@@ -260,9 +248,9 @@ class MatchingBallPool:
             elif b.get_type() == "cue":
                 bianca += 1
         
-        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}\t")
+        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}\n")
 
-        return final_balls, pockets, ghost_ball, aim_line, stick, player1_type
+        return final_balls, pockets, ghost_ball, player1_type
     
     """def redetect_ghost_ball(self):
         ghost_ball = self.finder.detect_ghost_ball(
@@ -273,7 +261,7 @@ class MatchingBallPool:
 
         return ghost_ball"""
     
-    def __assign_player_b_type(self, final_balls):
+    def __assign_player_ball_type(self, final_balls):
         if self.iteration < 2:
             return
         
@@ -356,7 +344,7 @@ class MatchingBallPool:
             white_ratio : float= c.white_ratio 
 
             #print(f"x: {x} y: {y} r: {r} color: {patch}")
-            bpColor = BPoolColor.get_color(dominant_col)
+            bpColor = PoolBallsColor.get_color(dominant_col)
 
             ball_obj = Ball()
             ball_obj.set_x(x)
@@ -367,7 +355,7 @@ class MatchingBallPool:
             raw_balls.append(ball_obj)
         
         # Raggruppa le palle per categoria di colore e assegna il tipo ("piena" -"mezza" - "otto" - "bianca")
-        final_balls = BPoolColor.assign_ball_types(raw_balls)
+        final_balls = PoolBallsColor.assign_ball_types(raw_balls)
         ghost_ball = self.abstract_ghost_ball()
 
         return final_balls, ghost_ball
@@ -436,6 +424,7 @@ class MatchingBallPool:
         # (ball_center_x, ball_center_y, direction_vector, len_line)
         # dove direction_vector è una tupla (dx, dy) già normalizzata.
 
+        self.__aim_line = None
         if self.__aim_line is not None:
         
             x1, y1, x2, y2 = self.__aim_line.get_x1(), self.__aim_line.get_y1(), self.__aim_line.get_x2(), self.__aim_line.get_y2()
@@ -461,7 +450,6 @@ class MatchingBallPool:
         cv2.putText(img_copy, f"Stick", (x_above, y_above),
                         cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 255), 2)
 
-        
 
         if self.__player_squares is not None and len(self.__player_squares) != 0:
             player_cont = 0
