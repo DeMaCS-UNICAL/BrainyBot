@@ -203,6 +203,12 @@ class MatchingBallPool:
         
         ball_circles = self.finder.find_pool_balls(circle_props, plt_show=False)
 
+        player_ball_circle = Circle(
+                self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
+                (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
+            )
+        players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
+
         # Assegna le palline ai giocatori se necessario
 
         print(f"Player {self.__game.player_turn} Turn")
@@ -215,7 +221,7 @@ class MatchingBallPool:
             print("RED Ghost Ball")
         print(f"{len(ball_circles)} Balls\n")
 
-        return ball_circles, ghost_ball, self.__player1_type
+        return ball_circles, ghost_ball, self.__player1_type, players_balls
 
     
     def abstraction(self, vision_output, reset=True) -> ElementsStacks:
@@ -225,13 +231,13 @@ class MatchingBallPool:
             PoolBallsColor.reset()
             #MoveAndShoot.reset()
         
-        ball_circles, ghost_ball, player1_type = vision_output
+        ball_circles, ghost_ball, player1_type, players_balls  = vision_output
         if self.iteration == 1:
             self.__pockets = self.abstract_pockets(self.__pockets)
 
         final_balls, ghost_ball = self.abstract_balls(ball_circles)
 
-        self.__assign_player_ball_type(final_balls)
+        self.__assign_player_ball_type(final_balls, players_balls)
 
         player1_type = self.__game.player1_ball_type
 
@@ -267,15 +273,10 @@ class MatchingBallPool:
 
         return ghost_ball"""
     
-    def __assign_player_ball_type(self, final_balls):
+    def __assign_player_ball_type(self, final_balls, players_balls):
         if self.iteration < 2:
             return
         
-        player_ball_circle = Circle(
-                self.BALLS_MIN_RADIUS - 1, 70, self.BALLS_MAX_RADIUS + 2,
-                (self.X_MIN_PLAYER_AREA, 0, self.X_MAX_PLAYER_AREA, self.Y_MAX_PLAYER_AREA)
-            )
-        players_balls = self.finder.find_assigned_balls(player_ball_circle, area_threshold=10, circularity_threshold=0.5)
         self.__game.assign_player1_ball_type(players_balls, final_balls)
 
 
