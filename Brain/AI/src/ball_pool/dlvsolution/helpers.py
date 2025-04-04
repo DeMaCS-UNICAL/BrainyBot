@@ -410,16 +410,6 @@ class Game(Predicate):
         self.player_white_ratio = [0.0, 0.0]
         self.player1_ball_type = "not assigned"
 
-
-    def set_player_turn(self, player_turn):
-        self.player_turn = player_turn
-    
-
-    def set_player_white_ratio(self,player, white_ratio):
-        self.player_white_ratio[player-1] = white_ratio
-        
-    def set_player1_ball_type(self, ball_type):
-        self.player1_ball_type = ball_type
     
     def read_player_turn(self, squares):
         squares= sorted(squares, key=lambda item: item[1], reverse=True)
@@ -447,11 +437,11 @@ class Game(Predicate):
         if detected_left_wr == 0.0 and detected_right_wr == 0.0:
             return
         
-        if self.player_white_ratio[0] != 0 and self.player_turn == 1 and detected_left_wr > 0.0:
+        if self.player_white_ratio[0] == 0.0 and self.player_turn == 1 and detected_left_wr > 0.0:
             self.player_white_ratio[0] = detected_left_wr
             print(f"Assegnato {detected_left_wr}")
 
-        elif self.player_white_ratio[1] != 0 and  self.player_turn == 2 and detected_right_wr > 0.0:
+        elif self.player_white_ratio[1]  == 0.0 and  self.player_turn == 2 and detected_right_wr > 0.0:
             self.player_white_ratio[1] = detected_right_wr
             print(f"Assegnato {detected_right_wr}")
 

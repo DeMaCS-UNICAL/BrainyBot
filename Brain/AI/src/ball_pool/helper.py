@@ -80,12 +80,13 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         validation=(vision_val is not None),
         iteration=iteration
     )
+    feedback = Feedback()
 
-    MAX_ITERATIONS = 6   # Per evitare loop infiniti
+    MAX_ITERATIONS = 5   # Per evitare loop infiniti
+    SHOOT_SCALE_FACTOR = 0.6
     iteration = 1
 
     while True:
-        feedback = Feedback()
         if iteration >1:
             feedback.take_screenshot()
         
@@ -94,11 +95,14 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
         s_x1, s_y1, s_x2, s_y2 = matcher.STICK_COORDS
 
+        shoot_power = s_y2
+
         # Verifica il turno del giocatore
-        player1_turn = matcher.player_turn
-        player1_turn = True  # Forzatura per debugging
-        if not player1_turn:
+        player_turn = matcher.player_turn
+        #player_turn = True  # Forzatura per debugging
+        if not player_turn == 1:
             iteration += 1
+            print("WAITING FOR PLAYER 1")
             time.sleep(1.5)
             continue
         if iteration > 1:
@@ -116,7 +120,6 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                     x_target, y_target = chosen_pocket.get_x(), chosen_pocket.get_y()
                     tolerance = 50
                 
-
                 # Recupera la posizione corrente della ghost ball
                 temp_g_x, temp_g_y = ghost_ball.get_coordinates()
                 if temp_g_x == 400 and temp_g_y == 400:
@@ -145,12 +148,15 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
             print(f"Target ball: {chosen_ball.get_type()} in posizione ({x_target}, {y_target})")
             print(f"Distanza tra ghost ball e target: {dist}")
+
             if dist < tolerance:
-                shoot_power = s_y2
+                shoot_power *= 0.70
+                shoot_power = int(shoot_power)
                 break
             
             # Calcola lo spostamento del 30% della differenza tra ghost ball e target,
             # applicando il segno corretto in base alla posizione della ghost ball.
+
             new_x = x_target + int(0.25 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
             new_y = y_target + int(0.25 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
 
