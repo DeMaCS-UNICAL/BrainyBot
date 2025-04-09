@@ -130,7 +130,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
     if not debug:
         plt.ion()
 
-    template_matches_list,candyMatrix = matchingCandy.search()
+    template_matches_list,candyMatrix,_ = matchingCandy.search()
     input = asp_input(candyMatrix)
     #for e in input:
         #print(ASPMapper.get_instance().get_string(e) + ".")
@@ -163,7 +163,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         swap: Swap = swap1
         if swap == None:
             print("No moves found. Maybe there is no candy on screen?")
-            template_matches_list,candyMatrix = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None).search()
+            template_matches_list,candyMatrix,_ = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None).search()
         else:
             # draw
             

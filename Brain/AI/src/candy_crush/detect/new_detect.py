@@ -40,7 +40,7 @@ def get_color(strg) -> tuple:
     return nameColor[RED]
 
 class MatchingCandy:
-    def __init__(self, screenshot,difference:tuple, thresholds:dict, debug=False,validation=False):
+    def __init__(self, screenshot,difference:tuple, thresholds:dict, debug=False,validation=False, sprites=SPRITES):
         #
         # Use Matrix2.png for testing
         #
@@ -55,6 +55,7 @@ class MatchingCandy:
         self.threshold_dictionary=thresholds
         self.object_matrix=None
         self.first=True
+        self.sprites=sprites
 
     def vision(self, grid_changed=True, benchmark=False):
         grid_changed=self.first
@@ -69,12 +70,12 @@ class MatchingCandy:
                 if not self.debug:
                     plt.pause(0.1)
         if grid_changed:
-            to_return = finder.find(TemplateMatch(SPRITES,self.threshold_dictionary))
+            to_return = finder.find(TemplateMatch(self.sprites,self.threshold_dictionary))
 
             return to_return
         else:
             print("Looking for existing matrix") if not benchmark else None
-            return finder.find_from_existing_matrix(SimplifiedTemplateMatch(SPRITES,self.__distance),self.object_matrix)
+            return finder.find_from_existing_matrix(SimplifiedTemplateMatch(self.sprites,self.__distance),self.object_matrix)
     
     def abstraction(self,vision_output, benchmark=False):
         gridifier = Abstraction()
@@ -101,14 +102,14 @@ class MatchingCandy:
         #return self.__graph
         self.object_matrix=objectMatrix
         self.__distance=objectMatrix.delta
-        return objectMatrix
+        return objectMatrix,matrix_copy
     
     def search(self, benchmark=False) -> tuple[list,ObjectMatrix]:
         #self.__graph = self.abstraction(self.vision())
         #return self.__graph
         template_matches_list = self.vision(False, benchmark)
-        matrix = self.abstraction(template_matches_list.copy(), benchmark)
-        return template_matches_list,matrix
+        matrix,to_plot = self.abstraction(template_matches_list.copy(), benchmark)
+        return template_matches_list,matrix,to_plot
 
     def get_matrix(self):
         return self.__matrix
