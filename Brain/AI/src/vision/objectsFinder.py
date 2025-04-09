@@ -1,12 +1,12 @@
 import os
-import sys
 import cv2
 import numpy as np
 import mahotas
-import pytesseract as ts
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
+from paddleocr import PaddleOCR
+import logging
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
@@ -25,6 +25,8 @@ class ObjectsFinder:
                         Container:self._detect_container,
                         Rectangle:self._find_rectangles,
                         TextRectangle:self._find_text_or_number}
+        
+        logging.getLogger('ppocr').setLevel(logging.ERROR)
 
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
@@ -34,6 +36,7 @@ class ObjectsFinder:
         self.__generic_object_methodName = 'cv2.TM_CCOEFF_NORMED'
         self.__generic_object_method = eval(self.__generic_object_methodName)
         self.__threshold=threshold
+        self.__paddle = None
         #self.__graph = CandyGraph(difference)
         
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
@@ -309,40 +312,37 @@ class ObjectsFinder:
         boxes, hierarchy = cv2.findContours(mat_contour, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         return boxes, hierarchy[0]
 
-    def __find_text(self, rectangle:OutputRectangle) -> str:
-        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
-        elem = ts.image_to_string(img, config='--psm 8 --oem 3') 
-        return elem if elem != '' else None
+    def __extract_text_with_paddle(self, rectangle: OutputRectangle):
+        if self.__paddle is None:
+            self.__paddle = PaddleOCR(use_angle_cls=False, lang='en')
+        img = self.extract_subimage(self.__img_matrix, rectangle).copy()
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        results = self.__paddle.ocr(img_rgb, cls=False)
+        return [line[1][0] for line in results[0]] if results != [None] else []
 
-    def __find_number(self, search_info:TextRectangle) -> int:
-        rectangle=search_info.rectangle
-        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
-        # Upscale the image to improve the OCR if the image is too small
-        if img.shape[0] < 150 or img.shape[1] < 150:
-            img = cv2.resize(img, (round(img.shape[1]*1.5), round(img.shape[0]*1.5)))
-        elem = ts.image_to_string(img, config='--psm 6 --oem 1 -c tessedit_char_whitelist=0123456789')
-        if elem == '':
-            elem = ts.image_to_string(img, config='--psm 7 --oem 1 -c tessedit_char_whitelist=0123456789')
-        try:
-            return int(elem)
-        except:
-            return None
-    
-    def __find_text_from_dictionary(self, search_info:TextRectangle) -> str:
-        rectangle=search_info.rectangle
-        dictionary_path = search_info.dictionary
-        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
-        elem = ts.image_to_string(img, config='--psm 8 --oem 3 --user-words {}'.format(dictionary_path))
-        return elem if elem != '' else None
+    def __find_text(self, rectangle: OutputRectangle) -> str:
+        texts = self.__extract_text_with_paddle(rectangle)
+        return texts[0] if texts else None
 
-    def __find_text_from_regex(self,search_info:TextRectangle) -> str:
-        rectangle=search_info.rectangle
-        regex = search_info.regex
-        img = self.extract_subimage(self.__img_matrix,rectangle).copy()
-        elem = ts.image_to_string(img, config='--psm 8 --oem 3')
-        if regex.match(elem):
-            return elem
-        else:
-            return None        
+    def __find_number(self, search_info: TextRectangle) -> int:
+        texts = self.__extract_text_with_paddle(search_info.rectangle)
+        numbers = [text for text in texts if text.isdigit()]
+        return int(numbers[0]) if numbers else None
+
+    def __find_text_from_dictionary(self, search_info: TextRectangle) -> str:
+        texts = self.__extract_text_with_paddle(search_info.rectangle)
+        with open(search_info.dictionary, 'r') as file:
+            dictionary_words = set(word.strip() for word in file.readlines())
+        for text in texts:
+            if text in dictionary_words:
+                return text
+        return None
+
+    def __find_text_from_regex(self, search_info: TextRectangle) -> str:
+        texts = self.__extract_text_with_paddle(search_info.rectangle)
+        for text in texts:
+            if search_info.regex.match(text):
+                return text
+        return None
 
     
