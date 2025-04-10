@@ -109,7 +109,7 @@ class MatchingCandy:
         #return self.__graph
         template_matches_list = self.vision(False, benchmark)
         matrix,to_plot = self.abstraction(template_matches_list.copy(), benchmark)
-        return template_matches_list,matrix,to_plot
+        return template_matches_list,matrix,self.__matrix.copy()
 
     def get_matrix(self):
         return self.__matrix

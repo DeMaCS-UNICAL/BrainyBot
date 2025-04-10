@@ -1,4 +1,4 @@
-from AI.src.candy_crush.helper import candy_crush,MatchingCandy
+from AI.src.candy_crush.helper import candy_crush,MatchingCandy,draw
 import constants
 import os
 import subprocess
@@ -8,13 +8,16 @@ import  cv2
 from AI.src.abstraction.helpers import getImg
 from matplotlib import pyplot as plt
 import argparse
-
+import random 
 SRC_PATH = os.path.dirname(__file__)  # Where your .py file is located
 RESOURCES_PATH = os.path.join(SRC_PATH, 'resources')
 SPRITE_PATH = os.path.join(RESOURCES_PATH, 'match3')
 SCREENSHOTS_PATH= os.path.join(constants.SCREENSHOT_PATH,'match3')
 GROUND_TRUTH = os.path.join(SRC_PATH, 'ground_truth')
 
+def get_center_color(img):
+    h, w, _ = img.shape
+    return img[h // 2, w // 2].tolist()  # ritorna [R, G, B]
 
 def load_recursive(current_path, base_path, sprites, distances):
     rel_path = os.path.relpath(current_path, base_path)
@@ -71,18 +74,37 @@ def process_screenshots_recursively(current_path,base_path, sprites, distances):
             output_file = os.path.join(GROUND_TRUTH, screenshot.strip(".png") + '.txt')
             print(output_file)
             # Crea le directory di destinazione se non esistono
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            with open(output_file, 'w') as f:
-                with redirect_stdout(f):
-                    for row in candyMatrix.get_cells():
-                        for cell in row:
-                            value=cell.get_value()
-                            if value != None:
-                                print (cell.x,cell.y,value.strip(".png"))
+            generate_ground_truth(sprites, game_path, candyMatrix, to_plot, output_file)
             subprocess.run(["code", output_file])
             plt.imshow(to_plot)
             plt.title(f"ABSTRACTION")
             plt.show()
+
+def generate_ground_truth(sprites, game_path, candyMatrix, to_plot, output_file):
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    met_templates = {}
+    met_templates[""]=""
+    colors = {}
+    id=0
+    width,heigth = candyMatrix.delta[0], candyMatrix.delta[1]
+    with open(output_file, 'w') as f:
+        with redirect_stdout(f):
+            for row in candyMatrix.get_cells():
+                for cell in row:
+                    value=cell.get_value()
+                            
+                    if value not in colors and value in sprites[game_path]:
+                        img = sprites[game_path][value]
+                        colors[value] = get_center_color(img)
+                    elif value not in colors:
+                                # Se manca, fallback su colore random
+                        colors[value] = [0,0,0]
+                                
+                    if value not in met_templates:
+                        id+=1
+                        met_templates[value]=id
+                    print (cell.x,cell.y,met_templates[value])                            
+                    draw(to_plot,(cell.x,cell.y),met_templates[value],width,heigth, colors[value] )
 
 
 msg = "Description"
