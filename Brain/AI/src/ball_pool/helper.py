@@ -61,6 +61,7 @@ def persist_threshold(value):
 
 
 def swipe_command(x1, y1, x2, y2):
+    x1, y1, x2, y2 = abs(x1), abs(y1), abs(x2), abs(y2)
     """Esegue il comando swipe tramite il client."""
     os.chdir(CLIENT_PATH)
     os.system(
@@ -82,9 +83,11 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
     )
     feedback = Feedback()
 
-    MAX_ITERATIONS = 5   # Per evitare loop infiniti
+    MAX_ITERATIONS = 4   # Per evitare loop infiniti
     SHOOT_SCALE_FACTOR = 0.6
     iteration = 1
+    sleeptime = 7.5
+    training_mode = True
 
     while True:
         if iteration >1:
@@ -100,7 +103,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         # Verifica il turno del giocatore
         player_turn = matcher.player_turn
         #player_turn = True  # Forzatura per debugging
-        if not player_turn == 1:
+        if not training_mode and not player_turn == 1:
             iteration += 1
             print("WAITING FOR PLAYER 1")
             time.sleep(1.5)
@@ -113,9 +116,9 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
     
                 print(f"Palla rilevata in pocket: {chosen_pocket.get_id()}")
                 if move_aim is not None:
-                    print(f"Move aim: {move_aim}")
+                    #print(f"Move aim: {move_aim}")
                     x_target, y_target = move_aim[0], move_aim[1]
-                    tolerance = 16
+                    tolerance = 33
                 else:
                     x_target, y_target = chosen_pocket.get_x(), chosen_pocket.get_y()
                     tolerance = 50
@@ -123,7 +126,7 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
                 # Recupera la posizione corrente della ghost ball
                 temp_g_x, temp_g_y = ghost_ball.get_coordinates()
                 if temp_g_x == 400 and temp_g_y == 400:
-                    print("Ghost ball NON TROVATA, swipo e redetecto")
+                    #print("Ghost ball NON TROVATA, swipo e redetecto")
                     need_to_redetect_cue_ball = True
                     # Esegue il comando swipe per muovere la ghost ball verso il punto intermedio
                     swipe_command(temp_g_x, temp_g_y, s_x1, s_y1)
@@ -139,8 +142,9 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
         while moves_before_shoot < MAX_ITERATIONS:
             if iteration == 1:
                 shoot_power = s_y2
+                sleeptime =4.5
                 break
-            
+            sleeptime = 7.5
             # Calcola la distanza corrente tra ghost ball (g_x, g_y) e target (x_target, y_target)
             dx_total = abs(g_x - x_target)
             dy_total = abs(g_y - y_target)
@@ -157,13 +161,25 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
             # Calcola lo spostamento del 30% della differenza tra ghost ball e target,
             # applicando il segno corretto in base alla posizione della ghost ball.
 
-            new_x = x_target + int(0.25 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
-            new_y = y_target + int(0.25 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
+            new_x = x_target + int(0.30 * abs(g_x - x_target)) * (1 if g_x < x_target else -1)
+            new_y = y_target + int(0.30 * abs(g_y - y_target)) * (1 if g_y < y_target else -1)
 
             #matcher.show_result()
+            if dist > 80:
+                num_swipe = int((dist / tolerance) / 10)
+                num_swipe = max (1, num_swipe)
+                num_swipe = min (2, num_swipe)
+            else:
+                num_swipe = int(dist - tolerance)
+                num_swipe = max (1, num_swipe)
+                num_swipe = min (4, num_swipe)
+                num_swipe = max (1, num_swipe)
 
+               
+            
             # Esegue il comando swipe per muovere la ghost ball verso il nuovo punto intermedio
-            swipe_command(g_x, g_y, new_x, new_y)
+            for i in range(num_swipe):
+                swipe_command(g_x, g_y, new_x, new_y)
 
             feedback.take_screenshot()
             vision = matcher.vision(iteration)
@@ -177,12 +193,12 @@ def ball_pool(screenshot_path, debug=True, vision_val=None, abstraction_val=True
 
 
         # Swipe finale con lo stick per tirare la pallina verso la pocket
-        print(f"TIRANDO{' per tempo' if moves_before_shoot == MAX_ITERATIONS else ''}")
+        #print(f"TIRANDO{' per tempo' if moves_before_shoot == MAX_ITERATIONS else ''}")
         swipe_command(s_x1, s_y1, s_x2, int(shoot_power))
 
         iteration += 1
         print("------------------------")
-        time.sleep(7.5)
+        time.sleep(sleeptime)
         
 
             

@@ -184,6 +184,8 @@ class MatchingBallPool:
 
             pocket_circle = Circle(self.POCKETS_MIN_RADIUS, 40, self.POCKETS_MAX_RADIUS, self.pool_coords)
             self.__pockets = self.finder.find_pool_pockets(pocket_circle)
+            print(f"{len(self.__pockets)} Pockets")
+
 
         player_squares = self.__read_turn(area=self.player_area)
 
@@ -211,15 +213,14 @@ class MatchingBallPool:
 
         # Assegna le palline ai giocatori se necessario
 
-        print(f"Player {self.__game.player_turn} Turn")
-        print(f"{len(self.__pockets)} Pockets")
-        if ghost_ball[3]:
+        print(f"Player {self.__game.player_turn} TURN")
+        """if ghost_ball[3]:
             print("WHITE Ghost Ball")
         elif ghost_ball[0] == 400:
             print("FAKE Ghost Ball")
         else:
             print("RED Ghost Ball")
-        print(f"{len(ball_circles)} Balls\n")
+        print(f"{len(ball_circles)} Balls\n")"""
 
         return ball_circles, ghost_ball, self.__player1_type, players_balls
 
@@ -260,7 +261,7 @@ class MatchingBallPool:
             elif b.get_type() == "cue":
                 bianca += 1
         
-        print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}\n")
+        #print(f"Piena: {piena} Mezza: {mezza} Otto: {otto} Bianca: {bianca}\n")
 
         return final_balls, pockets, ghost_ball, player1_type
     

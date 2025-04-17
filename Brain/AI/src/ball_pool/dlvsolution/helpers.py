@@ -156,8 +156,8 @@ class PoolBallsColor(Color):
                 ball_type = "cue" if category == "white" else "eight"
                 chosen_ball.set_type(ball_type)
                 final_balls.append(chosen_ball)
-                if len(ball_list_sorted) > 1:
-                    print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
+                #if len(ball_list_sorted) > 1:
+                    #print(f"Attenzione: rilevate più palle {category}; ne è stata mantenuta solo una come {ball_type}.")
             else:
                 # Limita a massimo 2 palle per categoria
                 ball_list_sorted = ball_list_sorted[:2]
@@ -441,7 +441,7 @@ class Game(Predicate):
             self.player_white_ratio[0] = detected_left_wr
             print(f"Assegnato {detected_left_wr}")
 
-        elif self.player_white_ratio[1]  == 0.0 and  self.player_turn == 2 and detected_right_wr > 0.0:
+        if self.player_white_ratio[1]  == 0.0 and  self.player_turn == 2 and detected_right_wr > 0.0:
             self.player_white_ratio[1] = detected_right_wr
             print(f"Assegnato {detected_right_wr}")
 
@@ -565,7 +565,7 @@ def calculate_shot_score(cue_ball, target, pocket, balls):
     
     # Verifica il percorso dalla bianca al target
     if is_path_clear(cue_ball, target, balls):
-        score += 50
+        score += 65
     
     # Verifica il percorso dal target alla pocket
     if is_path_clear(target, pocket, balls):
@@ -574,7 +574,7 @@ def calculate_shot_score(cue_ball, target, pocket, balls):
     pocket_distance = math.sqrt((target.get_x() - pocket.get_x())**2 + (target.get_y() - pocket.get_y())**2)
     if cue_ball is not None:
         cue_ball_b_distance = math.sqrt((cue_ball.get_x() - target.get_x())**2 + (cue_ball.get_y() - target.get_y())**2)
-        score += max(0, 70 - int(cue_ball_b_distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
+        score += max(0, 100 - int(cue_ball_b_distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
 
     score += max(0, 100 - int(pocket_distance/ 16))  # ad es., se la distanza è 60, aggiungiamo 40
 
@@ -655,8 +655,8 @@ def get_best_pair_to_shoot(balls: list, pockets: list, player_type="solid", curr
     """
     cue_ball = next((b for b in balls if b.get_type() == "cue"), None)
     
-    if cue_ball is None:
-        print("Attenzione: palla bianca non trovata!")
+    #if cue_ball is None:
+        #print("Attenzione: palla bianca non trovata!")
     
     best_ball, best_pocket, max_score = None, None, -float('inf')
 
