@@ -73,9 +73,9 @@ class Validation:
             if cost_matrix[i, j] > distance_threshold: 
                 false_positives_by_label[detected_objects[i][1]] += 1
                 false_negatives_by_label[ground_truth[j][1]] += 1
-            else:
-                matched_detected[i] = True
-                matched_ground_truth[j] = True
+   
+            matched_detected[i] = True
+            matched_ground_truth[j] = True
         
         for i, matched in enumerate(matched_detected):
             if not matched:
