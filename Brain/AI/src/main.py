@@ -19,7 +19,8 @@ def Start(screenshot,args,iteration=0):
     if args.test!=None:
         vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
         abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
-    return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration)
+    benchmark = True if args.benchmark else False
+    return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration, benchmark)
 
 
 def validate_game(args):
@@ -55,15 +56,19 @@ if __name__ == '__main__':
     parser.add_argument("-dV", "--debugVision", action="store_true", help="Debug screenshot")
     parser.add_argument("-t", "--test", type=str, help="screenshots to test prefix")
     parser.add_argument("-s", "--screenshot", type=str, help=f"specific screenshot filename (looks up in {constants.SCREENSHOT_PATH}))")
+    parser.add_argument("-b", "--benchmark", action="store_true", help="Benchmark mode")
     
     args = parser.parse_args()
-    
+
     
     #game = parser.parse_args()
     #print (f"Taking first screenshot from {constants.SCREENSHOT_SERVER_IP}...")
     # TODO: change ip!
 
-    if args.test == None:
+    if args.benchmark:
+        print("Benchmark mode")
+        Start(constants.SCREENSHOT_FILENAME,args)
+    elif args.test == None:
         screenshot = constants.SCREENSHOT_FILENAME
            
         if args.screenshot!=None:

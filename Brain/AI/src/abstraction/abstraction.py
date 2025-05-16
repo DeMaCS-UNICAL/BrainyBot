@@ -55,7 +55,8 @@ class Abstraction:
             for c in range(len(matrix[r])):
                 if matrix[r][c]!=None:
                     if labelMatrix and isinstance(matrix[r][c],OutputTemplateMatch) :
-                        print(matrix[r][c].x,matrix[r][c].y,matrix[r][c].label)
+                        # INFO: commented the print
+                        #print(matrix[r][c].x,matrix[r][c].y,matrix[r][c].label)
                         matrix[r][c]=matrix[r][c].label
                     else:
                         matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
