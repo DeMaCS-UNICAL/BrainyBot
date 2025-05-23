@@ -44,7 +44,7 @@ def validate_game(args):
     while(not_done):
         outputs=[]
         for filename in os.listdir(constants.SCREENSHOT_PATH):
-            if filename.startswith(args.test):
+            if filename.startswith(args.validate):
                 screenshot = filename
                 print(f"{screenshot}")
                 outputs.append(Start(screenshot,args,it))

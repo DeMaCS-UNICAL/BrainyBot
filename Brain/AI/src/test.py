@@ -16,12 +16,12 @@ def add_distinctive_argument(parser,required=False):
     parser.add_argument("-t", "--test", type=str, required=required, help=f"specific screenshot filename (looks up in {constants.SCREENSHOT_PATH}))")
 
 def execute(args):
-    screenshot = args.screenshot
+    screenshot = args.test
     Start(screenshot,args)
 
 
-def Start(screenshot):
-    return gameDictionary[args.games](screenshot,True)
+def Start(screenshot,args):
+    return gameDictionary[args.games](screenshot,args.debugVision)
 
 
 if __name__ == '__main__':

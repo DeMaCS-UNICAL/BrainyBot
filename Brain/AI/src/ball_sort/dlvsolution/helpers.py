@@ -43,13 +43,13 @@ class Tube(Predicate):
         Tube.__ids=count(1,1)
 
     def __init__(self, x=None, y=None, ):
-        Predicate.__init__(self, [("id", int)])
+        Predicate.__init__(self, [("id", str)])
         self.__id = None
         self.__balls = []
         self.__x = x
         self.__y = y
 
-    def get_id(self) -> int:
+    def get_id(self) -> str:
         return self.__id
 
     def set_id(self, id):
@@ -81,7 +81,7 @@ class On(Predicate):
     predicate_name = "on"
 
     def __init__(self, ball_above=None, ball_below=None, tube=None, step=None):
-        Predicate.__init__(self, [("ball_above", int), ("ball_below", int), ("tube", int), ("step", int)])
+        Predicate.__init__(self, [("ball_above", int), ("ball_below", int), ("tube", str), ("step", int)])
         self.__ball_above = ball_above
         self.__ball_below = ball_below
         self.__tube = tube
@@ -101,7 +101,7 @@ class On(Predicate):
     def set_ball_below(self, ball_below):
         self.__ball_below = ball_below
 
-    def get_tube(self) -> int:
+    def get_tube(self) -> str:
         return self.__tube
 
     def set_tube(self, tube):
@@ -118,7 +118,7 @@ class Move(Predicate):
     predicate_name = "move"
 
     def __init__(self, ball=None, tube=None, step=None):
-        Predicate.__init__(self, [("ball", int), ("tube", int), ("step", int)])
+        Predicate.__init__(self, [("ball", int), ("tube", str), ("step", int)])
         self.__ball = ball
         self.__tube = tube
         self.__step = step
@@ -129,7 +129,7 @@ class Move(Predicate):
     def set_ball(self, ball):
         self.__ball = ball
 
-    def get_tube(self) -> int:
+    def get_tube(self) -> str:
         return self.__tube
 
     def set_tube(self, tube):
