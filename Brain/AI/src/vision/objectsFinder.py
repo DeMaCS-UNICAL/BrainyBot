@@ -5,6 +5,8 @@ import mahotas
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
+import matplotlib
+matplotlib.use('TkAgg')
 from paddleocr import PaddleOCR
 import logging
 

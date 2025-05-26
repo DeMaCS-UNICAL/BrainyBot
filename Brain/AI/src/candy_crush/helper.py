@@ -28,9 +28,10 @@ class CCSValidation:
          self.previous_distances={}
          self.previous_thresholds={}
 
-def asp_input(matrix):
+def asp_input(input):
     #to_return = get_input_dlv_nodes(graph)
     #to_return.extend(get_edges(graph))
+    matrix = input[1]
     to_return = get_input_dlv_cells(matrix)
     return to_return
 
@@ -131,7 +132,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         plt.ion()
 
     template_matches_list,candyMatrix,_ = matchingCandy.search()
-    input = asp_input(candyMatrix)
+    input = asp_input(("",candyMatrix))
     #for e in input:
         #print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
@@ -193,8 +194,8 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
             os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
             time.sleep(1)
             feedback = Feedback()
-            success,candyMatrix,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
-
+            success,abstraction,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
+            matrix = abstraction[1]
 def read_validation_data(vision_validation, abstraction_validation):
     validation_vision=[]
     validation_abstraction=[]

@@ -102,13 +102,13 @@ class MatchingCandy:
         #return self.__graph
         self.object_matrix=objectMatrix
         self.__distance=objectMatrix.delta
-        return objectMatrix,matrix_copy
+        return matrix_copy,objectMatrix
     
     def search(self, benchmark=False) -> tuple[list,ObjectMatrix]:
         #self.__graph = self.abstraction(self.vision())
         #return self.__graph
         template_matches_list = self.vision(False, benchmark)
-        matrix,to_plot = self.abstraction(template_matches_list.copy(), benchmark)
+        to_plot,matrix = self.abstraction(template_matches_list.copy(), benchmark)
         return template_matches_list,matrix,self.__matrix.copy()
 
     def get_matrix(self):
