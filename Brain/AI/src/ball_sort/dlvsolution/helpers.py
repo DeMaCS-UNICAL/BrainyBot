@@ -42,9 +42,9 @@ class Tube(Predicate):
     def reset():
         Tube.__ids=count(1,1)
 
-    def __init__(self, id=None,x=None, y=None):
+    def __init__(self, x=None, y=None, ):
         Predicate.__init__(self, [("id", str)])
-        self.__id = id
+        self.__id = None
         self.__balls = []
         self.__x = x
         self.__y = y
@@ -79,6 +79,7 @@ class Tube(Predicate):
 
 class On(Predicate):
     predicate_name = "on"
+
     def __init__(self, ball_above=None, ball_below=None, tube=None, step=None):
         Predicate.__init__(self, [("ball_above", int), ("ball_below", int), ("tube", str), ("step", int)])
         self.__ball_above = ball_above
@@ -205,7 +206,7 @@ def get_balls_position(tubes: list[Tube]):
         cont=0
         for ball in tube.get_balls():
             on.append(On(ball.get_id(), ball_below, tube.get_id(), 1))
-            as_stacks.append("on_color("+str(ball.get_color())+","+str(cont)+","+str(tube.get_id())+",1)")
+            as_stacks.append("on_color("+str(ball.get_color())+","+str(cont)+",\""+tube.get_id()+"\",1)")
             cont+=1
             ball_below = ball.get_id()
     return on, as_stacks

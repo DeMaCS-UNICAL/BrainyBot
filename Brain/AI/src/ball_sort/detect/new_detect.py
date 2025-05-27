@@ -68,13 +68,14 @@ class MatchingBalls:
 
     def vision(self):
         self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)
-        
         self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
 
         if not self.validation:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
             plt.title(f"Screenshot")
             plt.show(block=self.debug)
+            if not self.debug: 
+                plt.pause(0.5)
 
         self.__gray = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),gray=True)
         self.__output = self.__image.copy()  # Used to display the result
@@ -178,5 +179,7 @@ class MatchingBalls:
         plt.imshow(result)
         plt.title(f"vision+abstraction")
         plt.show(block=self.debug)
+        if not self.debug: 
+            plt.pause(0.5)
 
 #### prendo il contorno del template che fa match, faccio i contorni dello screenshot e mi prendo solo i contorni uguali a quelli del template. Trovo le palle: per ogni palla controllo che i punti massimi lungo gli assi siano contenuti nei contorni: ogni contorno sarà un container, la palla verrà associata al container

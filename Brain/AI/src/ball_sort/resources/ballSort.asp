@@ -77,8 +77,8 @@ next_movable(B):-nextOnTop(B,T,S),nextOnTop(B1,T1,S), B!=B1, ball(B,C), ball(B1,
 next_movable(B):- nextOnTop(B,T,S), size(T1,S,0), not ballMoved(B,S-1).
 freeToMove(N):- #count{B : next_movable(B)}=N.
 %OPTIMIZE
-:~ #count{T:singleColorTubeWithColorMax(T, C, S),step(S)}=N1, #count{T:singleColorTubeWithColorMax(T, C, S),not step(S)}=N2, color(C), N2>=N1. [N2-N1@10, N1,N2,C]
-:~ wrongs(N). [N@9,N]
+:~ #count{T:singleColorTubeWithColorMax(T, C, S),step(S)}=N1, #count{T:singleColorTubeWithColorMax(T, C, S),not step(S)}=N2, color(C), N2>=N1. [N2-N1@9, N1,N2,C]
+:~ wrongs(N). [N@10,N]
 :~ freeToMove(N),tubeSize(M),fullTube(T). [T*M-N@8, N,M,T]
 
 %%%%%%%%%%%:~ move(B,T,S), move(B1,T1,S-1), T!=T1. [1@7, B,B1,T,T1,S]
