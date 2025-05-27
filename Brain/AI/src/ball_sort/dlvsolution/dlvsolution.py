@@ -77,13 +77,14 @@ class DLVSolution:
             # for a in range(0,LOOK_AHEAD):
             self.__dinamic_facts.add_program(f"step({str(step)}).")
 
-
             answer_sets = self.__handler.start_sync()
 
             self.__dinamic_facts.clear_all()
             print (f"Answer sets: {len(answer_sets.get_optimal_answer_sets())}")
             assert_true(answer_sets is not None,"No solutions found for this level.")
             
+            print(answer_sets.get_errors())
+            print(answer_sets._errors)
             #assert_true(answer_sets.get_errors() is None,
             #            "Found error:\n" + str(answer_sets.get_errors()))
             assert_true(len(answer_sets.get_optimal_answer_sets()) != 0,"No optimal solutions found for this level.")

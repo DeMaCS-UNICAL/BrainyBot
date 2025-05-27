@@ -246,7 +246,6 @@ class ObjectsFinder:
             if self.debug and not self.validation:
                 plt.imshow(cv2.cvtColor(self.__img_matrix,cv2.COLOR_BGR2RGB))
                 plt.show()
-                cv2.waitKey(0)
         return balls
     
     
@@ -272,15 +271,19 @@ class ObjectsFinder:
         _,tem_axis,tem_a = cv2.fitEllipse(tem_cnt)
         contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         containers = [cnt for cnt in contours if cv2.matchShapes(cnt,tem_cnt,3,0.0)<0.02]
+        print("possible containers",len(containers))
         coordinates = []
         to_return=[]
         for i in range(len(containers)):
             (x,y),axis,cont_a = cv2.fitEllipse(containers[i])
             if not rotate and abs(tem_a+cont_a)%179>5: #the 2 contours are aligned
-                    continue
+                print("nope, rotated")
+                continue
             if proportion_tolerance!=0 and abs(axis[1]/axis[0]-tem_axis[1]/tem_axis[0])>tem_axis[1]/tem_axis[0]*proportion_tolerance:
+                print("nope, wrong proportion")
                 continue
             if size_tolerance!=0 and abs(axis[1]-tem_axis[1])>tem_axis[1]*size_tolerance:
+                print("nope, wrong size")
                 continue
             to_return.append(OutputContainer(x,y,containers[i]))
 

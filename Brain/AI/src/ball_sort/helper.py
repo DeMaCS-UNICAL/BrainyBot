@@ -100,6 +100,7 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
     else:
         input=[]
         tubes=[]
+        colors=[]
     distance=0
     if vision_val!=None:
         for_val=[]
@@ -117,8 +118,9 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
     recompute=True
     while recompute:
         solution = DLVSolution()
+        print("first invoke")
         moves, ons, ans = solution.call_asp(colors,balls,tubes,on)
-
+        print("DONE")
         moves.sort(key=lambda x: x.get_step())
         ons.sort(key=lambda x: x.get_step())
 
