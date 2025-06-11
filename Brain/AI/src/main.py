@@ -73,16 +73,16 @@ if __name__ == '__main__':
            
         if args.screenshot!=None:
             screenshot = args.screenshot
-        
-        server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
-        try:
-            if getScreenshot(server_ip, port):
-                print("SCREENSHOT TAKEN.")
-            else:
+        else:
+            server_ip, port = constants.SCREENSHOT_SERVER_IP, 5432
+            try:
+                if getScreenshot(server_ip, port):
+                    print("SCREENSHOT TAKEN.")
+                else:
+                    exit(1)
+            except Exception as e:
+                print(e)
                 exit(1)
-        except Exception as e:
-            print(e)
-            exit(1)
         Start(screenshot,args)
     else:
         validate_game(args)
