@@ -5,6 +5,7 @@ import cv2
 from sklearn.cluster import AgglomerativeClustering
 from matplotlib import pyplot as plt
 from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch, OutputContainer, OutputCircle
+from scipy.stats import gaussian_kde
 
 class Abstraction:
     
@@ -24,16 +25,56 @@ class Abstraction:
 
     #elements.values are OutputGameObject
     def ToMatrix(self, elements:list, distance:tuple, labelMatrix:bool=True)->list:
-        offset, delta, clusters = self.compute_offest_delta_dict(elements, distance)
+        #for e in elements:
+            #print(e.x,e.y,e.label)
+        if len(elements)<2:
+            print("Nothing from the vision")
+            return
+        try:
+            offset, delta, clusters = self.compute_offest_delta_dict(elements, distance)
+            matrix = self.init_matrix(elements, offset, delta, clusters)
+            #print("offset",offset)
+            #print("delta",delta)
+            for element in elements:
+                    r=int((element.y-offset[1]+delta[1]/2)//delta[1]) #+delta[i]/2 because coords contains the center of the match
+                    c=int((element.x-offset[0]+delta[0]/2)//delta[0])
+                    if isinstance(element,OutputTemplateMatch):
+                        if matrix[r][c]!=None and matrix[r][c].confidence> element.confidence:
+                            continue
+                    matrix[r][c]=element
+                
+            offset, delta = self.compute_offest_delta_matrix(matrix)
+            for r in range(len(matrix)):
+                for c in range(len(matrix[r])):
+                    if matrix[r][c]!=None:
+                        if labelMatrix and isinstance(matrix[r][c],OutputTemplateMatch) :
+                            # INFO: commented the print
+                            #print(matrix[r][c].x,matrix[r][c].y,matrix[r][c].label)
+                            matrix[r][c]=matrix[r][c].label
+                        else:
+                            matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+        '''
+        for r in range(len(matrix)):
+            for c in range(len(matrix[r])):
+                print(matrix[r][c],end="\t")
+            print()
+        #print(matrix)
+        '''
+        return matrix,offset,delta
+
+    def init_matrix(self, elements, offset, delta, clusters):
         max_row_col=[0,0]
-        #print(offset,delta,sep="\n")
         for j in range(len(elements)):
-                coord=[0,0]       
+                coord=[0,0] 
                 for i in range(2):
                     key = "x" if i==0 else "y"
-                    current_coord = Cluster.get(key,clusters[i][j]).get_mean()
+                    current_coord = Cluster.get(key,clusters[i][j]).get_accumulation_point()
                     coord[i]=current_coord
-                    current = (current_coord-offset[i])//delta[i]
+                    #+delta[i]/2 because coords contains the center of the match
+                    current = int((current_coord-offset[i]+delta[i]/2)//delta[i])
                     if current > max_row_col[(i+1)%2]:
                         max_row_col[(i+1)%2]=int(current)
                 elements[j].x=coord[0]
@@ -43,31 +84,9 @@ class Abstraction:
             matrix.append([])
             for j in range(max_row_col[1]+1):
                 matrix[i].append(None)
-        for element in elements:
-                r=int((element.y-offset[1])//delta[1])
-                c=int((element.x-offset[0])//delta[0])
-                if isinstance(element,OutputTemplateMatch):
-                    if matrix[r][c]!=None and matrix[r][c].confidence> element.confidence:
-                        continue
-                matrix[r][c]=element
-        offset, delta = self.compute_offest_delta_matrix(matrix)
-        for r in range(len(matrix)):
-            for c in range(len(matrix[r])):
-                if matrix[r][c]!=None:
-                    if labelMatrix and isinstance(matrix[r][c],OutputTemplateMatch) :
-                        # INFO: commented the print
-                        #print(matrix[r][c].x,matrix[r][c].y,matrix[r][c].label)
-                        matrix[r][c]=matrix[r][c].label
-                    else:
-                        matrix[r][c]=(matrix[r][c].x,matrix[r][c].y)
-        '''
-        for r in range(len(matrix)):
-            for c in range(len(matrix[r])):
-                print(matrix[r][c],end="\t")
-            print()
-        #print(matrix)
-        '''
-        return matrix,offset,delta
+        return matrix
+    
+
     def compute_offest_delta_dict(self, elements:list, distance):
         #print(distance)
         offset=[10000,10000]
@@ -78,24 +97,41 @@ class Abstraction:
             all_coordinates[1].append(element.y)
             #print(element.label,element.x,element.y)
         Cluster.clear_clusters()
-        x_clusters  = Cluster.generate_initial_clusters(all_coordinates[0],"x")
-        y_clusters  = Cluster.generate_initial_clusters(all_coordinates[1],"y")
+        x_clusters  = Cluster.generate_initial_clusters(all_coordinates[0],"x",distance[0]/2)
+        y_clusters  = Cluster.generate_initial_clusters(all_coordinates[1],"y",distance[1]/2)
         representative_coord = []
         index=0
-        for key in Cluster.clusters.keys():
+        for key in ["x","y"]:
             representative_coord.append([])
             for cluster in Cluster.clusters[key]:
-                representative_coord[-1].append(cluster.get_mean())
+                representative_coord[-1].append(cluster.get_accumulation_point())
             representative_coord[-1].sort()
             offset[index] = representative_coord[-1][0]
             index+=1
+        deltas=[[],[]]
         for i in range(2):
             for j in range(len(representative_coord[i])-1):
                 current_delta = representative_coord[i][j+1]-representative_coord[i][j]
                 #print(i,current_delta)
-                if current_delta>=distance[i] and current_delta<delta[i]:
-                    if current_delta < delta[i]:
-                        delta[i]=current_delta
+                #if current_delta>=distance[i] and current_delta<delta[i]:
+                    #delta[i]=current_delta
+                deltas[i].append(current_delta)
+            '''
+            print(deltas[i])
+            most_frequent = np.bincount(deltas[i]).argmax()
+            print(most_frequent)
+            '''
+            std = np.std(deltas[i])
+            if std>0:
+                kde = gaussian_kde(deltas[i], bw_method=5/np.std(deltas[i]))  # you can tune bandwidth
+                x_grid = np.linspace(min(deltas[i]), max(deltas[i]), 1000)
+                density = kde(x_grid)
+                max_density_value = x_grid[np.argmax(density)]
+                delta[i]=max(int(max_density_value),distance[i])
+            else:
+                if len(deltas[i])>0:
+                    delta[i]=deltas[i][0]
+
         return offset,delta,(x_clusters,y_clusters)
     
     def compute_offest_delta_matrix(self, matrix):
@@ -234,10 +270,26 @@ class Cluster:
         self.cluster_id = cluster_id
         self.coordinates = coordinates
         self.cluster_threshold = cluster_threshold
+        self.accumulation_point=None
 
     def get_mean(self):
 
         return custom_median(self.coordinates)
+    
+    def get_accumulation_point(self):
+        if self.accumulation_point is None:
+            self.compute_accumulation_point()
+        return self.accumulation_point 
+
+    def compute_accumulation_point(self):
+        std = np.std(self.coordinates)
+        if std>0:
+            kde = gaussian_kde(self.coordinates, bw_method=5/std)  # you can tune bandwidth
+            x_grid = np.linspace(min(self.coordinates), max(self.coordinates), 1000)
+            density = kde(x_grid)
+            self.accumulation_point = int(x_grid[np.argmax(density)])       
+        else:
+            self.accumulation_point = self.coordinates[0]
 
     @classmethod
     def return_belonging_cluster(cls, coord, cluster_key):
@@ -253,6 +305,7 @@ class Cluster:
         existing_cluster = cls.return_belonging_cluster(coord,cluster_key)
         if existing_cluster:
             existing_cluster.coordinates.append(coord)
+            existing_cluster.compute_accumulation_point()
             return existing_cluster
 
         new_cluster = Cluster(len(cls.clusters[cluster_key]) + 1, [coord], cluster_threshold)
@@ -264,28 +317,18 @@ class Cluster:
     @classmethod
     def clear_clusters(cls):
         cls.clusters = {}
+
     @classmethod
     def generate_initial_clusters(cls, coordinates, cluster_key, cluster_threshold=10):
         if cluster_key not in cls.clusters.keys():
                     cls.clusters[cluster_key]=[]
-        '''
-        sorted_coords = sorted(coordinates)
-        current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[], cluster_threshold=cluster_threshold)
-
-        for coord in sorted_coords:
-            if all(abs(coord - c) <= cluster_threshold for c in current_cluster.coordinates):
-                current_cluster.coordinates.append(coord)
-            else:
-                
-                cls.clusters[cluster_key].append(current_cluster)
-                current_cluster = Cluster(cluster_id=len(cls.clusters[cluster_key]) + 1, coordinates=[coord], cluster_threshold=cluster_threshold)
-        cls.clusters[cluster_key].append(current_cluster)
-        '''
+        
         coordinates2 = np.array(coordinates).reshape(-1,1)
-        agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=cluster_threshold)
+        agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=cluster_threshold, linkage="average")
         labels = agglomerative.fit_predict(coordinates2)
         for i in range(len(coordinates)):
             cls.get(cluster_key,labels[i]).coordinates.append(coordinates[i])
+
         return labels
 
     @classmethod

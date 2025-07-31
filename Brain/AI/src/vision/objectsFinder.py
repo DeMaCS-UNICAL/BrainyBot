@@ -5,8 +5,8 @@ import mahotas
 import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
-from paddleocr import PaddleOCR
 import logging
+import os, psutil
 
 from AI.src.abstraction.helpers import getImg
 from AI.src.constants import SCREENSHOT_PATH
@@ -26,7 +26,7 @@ class ObjectsFinder:
                         Rectangle:self._find_rectangles,
                         TextRectangle:self._find_text_or_number}
         
-        logging.getLogger('ppocr').setLevel(logging.ERROR)
+        
 
         self.validation=validation
         self.__img_matrix = getImg(os.path.join(SCREENSHOT_PATH, screenshot),color_conversion=color) 
@@ -120,6 +120,7 @@ class ObjectsFinder:
             return self.__find_boxes()
     
     def _find_text_or_number(self,search_info:TextRectangle):
+            logging.getLogger('ppocr').setLevel(logging.ERROR)
             if search_info.numeric:
                 return self.__find_number(search_info)
             if search_info.dictionary!=None:
@@ -129,9 +130,9 @@ class ObjectsFinder:
             return self.__find_text(search_info)
             
 
-    def template_matching_worker_process(self,elements:list,regmax,img):
-        for (tm_name,tm_img,tm_threshold) in elements:
-            return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)     
+    def template_matching_worker_process(self,element,regmax,img):
+        tm_name,tm_img,tm_threshold= element
+        return self.__find_matches(img,tm_name,tm_img,tm_threshold,regmax)     
 
 
     def extract_tm_info(self, search_info:TemplateMatch):
@@ -155,8 +156,8 @@ class ObjectsFinder:
     
     def process_template(self,args):
         element, template, threshold, regmax, img = args
-        return self.template_matching_worker_process( [(element, template, threshold)], regmax, img
-        )
+        return self.template_matching_worker_process( (element, template, threshold), regmax, img)
+
 
     def __find_all(self, search_info: TemplateMatch) -> dict:
         # Estrai le informazioni necessarie
@@ -167,12 +168,10 @@ class ObjectsFinder:
             ( element, elements_to_find[element], thresholds[element], search_info.regmax, img)
             for element in elements_to_find.keys()
         ]
-        
         # Usa un Pool per parallelizzare il lavoro sui template
         num_processes = min(multiprocessing.cpu_count()//2, len(templates))
         with multiprocessing.Pool(processes=num_processes) as pool:
             results = pool.map(self.process_template, templates)
-        
         # Raccogli tutti i risultati in una lista
         main_list = [item for sublist in results for item in sublist]
         return main_list
@@ -314,6 +313,7 @@ class ObjectsFinder:
 
     def __extract_text_with_paddle(self, rectangle: OutputRectangle):
         if self.__paddle is None:
+            from paddleocr import PaddleOCR
             self.__paddle = PaddleOCR(use_angle_cls=False, lang='en')
         img = self.extract_subimage(self.__img_matrix, rectangle).copy()
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)

@@ -1,30 +1,30 @@
 import os
 import sys
 import time
-import cv2 as cv
+import cv2 
 from matplotlib import pyplot as plt
+from contextlib import redirect_stdout
+from collections import defaultdict
 
-from AI.src.abstraction.object_graph import ObjectGraph
-from AI.src.abstraction.objectsMatrix import ObjectMatrix,ObjectCell, TypeOf
-from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE
-from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
+from AI.src.candy_crush.constants import WHITE, nameColor, SPRITE_PATH
+from AI.src.candy_crush.detect.constants import SPRITES
 from AI.src.candy_crush.detect.new_detect import MatchingCandy,draw, DISTANCE
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
-from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap, get_input_dlv_cells
+from AI.src.candy_crush.dlvsolution.helpers import Swap, get_input_dlv_cells, ACTUAL_GAME
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
-from AI.src.constants import RESOURCES_PATH
-from AI.src.constants import BENCHMARK_PATH
 from AI.src.benchmark.benchmark_utils import BenchmarkUtils
 from AI.src.candy_crush.constants import SRC_PATH
 from languages.asp.asp_mapper import ASPMapper
+from AI.src.abstraction.helpers import getImg
+
 
 class CCSValidation:
-    def __init__(self):
+    def __init__(self,tuning):
          self.current_false_negative={}
          self.current_false_positive={}
-         self.current_thresholds=retrieve_config()
+         self.current_thresholds=retrieve_config(1 if tuning else 0.65)
          self.previous_distances={}
          self.previous_thresholds={}
 
@@ -34,55 +34,85 @@ def asp_input(matrix):
     to_return = get_input_dlv_cells(matrix)
     return to_return
 
-def check_CCS(outputs,validationInfo:CCSValidation):
-    print("checking")
+def check_CCS(outputs,validationInfo:CCSValidation,tuning):
+    for_printing={k:{"fn":[],"fp":[]} for k in SPRITES}
     if validationInfo==None:
-        validationInfo = CCSValidation()
-    total_fn={}
-    total_fp={}
-    for out in outputs:
-        for key in out[0][0]:
-            if total_fn.get(key)==None:
-                total_fn[key]=0
-            total_fn[key] += out[0][0][key]
-        for key in out[0][1]:
-            if total_fp.get(key)==None:
-                total_fp[key]=0
-            total_fp[key] += out[0][1][key]
-    validationInfo.current_false_negative=total_fn
-    validationInfo.current_false_positive=total_fp
-    print("Vision False negative:")
-    for key in validationInfo.current_false_negative:
-        validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
-        print(key,validationInfo.current_false_negative[key])
-    print("Vision False positive:")
-    for key in validationInfo.current_false_positive:
-        print(key,validationInfo.current_false_positive[key])
-
-
-    update_config(validationInfo.current_thresholds)
+        validationInfo = CCSValidation(tuning)
+    total_fn=defaultdict(int)
+    total_fp=defaultdict(int)
+    for key in for_printing:
+        for out in outputs:
+            if key in out[0][0]:
+                for_printing[key]["fn"].append( out[0][0][key])
+                total_fn[key]+=out[0][0][key]
+            else:
+                for_printing[key]["fn"].append(-1)
+            if key in out[0][1]:
+                for_printing[key]["fp"].append(out[0][1][key])
+                total_fp[key]+=out[0][1][key]
+            else:
+                for_printing[key]["fp"].append(-1)
+     
+    with open(os.path.join(SRC_PATH,'vision_results.txt'), 'w') as f:
+        with redirect_stdout(f):
+            for key in for_printing:
+                line = [key]
+                for fp_val, fn_val in zip(for_printing[key]["fp"], for_printing[key]["fn"]):
+                    line.extend([fp_val, fn_val])
+                print(*line)    
     fp_a=0
     fn_a=0
     for out in outputs:
         fp_a+=out[1][0]
         fn_a+=out[1][1]
-    print("Abstraction ---- False positive:",fp_a,"False negative:",fn_a)
-    return len(validationInfo.current_false_negative.keys())>0,validationInfo
+    done=True
+    if tuning:
+        print("Vision False negative:")
+        for key in total_fn:
+            if total_fn[key]>0 and (key not in validationInfo.current_false_negative or total_fn[key]<= validationInfo.current_false_negative[key]):
+                done=False
+                validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
+                print(key,total_fn[key])
+            elif total_fn[key]>0:
+                print(key,total_fn[key], "impossible to decrease")
+        if done:
+            for key in total_fn:
+                #Tuning is finished, if there are still false negative, it means that at the previous threshold it was better
+                if total_fn[key]>0:
+                    validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]+0.01,2)
+        print("Vision False positive:")
+        
+        for key in total_fp:
+            if total_fp[key]>0:
+                print(key,total_fp[key])
+        for key in for_printing:
+            if key not in validationInfo.current_thresholds:
+                validationInfo.current_thresholds[key]=1
 
-def retrieve_config():
-        result_dict={}
-        with open(os.path.join(SRC_PATH,"config"), 'r') as file:
-            for line in file:
-                line = line.strip()
-                key, value = line.split()
-                result_dict[key] = float(value)
+        validationInfo.current_false_negative=total_fn
+        validationInfo.current_false_positive=total_fp
+        update_config(validationInfo.current_thresholds)
+        print("Abstraction ---- False positive:",fp_a,"False negative:",fn_a)
+    return not done,validationInfo
+
+def retrieve_config(default_value=0.65):
+        result_dict=defaultdict(lambda:default_value)
+
+        try:
+            with open(os.path.join(SRC_PATH,"config_"+ACTUAL_GAME), 'r') as file:
+                for line in file:
+                    line = line.strip()
+                    key, value = line.split()
+                    result_dict[key] = float(value)
+        except:
+            print("no configuration file found")
         return result_dict
 
 def update_config(thresholds:dict):
     current = retrieve_config()
     for key in thresholds.keys():
         current[key]=thresholds[key]
-    with open(os.path.join(SRC_PATH,"config"), 'w') as file:
+    with open(os.path.join(SRC_PATH,"config_"+ACTUAL_GAME), 'w') as file:
         for key in current:
             file.write(f"{key} {current[key]}\n")
      
@@ -118,22 +148,27 @@ def candy_crush_benchmark(screenshot, spriteSize):
     benchmark_utils.end_benchmark()
 
         
-def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,it=0, benchmark=False):
+def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,iteration=0,tuning=False, benchmark=False):
+
     # execute template matching
-    spriteSize = (110, 110)
+    spriteSize = DISTANCE
 
     if benchmark:
         candy_crush_benchmark(screenshot, spriteSize)
         return
     
-    matchingCandy = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None)
+    matchingCandy = MatchingCandy(screenshot,retrieve_config(1 if tuning else 0.65),debug,vision_validation!=None)
     if not debug:
         plt.ion()
 
     template_matches_list,candyMatrix,_ = matchingCandy.search()
-    input = asp_input(candyMatrix)
-    #for e in input:
-        #print(ASPMapper.get_instance().get_string(e) + ".")
+    #for m in sorted(template_matches_list,key=lambda x : x.x):
+        #print(m.x,m.y,m.label)
+    if candyMatrix is not None:
+        input = asp_input(candyMatrix)
+        #for e in input:
+            #print(e.x, e.y)
+            #print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
 
     
@@ -141,16 +176,18 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         validation_abstraction=[]
         abstraction_result=[]
         validation_vision = {}
-        validation_info = CCSValidation()
+        validation_info = CCSValidation(tuning)
         if(vision_validation!=None):
             validation_vision,validation_abstraction=read_validation_data(vision_validation, abstraction_validation)
-        for e in input:
-            abstraction_result.append(ASPMapper.get_instance().get_string(e) + ".")
+        if candyMatrix is not None:
+            for e in input:
+                abstraction_result.append(ASPMapper.get_instance().get_string(e) + ".")
         validator = Validation()
         #validator.validate_matches(template_matches_list,validation_vision)
         #validator.validate_matrix(input,validation_abstraction)#TODO: ABSTRACTION VALIDATION
         #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
-        return (validator.validate_matches(template_matches_list,validation_vision, spriteSize[0]*0.1),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
+        tolerance = 0 if candyMatrix is None else candyMatrix.delta[0]*0.3
+        return (validator.validate_matches(template_matches_list,validation_vision, tolerance),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
     if debug:
         for r in candyMatrix.matrix:
             for c in r:
@@ -198,15 +235,36 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
 def read_validation_data(vision_validation, abstraction_validation):
     validation_vision=[]
     validation_abstraction=[]
-    with open(vision_validation,'r') as file:
-            for line in file:
-                line=line.strip()
-                split = tuple(line.split())
-                validation_vision.append(((int(split[0]),int(split[1])),split[2]))
-    with open(abstraction_validation,'r') as file:
-            for line in file:
-                line=line.strip()
-                validation_abstraction.append(line)
+    try:
+        with open(vision_validation,'r') as file:
+                for line in file:
+                    line=line.strip()
+                    split = tuple(line.split())
+                    if len(split)==2:
+                        split=(split[0],split[1],"")
+                    validation_vision.append(((int(split[0]),int(split[1])),split[2]))
+    except:
+        print("no vision file found for",vision_validation)
+    try:
+        with open(abstraction_validation,'r') as file:
+                for line in file:
+                    line=line.strip()
+                    validation_abstraction.append(line)
+    except:
+        print("no abstraction file found for",vision_validation)
+
     return validation_vision,validation_abstraction
 
     
+def init_sprites(path=SPRITE_PATH):
+    print("templates at",path)
+    for file in os.listdir(path):
+        if os.path.isfile(os.path.join(path, file)) and not file.endswith(".ini"): 
+            img = getImg(os.path.join(path, file),color_conversion=cv2.COLOR_BGR2RGB)
+            typeCandy = os.path.basename(file)
+            SPRITES[typeCandy] = img
+            height, width, _ = img.shape
+            if width < DISTANCE[0]:
+                DISTANCE[0]=width
+            if height < DISTANCE[1]:
+                DISTANCE[1]=height

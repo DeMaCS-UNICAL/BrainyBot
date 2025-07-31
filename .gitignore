@@ -1,2 +1,4 @@
 .idea/
-*.Identifier
+*.Identifier*
+*__pycache__*
+*screenshot.png*

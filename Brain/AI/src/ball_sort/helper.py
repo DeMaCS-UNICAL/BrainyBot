@@ -88,7 +88,7 @@ def read_validation_data(vision_input,abstraction_input):
             facts.append(line.rstrip())
     return tubes,balls,facts
 
-def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,iteration=0, benchmark=False):
+def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,iteration=0, tuning=False,benchmark=False):
     matcher = MatchingBalls(screenshot,debug,vision_val!=None,iteration)
     balls_chart = matcher.get_balls_chart()
     balls : list[OutputCircle]=[]

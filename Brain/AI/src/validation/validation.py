@@ -57,7 +57,6 @@ class Validation:
     
     def count_false_positives_negatives(self,detected_objects, ground_truth, distance_threshold=50):
         cost_matrix = self.create_cost_matrix(detected_objects, ground_truth)
-
         # Hungarian algorithm
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
         #for i, j in zip(row_ind, col_ind):
@@ -65,15 +64,18 @@ class Validation:
           #  print(detected_objects[i],ground_truth[j])
         false_positives_by_label = defaultdict(int)
         false_negatives_by_label = defaultdict(int)
-
         matched_detected = [False] * len(detected_objects)
         matched_ground_truth = [False] * len(ground_truth)
         
         for i, j in zip(row_ind, col_ind):
+            if detected_objects[i][1] not in false_negatives_by_label.keys():
+                false_positives_by_label[detected_objects[i][1]]=0
+                false_negatives_by_label[ground_truth[j][1]] =0
+                
             if cost_matrix[i, j] > distance_threshold: 
                 false_positives_by_label[detected_objects[i][1]] += 1
                 false_negatives_by_label[ground_truth[j][1]] += 1
-          
+                
 
             matched_detected[i] = True
             matched_ground_truth[j] = True
@@ -81,11 +83,10 @@ class Validation:
         for i, matched in enumerate(matched_detected):
             if not matched:
                 false_positives_by_label[detected_objects[i][1]] += 1
-       
+
         for j, matched in enumerate(matched_ground_truth):
             if not matched:
                 false_negatives_by_label[ground_truth[j][1]] += 1
-
         return false_negatives_by_label,false_positives_by_label
     
     def validate_matches(self,matches_list,validation:list,threshold=50):

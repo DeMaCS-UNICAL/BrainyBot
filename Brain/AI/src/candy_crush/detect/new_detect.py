@@ -40,14 +40,14 @@ def get_color(strg) -> tuple:
     return nameColor[RED]
 
 class MatchingCandy:
-    def __init__(self, screenshot,difference:tuple, thresholds:dict, debug=False,validation=False, sprites=SPRITES):
+    def __init__(self, screenshot, thresholds:dict, debug=False,validation=False, sprites=SPRITES,difference:tuple=DISTANCE):
         #
         # Use Matrix2.png for testing
         #
         self.screenshot=screenshot
         self.debug=debug
         #self.__difference = difference
-        self.__distance = DISTANCE
+        self.__distance = difference
         self.image = None
         self.__graph=None
         self.__matrix=None
@@ -70,9 +70,8 @@ class MatchingCandy:
                 if not self.debug:
                     plt.pause(0.1)
         if grid_changed:
-            to_return = finder.find(TemplateMatch(self.sprites,self.threshold_dictionary))
-
-            return to_return
+                to_return = finder.find(TemplateMatch(self.sprites,self.threshold_dictionary))
+                return to_return
         else:
             print("Looking for existing matrix") if not benchmark else None
             return finder.find_from_existing_matrix(SimplifiedTemplateMatch(self.sprites,self.__distance),self.object_matrix)
@@ -80,7 +79,11 @@ class MatchingCandy:
     def abstraction(self,vision_output, benchmark=False):
         gridifier = Abstraction()
         #self.__graph = gridifier.ToGraph(vision_output,self.__difference)
-        matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__distance)
+        try:
+            matrix_rep,offset,delta = gridifier.ToMatrix(vision_output,self.__distance)
+        except:
+            print("nothing arrived from vision layer")
+            return (None,None)
         objectMatrix = ObjectMatrix(matrix_rep,offset,delta)
 
         number_per_type={}

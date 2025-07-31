@@ -12,6 +12,9 @@ from AI.src.constants import DLV_PATH
 from AI.src.abstraction import mappers
 
 
+ACTUAL_GAME="dreamy"
+
+
 class Connect:
     def __init__(self, id1=None, id2=None):
         self.__id1 = id1
@@ -188,8 +191,15 @@ def get_input_dlv_cells(matrix: ObjectMatrix) -> list:
         cells.extend(row)
     for row in matrix.get_cells():
         for cell in row:
+            if ACTUAL_GAME == "candy_crush":
+                first_regex = r"^(\w+)\.(?:png|jpeg|jpg)$"
+                second_regex = r"^([a-z]+)[A-Z]?.*$"
+            elif ACTUAL_GAME == "dreamy":
+                first_regex = r"^(.+)\.(?:png|jpeg|jpg)$"
+                second_regex = r"(^.*)$"
+
             if cell.get_value()!="":
-                result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", cell.get_value())
+                result = re.search(first_regex, cell.get_value())
                 candyType = result.groups()[0]
                 special = None
                 # checks if the node2 is not swappable
@@ -207,7 +217,7 @@ def get_input_dlv_cells(matrix: ObjectMatrix) -> list:
 
                 if special!=None:
                     cells.append(TypeOf(cell.get_id(),special))
-                result = re.search(r"^([a-z]+)[A-Z]?.*$",candyType)
+                result = re.search(second_regex,candyType)
                 cell.set_value(result.groups()[0])
     return cells
 
