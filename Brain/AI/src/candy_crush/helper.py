@@ -22,22 +22,68 @@ from AI.src.abstraction.helpers import getImg
 
 class CCSValidation:
     def __init__(self,tuning):
-         self.current_false_negative={}
-         self.current_false_positive={}
-         self.current_thresholds=retrieve_config(1 if tuning else 0.65)
+         self.current_vision_false_negative={}
+         self.current_vision_false_positive={}
+         self.current_vision_thresholds=retrieve_config(1 if tuning else 0.65)
          self.previous_distances={}
          self.previous_thresholds={}
 
-def asp_input(matrix):
-    #to_return = get_input_dlv_nodes(graph)
-    #to_return.extend(get_edges(graph))
-    to_return = get_input_dlv_cells(matrix)
-    return to_return
 
 def check_CCS(outputs,validationInfo:CCSValidation,tuning):
     for_printing={k:{"fn":[],"fp":[]} for k in SPRITES}
     if validationInfo==None:
         validationInfo = CCSValidation(tuning)
+    total_fn, total_fp = vision_validation(outputs, for_printing)    
+    abstraction_validation(outputs)
+
+    done=True
+    if tuning:
+        done = tune_vision_thresholds(validationInfo, for_printing, total_fn, total_fp)
+
+    
+    validationInfo.current_vision_false_negative=total_fn
+    validationInfo.current_vision_false_positive=total_fp
+    return not done,validationInfo
+
+def abstraction_validation(outputs):
+    with open(os.path.join(SRC_PATH,"abstraction_results.csv"), 'w') as f:
+        with redirect_stdout(f):
+            print("False Positive,False Negative")
+            for out in outputs:
+                print(out[1][0],",",out[1][1])
+    
+
+    
+
+def tune_vision_thresholds(validationInfo, for_printing, total_fn, total_fp):
+    done=True
+    print("Vision False negative:")
+    for key in total_fn:
+        if total_fn[key]>0 and (key not in validationInfo.current_false_negative or total_fn[key]<= validationInfo.current_false_negative[key]):
+            done=False
+            validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
+            print(key,total_fn[key])
+        elif total_fn[key]>0:
+            print(key,total_fn[key], "impossible to decrease")
+
+    print("Vision False positive:")
+        
+    for key in total_fp:
+        if total_fp[key]>0:
+            print(key,total_fp[key])
+    for key in for_printing:
+        if key not in validationInfo.current_thresholds:
+            validationInfo.current_thresholds[key]=1
+        
+    if done:
+        for key in total_fn:
+                #Tuning is finished, if there are still false negative, it means that at the previous threshold it was better
+            if total_fn[key]>0:
+                validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]+0.01,2)
+    update_config(validationInfo.current_thresholds)
+    return done
+
+def vision_validation(outputs, for_printing):
     total_fn=defaultdict(int)
     total_fp=defaultdict(int)
     for key in for_printing:
@@ -53,47 +99,17 @@ def check_CCS(outputs,validationInfo:CCSValidation,tuning):
             else:
                 for_printing[key]["fp"].append(-1)
      
-    with open(os.path.join(SRC_PATH,'vision_results.txt'), 'w') as f:
+    print_validation_output(for_printing,'vision_results.csv')
+    return total_fn,total_fp
+
+def print_validation_output(for_printing,file_name):
+    with open(os.path.join(SRC_PATH,file_name), 'w') as f:
         with redirect_stdout(f):
             for key in for_printing:
                 line = [key]
                 for fp_val, fn_val in zip(for_printing[key]["fp"], for_printing[key]["fn"]):
-                    line.extend([fp_val, fn_val])
-                print(*line)    
-    fp_a=0
-    fn_a=0
-    for out in outputs:
-        fp_a+=out[1][0]
-        fn_a+=out[1][1]
-    done=True
-    if tuning:
-        print("Vision False negative:")
-        for key in total_fn:
-            if total_fn[key]>0 and (key not in validationInfo.current_false_negative or total_fn[key]<= validationInfo.current_false_negative[key]):
-                done=False
-                validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]-0.01,2)
-                print(key,total_fn[key])
-            elif total_fn[key]>0:
-                print(key,total_fn[key], "impossible to decrease")
-        if done:
-            for key in total_fn:
-                #Tuning is finished, if there are still false negative, it means that at the previous threshold it was better
-                if total_fn[key]>0:
-                    validationInfo.current_thresholds[key] = round(validationInfo.current_thresholds[key]+0.01,2)
-        print("Vision False positive:")
-        
-        for key in total_fp:
-            if total_fp[key]>0:
-                print(key,total_fp[key])
-        for key in for_printing:
-            if key not in validationInfo.current_thresholds:
-                validationInfo.current_thresholds[key]=1
-
-        validationInfo.current_false_negative=total_fn
-        validationInfo.current_false_positive=total_fp
-        update_config(validationInfo.current_thresholds)
-        print("Abstraction ---- False positive:",fp_a,"False negative:",fn_a)
-    return not done,validationInfo
+                    line.extend([",",fp_val, fn_val])
+                print(*line)
 
 def retrieve_config(default_value=0.65):
         result_dict=defaultdict(lambda:default_value)
@@ -115,7 +131,13 @@ def update_config(thresholds:dict):
     with open(os.path.join(SRC_PATH,"config_"+ACTUAL_GAME), 'w') as file:
         for key in current:
             file.write(f"{key} {current[key]}\n")
-     
+
+
+def asp_input(matrix):
+    to_return = get_input_dlv_cells(matrix)
+    return to_return
+
+
 def candy_crush_benchmark(screenshot, spriteSize):
     benchmark_utils = BenchmarkUtils("candy_crush")
     matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
