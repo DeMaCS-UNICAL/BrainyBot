@@ -58,6 +58,9 @@ class ObjectsFinder:
         best_match_value = -float('inf')
         idx=-1
         for i in range(len(image_list)):
+            # se target image è più piccola di image_list[i], continue
+            if target_image.shape[0] < image_list[i].shape[0] or target_image.shape[1] < image_list[i].shape[1]:
+                continue
             result = cv2.matchTemplate(target_image, image_list[i], self.__generic_object_method)
             _, max_val, _, _ = cv2.minMaxLoc(result)
             if max_val>0.5 and max_val > best_match_value:
