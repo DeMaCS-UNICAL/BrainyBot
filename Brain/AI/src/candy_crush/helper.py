@@ -121,7 +121,8 @@ def retrieve_config(default_value=0.65):
                     key, value = line.split()
                     result_dict[key] = float(value)
         except:
-            print("no configuration file found")
+            # print("no configuration file found") TODO: uncomment
+            pass
         return result_dict
 
 def update_config(thresholds:dict):
@@ -138,31 +139,32 @@ def asp_input(matrix):
     return to_return
 
 
-def candy_crush_benchmark(screenshot, spriteSize):
-    benchmark_utils = BenchmarkUtils("candy_crush")
-    matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+def candy_crush_benchmark(resource_path, tuning):
+    benchmark_utils = BenchmarkUtils("candy_crush", resource_path)
+    screenshot = benchmark_utils.get_screenshot_path()
+    matchingCandy = MatchingCandy(screenshot, retrieve_config(1 if tuning else 0.65), False, False)
 
     while not benchmark_utils.is_game_finished():
         while not benchmark_utils.is_level_finished():
-            print(f"Level {benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - cache")
+            print(f"{benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - cache")
             benchmark_utils.start_timer()
             matchingCandy.search(benchmark=True)
             benchmark_utils.stop_timer()
             benchmark_utils.save_time(level=benchmark_utils.get_level_name(), step=benchmark_utils.get_step_name(), type="cache")
             benchmark_utils.load_new_step()
         benchmark_utils.load_new_level()
-        matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+        matchingCandy = MatchingCandy(screenshot, retrieve_config(1 if tuning else 0.65), False, False)
 
-    matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+    matchingCandy = MatchingCandy(screenshot, retrieve_config(1 if tuning else 0.65), False, False)
     benchmark_utils.restart()
 
     while not benchmark_utils.is_game_finished():
         while not benchmark_utils.is_level_finished():
-            print(f"Level {benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - no cache")
+            print(f"{benchmark_utils.get_level_name()}, {benchmark_utils.get_step_name()} - no cache")
             benchmark_utils.start_timer()
             matchingCandy.search(benchmark=True)
             benchmark_utils.stop_timer()
-            matchingCandy = MatchingCandy(screenshot,spriteSize, retrieve_config(), False, False)
+            matchingCandy = MatchingCandy(screenshot, retrieve_config(1 if tuning else 0.65), False, False)
             benchmark_utils.save_time(level=benchmark_utils.get_level_name(), step=benchmark_utils.get_step_name(), type="no cache")
             benchmark_utils.load_new_step()
         benchmark_utils.load_new_level()
@@ -176,10 +178,10 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
     spriteSize = DISTANCE
 
     if benchmark:
-        candy_crush_benchmark(screenshot, spriteSize)
+        candy_crush_benchmark(screenshot, tuning)
         return
-    
-    matchingCandy = MatchingCandy(screenshot,retrieve_config(1 if tuning else 0.65),debug,vision_validation!=None)
+
+    matchingCandy = MatchingCandy(screenshot, retrieve_config(1 if tuning else 0.65), debug, vision_validation != None)
     if not debug:
         plt.ion()
 

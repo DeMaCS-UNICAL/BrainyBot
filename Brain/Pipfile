@@ -17,6 +17,7 @@ paddlepaddle = "*"
 pillow = "*"
 scipy = "*"
 scikit-learn = "*"
+psutil = "*"
 
 [dev-packages]
 

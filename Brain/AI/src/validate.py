@@ -21,23 +21,35 @@ def add_distinctive_argument(parser,required=False):
     parser.add_argument("-v", "--validate", type=str, required=required, help="Path, ending with '/screenshots/file_prefix', where to find screenshots to perform validation on")
 
 def execute(args):
-    if args.benchmark:
-        print("Benchmark mode")
-        Start(constants.SCREENSHOT_FILENAME,args)
     if args.games == "candy_crush":
         to_strip = args.validate.rfind("screenshots")
         clean_path = args.validate[:to_strip]
         sprite_path = clean_path+"templates"
         init_sprites(sprite_path)
-    print("validating")     
-   
+    if args.benchmark:
+        print("Benchmark mode")
+        to_strip = args.validate.rfind("screenshots")
+        clean_path = args.validate[:to_strip]
+        benchmark_path = os.path.join(clean_path, "benchmark")
+        result_path = os.path.join(clean_path, "results")
+        # Check if benchmark folder exists, if not create it
+        if not os.path.exists(benchmark_path):
+            os.makedirs(benchmark_path)
+        # Check if results folder exists, if not create it
+        if not os.path.exists(result_path):
+            os.makedirs(result_path)
+
+        Start(constants.SCREENSHOT_FILENAME,args)
+        return # benchmark mode does not require validation
+    print("validating")
+
     validate_game(args)
 
 def Start(screenshot,args,iteration=0):
     vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
     abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
     benchmark = True if args.benchmark else False
-    print("starting with",screenshot)
+    # print("starting with",screenshot)
     complete_path = os.path.join(args.validate.removesuffix(os.path.basename(args.validate)),screenshot)
     return gameDictionary[args.games](complete_path,True,vision,abstraction,iteration,args.tune, benchmark)
 
