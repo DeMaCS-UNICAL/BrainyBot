@@ -1,4 +1,3 @@
-
 import numpy as np
 from languages.asp.asp_mapper import ASPMapper
 from languages.predicate import Predicate
@@ -68,20 +67,35 @@ class Feedback:
                 to_return.append(element)
         return to_return
 
-    def main(self):
+    def capture_board_state(self):
         self.take_screenshot()
         vision_result = self.current_vision_callback()
         abstraction_result = self.current_abstraction_callback(vision_result)
-        asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-        mapped_objects1 = self.get_mapped(asp_input)
+        asp_input = self.current_abstraction_to_asp_callback(abstraction_result)
+        mapped_objects = self.get_mapped(asp_input)
+        return mapped_objects, abstraction_result, asp_input
+
+    def wait_for_stable_mapped_objects(self):
+        mapped_objects1, _, _ = self.capture_board_state()
         while True:
-            self.take_screenshot()
-            vision_result = self.current_vision_callback()
-            abstraction_result = self.current_abstraction_callback(vision_result)
-            asp_input=self.current_abstraction_to_asp_callback(abstraction_result)
-            mapped_objects2 = self.get_mapped(asp_input)
-            if not self.board_is_stable(mapped_objects1,mapped_objects2):
-                mapped_objects1 = mapped_objects2
-            else:
-                return (self.compare_with_expected(mapped_objects2),abstraction_result,asp_input)
+            mapped_objects2, abstraction_result, asp_input = self.capture_board_state()
+            if self.board_is_stable(mapped_objects1, mapped_objects2):
+                return mapped_objects2, abstraction_result, asp_input
+            mapped_objects1 = mapped_objects2
+
+    def wait_for_change(self):
+        mapped_objects1, _, _ = self.capture_board_state()
+        while True:
+            mapped_objects2, abstraction_result, asp_input = self.capture_board_state()
+            if not self.board_is_stable(mapped_objects1, mapped_objects2):
+                return mapped_objects2, abstraction_result, asp_input
+            mapped_objects1 = mapped_objects2
+
+    def wait_for_opponent(self):
+        self.wait_for_change()
+        return self.wait_for_stable_mapped_objects()
+
+    def main(self):
+        mapped_objects,abstraction_result,asp_input = self.wait_for_stable_mapped_objects()
+        return (self.compare_with_expected(mapped_objects),abstraction_result,asp_input)
    
