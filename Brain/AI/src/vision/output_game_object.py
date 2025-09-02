@@ -9,6 +9,7 @@ class OutputCircle(OutputGameObject):
         self.radius=radius
         self.color=color
 
+
 class OutputTemplateMatch(OutputGameObject):
     def __init__(self,x,y,width,heigth,label,confidence):
         super().__init__(x,y)

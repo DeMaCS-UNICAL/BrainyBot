@@ -105,11 +105,35 @@ def vision_validation(outputs, for_printing):
 def print_validation_output(for_printing,file_name):
     with open(os.path.join(SRC_PATH,file_name), 'w') as f:
         with redirect_stdout(f):
-            for key in for_printing:
-                line = [key]
-                for fp_val, fn_val in zip(for_printing[key]["fp"], for_printing[key]["fn"]):
-                    line.extend([",",fp_val, fn_val])
-                print(*line)
+            keys = sorted(for_printing.keys())
+
+        # First header row: object names (each spanning 2 columns)
+            header1 = []
+            for key in keys:
+                header1.extend([key, ""])  # one cell for object name, one blank for subcolumn alignment
+            print(', '.join(header1))
+
+            # Second header row: 'fn', 'fp' under each object
+            header2 = []
+            for _ in keys:
+                header2.extend(["fn", "fp"])
+            print(', '.join(header2))
+
+            # Find max number of rows to print (handles unequal length arrays)
+            max_len = max(max(len(for_printing[k]["fp"]), len(for_printing[k]["fn"])) for k in keys)
+
+            # Print data rows
+            for i in range(max_len):
+                row = []
+                for key in keys:
+                    fn_vals = for_printing[key]["fn"]
+                    fp_vals = for_printing[key]["fp"]
+
+                    fn = fn_vals[i] if i < len(fn_vals) else ""
+                    fp = fp_vals[i] if i < len(fp_vals) else ""
+
+                    row.extend([str(fn), str(fp)])
+                print(', '.join(row))
 
 def retrieve_config(default_value=0.65):
         result_dict=defaultdict(lambda:default_value)
@@ -184,6 +208,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         plt.ion()
 
     template_matches_list,candyMatrix,_ = matchingCandy.search()
+    
     #for m in sorted(template_matches_list,key=lambda x : x.x):
         #print(m.x,m.y,m.label)
     if candyMatrix is not None:
@@ -195,21 +220,18 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
 
     
     if vision_validation!=None:
-        validation_abstraction=[]
-        abstraction_result=[]
-        validation_vision = {}
-        validation_info = CCSValidation(tuning)
-        if(vision_validation!=None):
-            validation_vision,validation_abstraction=read_validation_data(vision_validation, abstraction_validation)
         if candyMatrix is not None:
-            for e in input:
-                abstraction_result.append(ASPMapper.get_instance().get_string(e) + ".")
-        validator = Validation()
-        #validator.validate_matches(template_matches_list,validation_vision)
-        #validator.validate_matrix(input,validation_abstraction)#TODO: ABSTRACTION VALIDATION
-        #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
-        tolerance = 0 if candyMatrix is None else candyMatrix.delta[0]*0.3
-        return (validator.validate_matches(template_matches_list,validation_vision, tolerance),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
+            with open(os.path.join(SRC_PATH,"outputs","vision",os.path.basename(screenshot)+".txt"), 'w') as f:
+                with redirect_stdout(f):
+                    for m in sorted(template_matches_list,key=lambda x : x.x):
+                        print(m.x,m.y,m.label)
+            with open(os.path.join(SRC_PATH,"outputs","abstraction",os.path.basename(screenshot)+".txt"), 'w') as f:
+                with redirect_stdout(f):
+                    for e in input:
+                        print(ASPMapper.get_instance().get_string(e) + ".")
+
+        return validate_vision_and_abstraction(vision_validation, abstraction_validation, tuning, template_matches_list, candyMatrix, input)
+    
     if debug:
         for r in candyMatrix.matrix:
             for c in r:
@@ -253,6 +275,20 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
             time.sleep(1)
             feedback = Feedback()
             success,candyMatrix,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
+
+def validate_vision_and_abstraction(vision_validation, abstraction_validation, tuning, template_matches_list, candyMatrix, input):
+    validation_abstraction=[]
+    abstraction_result=[]
+    validation_vision = {}
+    validation_info = CCSValidation(tuning)
+    if(vision_validation!=None):
+        validation_vision,validation_abstraction=read_validation_data(vision_validation, abstraction_validation)
+    if candyMatrix is not None:
+        for e in input:
+            abstraction_result.append(ASPMapper.get_instance().get_string(e) + ".")
+    validator = Validation()
+    tolerance = 0 if candyMatrix is None else candyMatrix.delta[0]*0.3
+    return (validator.validate_matches(template_matches_list,validation_vision, tolerance),(validator.validate_facts(abstraction_result,validation_abstraction)))
 
 def read_validation_data(vision_validation, abstraction_validation):
     validation_vision=[]

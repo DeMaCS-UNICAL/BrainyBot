@@ -13,11 +13,13 @@ class Color(Predicate):
     __colors= []
     __MAX_DISTANCE = 20
     __delta_e_distance = 3
+    __ids_usage=False
     def reset():
         Color.__ids = count(1, 1)
         Color.__colors = []
         Color.__MAX_DISTANCE = 20
         Color.__delta_e_distance = 3
+        Color.__ids_usage=False
         
 
     def __init__(self, bgr=None):
@@ -27,6 +29,8 @@ class Color(Predicate):
         self.__bgr = bgr
 
     def get_id(self) -> int:
+        if not Color.__ids_usage:
+            Color.__ids_usage=True
         return self.__id
 
     def set_id(self, id):
@@ -85,6 +89,8 @@ class Color(Predicate):
         for color in Color.__colors:
             if Color.delta_e_2000(color.__bgr, bgr) < Color.__delta_e_distance:
                 return color
+        if Color.__ids_usage:
+            print("WARNING: a new color has been added, previous used colors' IDs could be messed up")
         color = Color(bgr)
         Color.__colors.append(color)
         Color.__colors = Color.sort_colors_by_lab(Color.__colors)

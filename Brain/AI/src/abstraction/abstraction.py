@@ -238,8 +238,8 @@ class Abstraction:
         for container in l:
             coordinates.append((container.get_x(),container.get_y()))
         if len(Cluster.clusters)==0:
-            Cluster.generate_initial_clusters([x[0] for x in coordinates],"x")
-            Cluster.generate_initial_clusters([x[1] for x in coordinates],"y")
+            Cluster.generate_initial_clusters(sorted([coord[0] for coord in coordinates]),"x")
+            Cluster.generate_initial_clusters(sorted([coord[1] for coord in coordinates]),"y")
             '''
             for key in Cluster.clusters.keys():
                 print(key)
@@ -247,8 +247,8 @@ class Abstraction:
                     print(cluster.cluster_id)
             '''
         for i in range(len(l)):
-            cluster_x_id = Cluster.find_or_add_cluster(l[i].get_x(),"x").cluster_id
-            cluster_y_id = Cluster.find_or_add_cluster(l[i].get_y(),"y").cluster_id
+            cluster_x_id = Cluster.find_or_add_cluster(l[i].get_x(),"x").incremental_id
+            cluster_y_id = Cluster.find_or_add_cluster(l[i].get_y(),"y").incremental_id
             l[i].set_id(f"x{cluster_x_id}y{cluster_y_id}")
 
     def stack_no_duplicates(self, elements:dict)->list:
@@ -266,8 +266,11 @@ class Abstraction:
 
 class Cluster:
     clusters = {} 
-    def __init__(self, cluster_id, coordinates, cluster_threshold=10):
+    __ids = {}
+    def __init__(self, cluster_id,coordinates,incremental_id=-1,  cluster_threshold=10):
+
         self.cluster_id = cluster_id
+        self.incremental_id = incremental_id if incremental_id!=-1 else cluster_id
         self.coordinates = coordinates
         self.cluster_threshold = cluster_threshold
         self.accumulation_point=None
@@ -302,6 +305,7 @@ class Cluster:
     def find_or_add_cluster(cls, coord, cluster_key, cluster_threshold=10):
         if cluster_key not in Cluster.clusters.keys():
             cls.clusters[cluster_key]=[]
+            cls.__ids[cluster_key]=0
         existing_cluster = cls.return_belonging_cluster(coord,cluster_key)
         if existing_cluster:
             existing_cluster.coordinates.append(coord)
@@ -322,6 +326,7 @@ class Cluster:
     def generate_initial_clusters(cls, coordinates, cluster_key, cluster_threshold=10):
         if cluster_key not in cls.clusters.keys():
                     cls.clusters[cluster_key]=[]
+                    cls.__ids[cluster_key]=0
         
         coordinates2 = np.array(coordinates).reshape(-1,1)
         agglomerative = AgglomerativeClustering(n_clusters=None, distance_threshold=cluster_threshold, linkage="average")
@@ -336,7 +341,9 @@ class Cluster:
         for cluster in cls.clusters[key]:
             if cluster.cluster_id == cluster_id:
                 return cluster
-        cluster = Cluster(cluster_id=cluster_id, coordinates=[])
+        next_id=cls.__ids[key]
+        cls.__ids[key] += 1
+        cluster = Cluster(cluster_id=cluster_id,incremental_id=next_id, coordinates=[])
         cls.clusters[key].append(cluster)
         return cluster
 

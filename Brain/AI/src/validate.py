@@ -21,14 +21,15 @@ def add_distinctive_argument(parser,required=False):
     parser.add_argument("-v", "--validate", type=str, required=required, help="Path, ending with '/screenshots/file_prefix', where to find screenshots to perform validation on")
 
 def execute(args):
-    if args.benchmark:
-        print("Benchmark mode")
-        Start(constants.SCREENSHOT_FILENAME,args)
+    
     if args.games == "candy_crush":
         to_strip = args.validate.rfind("screenshots")
         clean_path = args.validate[:to_strip]
         sprite_path = clean_path+"templates"
         init_sprites(sprite_path)
+    if args.benchmark:
+        print("Benchmark mode")
+        Start(constants.SCREENSHOT_FILENAME,args)
     print("validating")     
    
     validate_game(args)
@@ -50,7 +51,7 @@ def validate_game(args):
         outputs=[]
         to_print=[]
         for filename in sorted(os.listdir(os.path.dirname(args.validate))):
-            if filename.startswith(os.path.basename(args.validate)):
+            if filename.startswith(os.path.basename(args.validate)) and not filename.endswith(".ini"):
                 to_print.append(filename)
                 screenshot = filename
                 print(f"{screenshot}")
@@ -61,7 +62,8 @@ def validate_game(args):
             print(to_print)
             return
         it+=1
-    print(to_print)
+    for e  in to_print:
+        print(e)
 
 if __name__ == '__main__':
     msg = "This script is meant to perform validation and benchmark tasks."

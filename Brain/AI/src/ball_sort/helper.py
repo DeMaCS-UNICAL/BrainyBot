@@ -114,39 +114,42 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
         fp,fn = validator.validate_facts(for_val,validate)
 
         return distance, matcher.canny_threshold
+    if debug:
+        return
     recompute=True
     while recompute:
-        solution = DLVSolution()
-        moves, ons, ans = solution.call_asp(colors,balls,tubes,on)
+        if balls_chart is not None:
+            solution = DLVSolution()
+            moves, ons, ans = solution.call_asp(colors,balls,tubes,on)
 
-        moves.sort(key=lambda x: x.get_step())
-        ons.sort(key=lambda x: x.get_step())
+            moves.sort(key=lambda x: x.get_step())
+            ons.sort(key=lambda x: x.get_step())
 
-        os.chdir(CLIENT_PATH)
+            os.chdir(CLIENT_PATH)
 
-        coordinates = []
-        x1, y1, x2, y2 = 0, 0, 0, 0
-        if len(moves)==0:
-            print("No moves found.")
-            return
-        feedback=Feedback()
-        for i in range(len(moves)):
-            step=i
-            move=moves[i]
-            previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
-            next_tube = move.get_tube()
-            for tube in tubes:
-                if tube.get_id() == previous_tube:
-                    x1 = tube.get_x()
-                    y1 = tube.get_y()
-                elif tube.get_id() == next_tube:
-                    x2 = tube.get_x()
-                    y2 = tube.get_y()
-            coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
-            time.sleep(0.25)
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
-            time.sleep(0.25)
+            coordinates = []
+            x1, y1, x2, y2 = 0, 0, 0, 0
+            if len(moves)==0:
+                print("No moves found.")
+                return
+            feedback=Feedback()
+            for i in range(len(moves)):
+                step=i
+                move=moves[i]
+                previous_tube = __get_ball_tube(move.get_ball(), ons, move.get_step())
+                next_tube = move.get_tube()
+                for tube in tubes:
+                    if tube.get_id() == previous_tube:
+                        x1 = tube.get_x()
+                        y1 = tube.get_y()
+                    elif tube.get_id() == next_tube:
+                        x2 = tube.get_x()
+                        y2 = tube.get_y()
+                coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
+                os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
+                time.sleep(0.25)
+                os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+                time.sleep(0.25)
             success,_,(_,colors,tubes,balls,on,on_feedback) = feedback.request_feedback(matcher.vision,matcher.abstraction,asp_input,ans[step])
             print("Success?",success)
             if not success:

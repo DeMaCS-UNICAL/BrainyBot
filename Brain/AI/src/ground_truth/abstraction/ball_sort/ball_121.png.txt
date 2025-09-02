@@ -1,0 +1,16 @@
+tube("x1y1").
+tube("x3y0").
+tube("x2y0").
+tube("x1y0").
+tube("x0y0").
+tube("x2y1").
+tube("x0y1").
+on(1,0,"x2y1",1).
+on(2,1,"x2y1",1).
+on(3,2,"x2y1",1).
+on(4,0,"x0y1",1).
+ball(1,1).
+ball(2,1).
+ball(3,1).
+ball(4,1).
+color(1).

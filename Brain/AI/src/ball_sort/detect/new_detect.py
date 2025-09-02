@@ -59,6 +59,8 @@ class MatchingBalls:
         size_tolerance=float(re.search("TUBE_SIZE_TOLERANCE=([^\n]+)", x,flags=re.M).group(1))
         return canny_threshold,proportion_tolerance,size_tolerance
         
+    def get_vision_balls(self):
+        return self.__balls
 
     def get_balls_chart(self):
         vision_output=self.vision()
@@ -67,9 +69,9 @@ class MatchingBalls:
         return self.abstraction(vision_output)
 
     def vision(self):
-        self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation)
+        self.finder = ObjectsFinder(self.screenshot,debug=self.debug, threshold=0.8,validation=self.validation,color=cv2.COLOR_BGR2RGB)
         
-        self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot))
+        self.__image = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
 
         if not self.debug and not self.validation:
             plt.imshow( cv2.cvtColor(self.__image,cv2.COLOR_BGR2RGB))
@@ -115,8 +117,7 @@ class MatchingBalls:
     def detect_balls(self)->list:
         height = self.__image.shape[0]
         min_dist = int(height / MatchingBalls.BALLS_DISTANCE_RATIO)
-        minRadius=int(height / MatchingBalls.RADIUS_RATIO)
-        maxRadius=int(height / MatchingBalls.RADIUS_RATIO)
+        minRadius=int(height / (MatchingBalls.RADIUS_RATIO*2))
         self.balls = self.finder.find(Circle(minRadius,self.canny_threshold))
         return self.balls
         #self.__ball_chart.setup_non_empty_stack(self.balls.copy())
