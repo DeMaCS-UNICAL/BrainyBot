@@ -9,6 +9,7 @@ SCREENSHOT_FILENAME = 'screenshot.png'
 SCREENSHOT_FULLPATH = os.path.join(SCREENSHOT_PATH, SCREENSHOT_FILENAME)
 CLIENT_PATH = os.path.join(SRC_PATH, '../../../tappy-client/clients/python')
 DLV_PATH = os.path.join(RESOURCES_PATH, 'dlv')
+GRID_CONFIG_PATH = os.path.join(RESOURCES_PATH, 'grid_config.json')
 # change IP addresses to your needs.
 SCREENSHOT_SERVER_IP = '192.168.0.30'     # IP of the mobile phone with Screenshotserver on board
 TAPPY_ORIGINAL_SERVER_IP = '127.0.0.1'  # IP of the server where the robot is attached to

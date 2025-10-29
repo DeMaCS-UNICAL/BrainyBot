@@ -9,9 +9,10 @@ import matplotlib
 matplotlib.use('TkAgg')
 from paddleocr import PaddleOCR
 import logging
+import json
 
 from AI.src.abstraction.helpers import getImg
-from AI.src.constants import SCREENSHOT_PATH
+from AI.src.constants import SCREENSHOT_PATH, GRID_CONFIG_PATH
 from AI.src.vision.input_game_object import *
 from AI.src.vision.output_game_object import *
 from AI.src.abstraction.objectsMatrix import *
@@ -39,6 +40,7 @@ class ObjectsFinder:
         self.__generic_object_method = eval(self.__generic_object_methodName)
         self.__threshold=threshold
         self.__paddle = None
+        self.__grid_config = self.__load_grid_config()
         #self.__graph = CandyGraph(difference)
         
         self.__hough_circles_method_name = 'cv2.HOUGH_GRADIENT'
@@ -350,4 +352,201 @@ class ObjectsFinder:
                 return text
         return None
 
-    
+    def __load_grid_config(self):
+        if os.path.exists(GRID_CONFIG_PATH):
+            with open(GRID_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+
+
+    # Get the OutputTemplateMatch list representing the grid for the specified game name (e.g., "ccs_soda")
+    # Uses the grid configuration from grid_config.json (cell_w, cell_h) must be defined for the game
+    def getGrid(self, game_name: str) -> list[OutputTemplateMatch]:
+        if not self.__grid_config or game_name not in self.__grid_config:
+            raise KeyError(f"'{game_name}' not found in grid_config.json")
+        params = self.__grid_config[game_name]
+
+        grid_region = self.__agn_retain_grid_region(self.__img_matrix)
+
+        filtered_grid_region = self.__agn_process_image(grid_region)
+
+        try:
+            cw = float(params["cell_w"])
+            ch = float(params["cell_h"])
+        except KeyError as e:
+            missing = [k for k in ("cell_w", "cell_h") if k not in params]
+            raise KeyError(f"Missing {', '.join(missing)} in grid_config for game '{game_name}'") from e
+        boxes = self.__agn_get_grid(filtered_grid_region, cw, ch)
+
+        return self.__agn_boxes_to_output_template_matches(boxes, game_name)
+
+
+
+    # --- Agnostic methods for grid detection ---
+    # Search the grid region in the image and blacken everything else
+    def __agn_retain_grid_region(self, image: np.ndarray) -> np.ndarray:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        binary = cv2.adaptiveThreshold(
+            blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV, 11, 2
+        )
+
+        # Seal small gaps so the board becomes a single solid blob
+        kernel = np.ones((5,5), np.uint8)
+        binary_closed = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+        # Find the outer board contour on the FILLED binary, not on edges
+        contours, _ = cv2.findContours(binary_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+
+        if contours:
+            largest = max(contours, key=cv2.contourArea)
+            cv2.drawContours(mask, [largest], -1, (255,), thickness=cv2.FILLED)   # solid, no holes
+
+            # Apply mask to the ORIGINAL image (color-safe)
+            result = cv2.bitwise_and(image, image, mask=mask)
+            return result
+        
+        return np.zeros_like(image)
+
+    # --- Agnostic methods for grid detection ---
+    # Process the image to blacken rows/columns that are mostly black (under threshold)
+    def __agn_process_image(self, img: np.ndarray, threshold: int = 100) -> np.ndarray:
+        img_array = img.copy()  
+        if img_array.ndim == 2:
+            nonblack = img_array != 0                 # (H,W)
+        else:
+            nonblack = np.any(img_array != 0, axis=2) # (H,W)
+
+        H, W = nonblack.shape
+
+        # --- Rows: find first/last with count > threshold
+        row_counts = np.count_nonzero(nonblack, axis=1)           # (H,)
+        row_hits = np.flatnonzero(row_counts > threshold)
+
+        if row_hits.size == 0:
+            # No row exceeds the threshold => whole image becomes black
+            img_array[...] = 0
+            return img_array
+
+        top = row_hits[0]
+        bottom = row_hits[-1]
+
+        # Blacken rows outside [top, bottom]
+        if top > 0:
+            img_array[:top, :] = 0
+        if bottom + 1 < H:
+            img_array[bottom+1:, :] = 0
+
+
+        # --- Columns: find first/last with count > threshold
+        col_counts = np.count_nonzero(nonblack, axis=0)           # (W,)
+        col_hits = np.flatnonzero(col_counts > threshold)
+
+        if col_hits.size == 0:
+            # All columns under threshold after row pass
+            img_array[...] = 0
+            return img_array
+
+        left = col_hits[0]
+        right = col_hits[-1]
+
+        # Blacken columns outside [left, right]
+        if left > 0:
+            img_array[:, :left] = 0
+        if right + 1 < W:
+            img_array[:, right+1:] = 0
+
+        return img_array
+
+    # --- Agnostic methods for grid detection ---
+    # Return (top, bottom, left, right) of non-black region to define limits
+    @staticmethod
+    def __agn_non_black_limits(img: np.ndarray):
+        """Ritorna (top, bottom, left, right) della regione non-nera."""
+        H, W = img.shape[:2]
+        s = img if img.ndim == 2 else img.max(axis=2)
+        row_max = s.max(axis=1)
+        col_max = s.max(axis=0)
+        if row_max.max() == 0:
+            return -1, -1, -1, -1
+        rows_has = row_max > 0
+        cols_has = col_max > 0
+        top    = int(np.argmax(rows_has))
+        bottom = int(H - 1 - np.argmax(rows_has[::-1]))
+        left   = int(np.argmax(cols_has))
+        right  = int(W - 1 - np.argmax(cols_has[::-1]))
+        return top, bottom, left, right
+
+    # --- Agnostic methods for grid detection ---
+    # Create boxes from horizontal and vertical lines
+    @staticmethod
+    def __agn_create_boxes(horizontal_lines: list, vertical_lines: list) -> list[dict]:
+        boxes = []
+        for i in range(len(horizontal_lines) - 1):
+            for j in range(len(vertical_lines) - 1):
+                top    = horizontal_lines[i]
+                bottom = horizontal_lines[i + 1]
+                left   = vertical_lines[j]
+                right  = vertical_lines[j + 1]
+                center_x = int((left + right) // 2)
+                center_y = int((top  + bottom) // 2)
+                width  = int(right - left)
+                height = int(bottom - top)
+                boxes.append({"center": (center_x, center_y), "width": width, "height": height})
+        return boxes
+
+    # --- Agnostic methods for grid detection ---
+    # Generate boxes representing the grid cells
+    def __agn_get_grid(self, image: np.ndarray, cell_width: float, cell_height: float):
+        top, bottom, left, right = self.__agn_non_black_limits(image)
+        if min(top, bottom, left, right) < 0:
+            return []  # entire image is black -> no cells
+
+        roi_h = float(max(1, bottom - top))
+        roi_w = float(max(1, right  - left))
+
+        # Support fractional parameters (relative to ROI) or values in pixels
+        cw_px = (cell_width  * roi_w) if (0 < cell_width  <= 1.0) else float(cell_width)
+        ch_px = (cell_height * roi_h) if (0 < cell_height <= 1.0) else float(cell_height)
+        cw_px = max(1.0, cw_px)
+        ch_px = max(1.0, ch_px)
+
+        # Number of integer segments (at least 1) and uniform step
+        ncols = max(1, int(roi_w // cw_px))
+        nrows = max(1, int(roi_h // ch_px))
+        v_delta = roi_w / ncols
+        h_delta = roi_h / nrows
+
+        # Align borders to multiples of the step
+        right  = left + v_delta * ncols
+        bottom = top  + h_delta * nrows
+
+        # Generate grid line coordinates
+        horizontal_lines = []
+        y = float(top)
+        while y <= bottom + 1:
+            horizontal_lines.append(int(round(y)))
+            y += h_delta
+        vertical_lines = []
+        x = float(left)
+        while x <= right + 1:
+            vertical_lines.append(int(round(x)))
+            x += v_delta
+
+        boxes = self.__agn_create_boxes(horizontal_lines, vertical_lines)
+        return boxes
+
+
+    # --- Agnostic methods for grid detection ---
+    # Convert boxes to OutputTemplateMatch objects
+    # TODO: add label and confidence if needed
+    def __agn_boxes_to_output_template_matches(self, boxes: list[dict], game_name: str) -> list[OutputTemplateMatch]:
+        objects = []
+        for box in boxes:
+            (cx, cy) = box["center"]
+            w = int(box["width"])
+            h = int(box["height"])
+            objects.append(OutputTemplateMatch(cx, cy, w, h, "", 1.0))
+        return objects
