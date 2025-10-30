@@ -210,7 +210,9 @@ class ObjectsFinder:
         #blurred_img = cv2.blur(gray,ksize=(5,5))
         #canny = cv2.Canny(gray, canny_threshold,int(canny_threshold*3.5))
         min_radius_odd = min_radius if min_radius % 2 ==1 else min_radius+1
-        contours,edged = self.get_circle_contours(gray,min_radius_odd)
+        print("looking for similarities")
+        out, mask = self.similar_neighbors_to_white(self.__img_matrix, radius=3, threshold=10.0, ratio=1)
+        contours,edged = self.get_circle_contours(mask,min_radius_odd)
         edged = cv2.cvtColor(edged,cv2.COLOR_GRAY2BGR)
         print("found",len(contours),"contours")
         circles = [cnt for cnt in contours if self.is_circle(cnt)]
@@ -244,39 +246,106 @@ class ObjectsFinder:
                 plt.show()
                 cv2.waitKey(0)
         return balls
-    def get_circle_contours(self, gray,min_radius):
-        sigma=1.6
-        k=1.6
-        zc_thresh=0.01
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))
-        gray = cv2.morphologyEx(self.__img_matrix, cv2.MORPH_GRADIENT,kernel)
-        gray = cv2.cvtColor(gray,cv2.COLOR_BGR2GRAY)
-        b1 = cv2.bilateralFilter(gray,-1,12,12)
-        dog = cv2.subtract(b1,gray)  # sign convention doesn't matter for zero-crossings
-        #dog = cv2.cvtColor(dog,cv2.COLOR_BGR2GRAY)
-        #dog = cv2.normalize(np.abs(dog), None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    def get_circle_contours(self, black_white,min_radius):
         
-        edged_1 = gray
-        edged_2 = cv2.bilateralFilter(dog,-1,12,12)
-        edged = cv2.subtract(edged_2,dog)
-        mask1 = dog>0
-        mask2 = dog==0
-        dog[mask1]=0
-        dog[mask2]=255
-        mask1 = edged>0
-        mask2 = edged==0
-        edged[mask1]=0
-        edged[mask2]=255
-        
-        self.show_comparison(dog, edged, edged_1, edged_2)
-        contours, _ = cv2.findContours(edged, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
-        temp = cv2.cvtColor(edged,cv2.COLOR_GRAY2BGR)
-        cv2.drawContours(temp,contours,-1,(255,0,0),3)
+        contours, _ = cv2.findContours(black_white, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+        temp = cv2.cvtColor(black_white,cv2.COLOR_GRAY2BGR)
+        print("masked")
+        plt.imshow(temp)
+        plt.show()
+        print("detection done")
+        cv2.drawContours(temp,contours,-1,(255,0,0),1)
         print("contours")
         plt.imshow(temp)
         plt.show()
         print("detection done")
-        return contours,edged
+        return contours,black_white
+
+    def similar_neighbors_to_white(self,img_bgr, radius=20, threshold=10.0, ratio=0.7):
+        """
+        Set a pixel to white if at least `ratio` of pixels in a radius-`radius` disk
+        are within CIE-Lab distance < `threshold` from the center pixel.
+
+        Parameters
+        ----------
+        img_bgr : np.ndarray  (H, W, 3), uint8
+            Input BGR image.
+        radius : int
+            Neighborhood radius in pixels.
+        threshold : float
+            Max Lab distance (ΔE) to be considered "really close".
+        ratio : float in (0,1]
+            Fraction of neighbors that must be close.
+
+        Returns
+        -------
+        out : np.ndarray  (H, W, 3), uint8
+            Output image with qualifying pixels set to white.
+        mask : np.ndarray (H, W), uint8
+            Binary mask of pixels that were set to white (0 or 255).
+        """
+        # Convert to Lab for perceptual distances
+        lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
+        H, W, _ = lab.shape
+
+        # Create a disk structuring element of given radius
+        y, x = np.ogrid[-radius:radius+1, -radius:radius+1]
+        disk = (x*x + y*y) <= radius*radius
+        offsets = np.argwhere(disk) - radius  # list of (dy, dx)
+
+        # We'll accumulate how many neighbors are "close"
+        close_count = np.zeros((H, W), dtype=np.int16)
+
+        # For each offset, compare shifted Lab to original
+        for dy, dx in offsets:
+            if dy == 0 and dx == 0:
+                # include the center as well (distance 0). Optional: skip if you don't want to count the center.
+                close_count += 1
+                continue
+
+            # Build shifted view with edge-padding (replicate)
+            if dy >= 0:
+                src_y = slice(0, H - dy)
+                dst_y = slice(dy, H)
+            else:
+                src_y = slice(-dy, H)
+                dst_y = slice(0, H + dy)
+
+            if dx >= 0:
+                src_x = slice(0, W - dx)
+                dst_x = slice(dx, W)
+            else:
+                src_x = slice(-dx, W)
+                dst_x = slice(0, W + dx)
+
+            # Compute ΔE between center and shifted neighbor region
+            center = lab[dst_y, dst_x]       # region aligned for comparison
+            neighb = lab[src_y, src_x]       # shifted neighborhood region
+
+            # Euclidean distance in Lab
+            dE = np.sqrt(np.sum((center - neighb) ** 2, axis=2))
+
+            # Threshold: count where close
+            close_count[dst_y, dst_x] += (dE < threshold).astype(np.int16)
+
+        # How many pixels are in the disk?
+        neigh_total = int(disk.sum())
+        need = int(np.ceil(ratio * neigh_total))
+
+        # Build mask of pixels to set white
+        mask = (close_count >= need).astype(np.uint8) * 255
+
+        # Apply mask
+        out = img_bgr.copy()
+        out[mask.astype(bool)] = (255, 255, 255)
+
+        return out, mask
+
+    # Example usage:
+    # img = cv2.imread("input.png")
+    # out, mask = similar_neighbors_to_white(img, radius=3, threshold=10.0, ratio=0.7)
+    # cv2.imwrite("out.png", out)
+    # cv2.imwrite("mask.png", mask)
 
     def show_comparison(self, dog, edged, edged_1, edged_2):
         width = int(self.__img_matrix.shape[1] * 0.3)
