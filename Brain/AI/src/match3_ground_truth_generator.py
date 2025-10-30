@@ -1,4 +1,5 @@
 from AI.src.candy_crush.helper import candy_crush,MatchingCandy,draw
+from AI.src.vision.output_game_object import OutputTemplateMatch
 import constants
 import os
 import subprocess
@@ -6,6 +7,7 @@ from contextlib import redirect_stdout
 from collections import defaultdict
 import  cv2
 from AI.src.abstraction.helpers import getImg
+from AI.src.vision.objectsFinder import ObjectsFinder
 from matplotlib import pyplot as plt
 import argparse
 import random 
@@ -49,6 +51,33 @@ def load_sprites_and_distances(base_path):
     
     return sprites, distances
 
+def process_screenshots_with_get_grid(current_path,base_path):
+    for entry in os.listdir(current_path):
+        full_path = os.path.join(current_path, entry)
+        if os.path.isdir(full_path):
+            # Chiamata ricorsiva per sottodirectory
+            process_screenshots_recursively(full_path,base_path)
+        else:
+            screenshot = os.path.relpath(full_path, current_path)
+            print(f"{screenshot}")
+            finder = ObjectsFinder(full_path)
+            img_copy = finder.get_image()
+            outputs_tm = finder.getGrid(args.game_name,img=img_copy)
+            output_file = os.path.join(GROUND_TRUTH,args.game_name, entry.strip(".png") + '.txt')
+            print(output_file)
+            # Crea le directory di destinazione se non esistono
+            generate_ground_truth_from_boxes(outputs_tm, output_file)
+            subprocess.run(["code", output_file])
+            plt.imshow(img_copy)
+            plt.title(f"ABSTRACTION")
+            plt.show()
+
+def generate_ground_truth_from_boxes(template_matches_list:list[OutputTemplateMatch], output_file):
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w') as f:
+        with redirect_stdout(f):
+            for cell in template_matches_list:
+                print (cell.x,cell.y,cell.label)                            
 
 def process_screenshots_recursively(current_path,base_path, sprites, distances):
     if current_path == base_path:
@@ -111,10 +140,15 @@ msg = "Description"
     
 parser = argparse.ArgumentParser(description=msg)
 parser.add_argument("-p", "--path", type=str, help=f"Name of the folder in {SCREENSHOTS_PATH} on which you want to recurse to generate the ground truth",required=False)
+parser.add_argument("-t", "--templates", action='store_true', help=f"To use templates instead of cell size",required=False)
+parser.add_argument("-g", "--game_name", type=str, help=f"If using cell size, specify the name of the game",required=False)
 args = parser.parse_args()
 if not args.path:
     args.path=""
-print(SPRITE_PATH)
-SPRITES,DISTANCES = load_sprites_and_distances(os.path.join(SPRITE_PATH,args.path))
-path = os.path.join(SCREENSHOTS_PATH,args.path)
-process_screenshots_recursively(path,path, SPRITES,DISTANCES)
+if args.templates:
+    print(SPRITE_PATH)
+    SPRITES,DISTANCES = load_sprites_and_distances(os.path.join(SPRITE_PATH,args.path))
+    path = os.path.join(SCREENSHOTS_PATH,args.path)
+    process_screenshots_recursively(path,path, SPRITES,DISTANCES)
+else:
+    process_screenshots_with_get_grid(args.path,args.path)

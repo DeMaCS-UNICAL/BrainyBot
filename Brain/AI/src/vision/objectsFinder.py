@@ -361,11 +361,14 @@ class ObjectsFinder:
 
     # Get the OutputTemplateMatch list representing the grid for the specified game name (e.g., "ccs_soda")
     # Uses the grid configuration from grid_config.json (cell_w, cell_h) must be defined for the game
-    def getGrid(self, game_name: str) -> list[OutputTemplateMatch]:
+    def getGrid(self, game_name: str, img=None) -> list[OutputTemplateMatch]:
+        resolution = f"{self.__img_matrix.shape[0]}x{self.__img_matrix.shape[1]}"
         if not self.__grid_config or game_name not in self.__grid_config:
             raise KeyError(f"'{game_name}' not found in grid_config.json")
         params = self.__grid_config[game_name]
-
+        if not resolution in params:
+            raise KeyError(f"'{resolution}' not found for game {game_name} in grid_config.json")
+        params = params[resolution]
         grid_region = self.__agn_retain_grid_region(self.__img_matrix)
 
         filtered_grid_region = self.__agn_process_image(grid_region)
@@ -378,7 +381,7 @@ class ObjectsFinder:
             raise KeyError(f"Missing {', '.join(missing)} in grid_config for game '{game_name}'") from e
         boxes = self.__agn_get_grid(filtered_grid_region, cw, ch)
 
-        return self.__agn_boxes_to_output_template_matches(boxes, game_name)
+        return self.__agn_boxes_to_output_template_matches(filtered_grid_region,boxes, game_name,img)
 
 
 
@@ -504,36 +507,29 @@ class ObjectsFinder:
         if min(top, bottom, left, right) < 0:
             return []  # entire image is black -> no cells
 
-        roi_h = float(max(1, bottom - top))
-        roi_w = float(max(1, right  - left))
+        num_rows = round((bottom-top)/cell_height)
+        num_col = round((right-left)/cell_width)
 
-        # Support fractional parameters (relative to ROI) or values in pixels
-        cw_px = (cell_width  * roi_w) if (0 < cell_width  <= 1.0) else float(cell_width)
-        ch_px = (cell_height * roi_h) if (0 < cell_height <= 1.0) else float(cell_height)
-        cw_px = max(1.0, cw_px)
-        ch_px = max(1.0, ch_px)
-
-        # Number of integer segments (at least 1) and uniform step
-        ncols = max(1, int(roi_w // cw_px))
-        nrows = max(1, int(roi_h // ch_px))
-        v_delta = roi_w / ncols
-        h_delta = roi_h / nrows
-
-        # Align borders to multiples of the step
-        right  = left + v_delta * ncols
-        bottom = top  + h_delta * nrows
-
-        # Generate grid line coordinates
-        horizontal_lines = []
-        y = float(top)
-        while y <= bottom + 1:
-            horizontal_lines.append(int(round(y)))
-            y += h_delta
-        vertical_lines = []
-        x = float(left)
-        while x <= right + 1:
-            vertical_lines.append(int(round(x)))
-            x += v_delta
+        center_horiz = top+((bottom-top)/2)
+        center_vert = left+((right-left)/2)
+        next_horiz_top = center_horiz-cell_height/2 if num_rows%2==1 else center_horiz
+        next_horiz_bottom = center_horiz+cell_height/2 if num_rows%2==1 else center_horiz + cell_height
+        next_vert_left = center_vert-cell_width/2 if num_col%2==1 else center_vert
+        next_vert_right = center_vert +cell_width/2 if num_col%2==1 else center_vert + cell_width
+        vertical_lines =[]
+        horizontal_lines=[]
+        while next_horiz_top>=top:
+            horizontal_lines.insert(0,next_horiz_top)
+            next_horiz_top -= cell_height
+        while next_horiz_bottom<=bottom:
+            horizontal_lines.append(next_horiz_bottom)
+            next_horiz_bottom += cell_height
+        while next_vert_left>=left:
+            vertical_lines.insert(0,next_vert_left)
+            next_vert_left -= cell_width
+        while next_vert_right<=right:
+            vertical_lines.append(next_vert_right)
+            next_vert_right += cell_width
 
         boxes = self.__agn_create_boxes(horizontal_lines, vertical_lines)
         return boxes
@@ -542,11 +538,143 @@ class ObjectsFinder:
     # --- Agnostic methods for grid detection ---
     # Convert boxes to OutputTemplateMatch objects
     # TODO: add label and confidence if needed
-    def __agn_boxes_to_output_template_matches(self, boxes: list[dict], game_name: str) -> list[OutputTemplateMatch]:
+    def __agn_boxes_to_output_template_matches(self, filtered_grid_image,boxes: list[dict], game_name: str, img=None) -> list[OutputTemplateMatch]:
         objects = []
-        for box in boxes:
-            (cx, cy) = box["center"]
-            w = int(box["width"])
-            h = int(box["height"])
-            objects.append(OutputTemplateMatch(cx, cy, w, h, "", 1.0))
+        
+        _, _, _,_,_,labels_confidence = self.__agn_template_matching_fast(filtered_grid_image,boxes,out_image=img)
+        for label_conf in sorted(labels_confidence,key= lambda x : x[0]):
+            (cx, cy) = boxes[label_conf[0]]["center"]
+            w = int(boxes[label_conf[0]]["width"])
+            h = int(boxes[label_conf[0]]["height"])
+            objects.append(OutputTemplateMatch(cx, cy, w, h, label_conf[1], label_conf[2]))
         return objects
+
+    #Performs template matching in order to cluster objects in the screen
+    def __agn_template_matching_fast(self,image, boxes, out_image=None, black_threshold=50, match_threshold=0.80, parallel=True, template_percentage=0.75, save_templates=False):
+        img=image
+        H, W,_ = img.shape
+        if len(boxes)==0:
+            return 0, np.inf, np.inf,0,0,[],img
+        # 2) pack boxes to arrays
+        centers = np.array([b["center"] for b in boxes], dtype=np.int32)   # (N,2): [cx, cy]
+        wh      = np.array([[b["width"], b["height"]] for b in boxes], dtype=np.int32)  # (N,2): [w, h]
+
+        # corners (clipped)
+        x1 = np.clip(centers[:,0] - wh[:,0]//2, 0, W)
+        y1 = np.clip(centers[:,1] - wh[:,1]//2, 0, H)
+        x2 = np.clip(x1 + wh[:,0], 0, W)
+        y2 = np.clip(y1 + wh[:,1], 0, H)
+        areas = (x2 - x1) * (y2 - y1)
+        # 5) arrays instead of dicts
+        N = len(boxes)
+        assigned = np.full(N, -1, dtype=np.int32)
+        is_flat=np.full(N, False, dtype=bool)
+        cur_id = 1
+
+        # accumulate drawings; do once at end
+        to_draw_rects = []
+        to_draw_labels = []
+
+        # stats (just compute once with numpy)
+        widths  = wh[:,0].astype(np.float32)
+        heights = wh[:,1].astype(np.float32)
+        templates=[]
+        for i in range(N):
+            cx, cy = centers[i]
+            w, h   = int(wh[i,0]), int(wh[i,1])
+
+            # build template = 0.75 window around the same center
+            tpl_w, tpl_h = int(w *template_percentage), int(h *template_percentage)
+            tx1 = max(cx - tpl_w // 2, 0); ty1 = max(cy - tpl_h // 2, 0)
+            tx2 = min(tx1 + tpl_w, W);     ty2 = min(ty1 + tpl_h, H)
+            tpl = img[ty1:ty2, tx1:tx2]
+            th, tw = tpl.shape[:2]
+            if th == 0 or tw == 0:
+                templates.append(None)
+                is_flat[i]=True
+                to_draw_rects.append((int(x1[i]), int(y1[i]), int(x2[i]), int(y2[i])))
+                #plt.imshow(tpl)
+                #plt.show()
+                to_draw_labels.append((i, "ERR!",0))
+                continue
+
+            #temp_box = np.full(tpl.shape[:2],125, dtype=np.uint8)
+            tpl_gray = cv2.cvtColor(tpl,cv2.COLOR_BGR2GRAY)
+        
+            #print(res.max())
+            if not self.is_flat_patch(tpl_gray):
+                templates.append(tpl)
+            else:
+                to_draw_rects.append((int(x1[i]), int(y1[i]), int(x2[i]), int(y2[i])))
+                #plt.imshow(tpl)
+                #plt.show()
+                to_draw_labels.append((i, 0,0))
+                templates.append(None)
+                is_flat[i]=True
+
+        for i in range(N):
+            if assigned[i] != -1 or is_flat[i]:
+                continue
+            tpl = templates[i]
+            th, tw = tpl.shape[:2]
+            tpl_area = th * tw
+
+            assigned[i] = cur_id
+            to_draw_rects.append((int(x1[i]), int(y1[i]), int(x2[i]), int(y2[i])))
+            to_draw_labels.append((i, cur_id, 0))
+
+            # 4) vectorized candidate prefilter (size & area gating)
+            area_factor = (1/(template_percentage**2))
+            area_factor += area_factor*0.2
+            ok_size = (wh[:,0] >= tw) & (wh[:,1] >= th) & (areas <= area_factor * tpl_area)
+            cand_mask = (assigned == -1) & (~is_flat) & ok_size
+            cand_mask[i] = False
+            cand_idx = np.flatnonzero(cand_mask)
+            def score(j):
+                sr = img[y1[j]:y2[j], x1[j]:x2[j]]
+                res = cv2.matchTemplate(sr, tpl, cv2.TM_CCOEFF_NORMED)
+                
+                return j, float(res.max())
+
+            if cand_idx.size:
+                for j in cand_idx:
+                    _, m = score(j)
+                    if m >= match_threshold:
+                        assigned[j] = cur_id
+                        to_draw_rects.append((int(x1[j]), int(y1[j]), int(x2[j]), int(y2[j])))
+                        to_draw_labels.append((j, cur_id, m))
+
+            cur_id += 1
+
+        # 6) draw once at the end
+        
+        if out_image is not None:
+            for rx1, ry1, rx2, ry2 in to_draw_rects:
+                cv2.rectangle(out_image, (rx1, ry1), (rx2, ry2), (0, 255, 255), 2)
+            for idx, cid, score in to_draw_labels:
+                cx = (x1[idx] + x2[idx]) // 2
+                cy = (y1[idx] + y2[idx]) // 2
+                cv2.putText(out_image, f"{cid}:{score:.2f}", (x1[idx], cy + 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 1, cv2.LINE_AA)
+            
+        mean_width = widths.mean()
+        mean_height = heights.mean()
+        w_cv = float(widths.std() / max(mean_width, 1e-9)) if widths.size else float("inf")
+        h_cv = float(heights.std() / max(mean_height, 1e-9)) if heights.size else float("inf")
+        num_groups = int(np.unique(assigned[assigned != -1]).size)
+
+        return num_groups, w_cv, h_cv,mean_width,mean_height,to_draw_labels
+    
+    def is_flat_patch(self,patch, var_thresh=130, range_thresh=15):
+        """
+        Returns True if `patch` is (almost) flat.
+        - var_thresh: variance threshold (uint8 scale). 4 ≈ std dev of 2.
+        - range_thresh: early-exit check using (max - min).
+        """
+        # Early cheap reject/accept via value range
+        if (int(patch.max()) - int(patch.min())) <= range_thresh:
+            return True
+        # Robust variance (E[x^2] - E[x]^2)
+        m = patch.mean(dtype=np.float32)
+        v = (patch.astype(np.float32)**2).mean() - m*m
+        return v <= var_thresh
