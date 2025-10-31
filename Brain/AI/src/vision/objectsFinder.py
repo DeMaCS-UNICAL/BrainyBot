@@ -540,7 +540,7 @@ class ObjectsFinder:
     # TODO: add label and confidence if needed
     def __agn_boxes_to_output_template_matches(self, filtered_grid_image,boxes: list[dict], game_name: str, img=None) -> list[OutputTemplateMatch]:
         objects = []
-        
+        boxes = self.__agn_filter_boxes_by_black_pixels(filtered_grid_image, boxes, black_threshold=50, max_black_ratio=0.40)
         _, _, _,_,_,labels_confidence = self.__agn_template_matching_fast(filtered_grid_image,boxes,out_image=img)
         for label_conf in sorted(labels_confidence,key= lambda x : x[0]):
             (cx, cy) = boxes[label_conf[0]]["center"]
@@ -548,6 +548,35 @@ class ObjectsFinder:
             h = int(boxes[label_conf[0]]["height"])
             objects.append(OutputTemplateMatch(cx, cy, w, h, label_conf[1], label_conf[2]))
         return objects
+
+    #Remove black patches form candidate boxes for TM
+    def __agn_filter_boxes_by_black_pixels(self,image, boxes, black_threshold=50, max_black_ratio=0.40):
+
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        H, W = gray.shape[:2]
+        kept_boxes = []
+        received = len(boxes)
+        removed = 0
+
+        for b in boxes:
+            cx, cy = b["center"]
+            w, h = int(b["width"]), int(b["height"])
+
+            # Reconstruct box coordinates and clip to image bounds
+            left   = max(0, int(cx - w // 2))
+            right  = min(W, int(left + w))
+            top    = max(0, int(cy - h // 2))
+            bottom = min(H, int(top + h))
+            roi = gray[top:bottom, left:right]
+            total = roi.size
+            black_pixels = np.count_nonzero(roi < black_threshold)
+            black_ratio = black_pixels / total
+
+            if black_ratio <= max_black_ratio:
+                kept_boxes.append(b)
+            else:
+                removed += 1
+        return kept_boxes
 
     #Performs template matching in order to cluster objects in the screen
     def __agn_template_matching_fast(self,image, boxes, out_image=None, black_threshold=50, match_threshold=0.80, parallel=True, template_percentage=0.75, save_templates=False):

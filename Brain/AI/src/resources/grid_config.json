@@ -1,11 +1,15 @@
 {
     "candy_crush_saga": {
-        "vertical_threshold": 300,
-        "vertical_minLineLength": 130,
-        "vertical_maxLineGap": 6,
-        "horizontal_threshold": 100,
-        "horizontal_minLineLength": 190,
-        "horizontal_maxLineGap": 7
+        "2400x1080": {
+            "vertical_threshold": 289,
+            "vertical_minLineLength": 88,
+            "vertical_maxLineGap": 11,
+            "threshold": 236,
+            "maxval": 251,
+            "canny_thresh": 65,
+            "cell_w": "118.0",
+            "cell_h": "125.62"
+        }
     },
     "3. Candy crush friends saga": {
         "vertical_threshold": 300,
@@ -106,5 +110,515 @@
         "canny_thresh": 135,
         "cell_w": "115.43",
         "cell_h": "115.29"
+    },
+    "CCSS": {
+        "2400x1080": {
+            "vertical_threshold": 208,
+            "vertical_minLineLength": 171,
+            "vertical_maxLineGap": 19,
+            "threshold": 229,
+            "maxval": 216,
+            "canny_thresh": 56,
+            "cell_w": "114.0",
+            "cell_h": "116.22"
+        },
+        "2000x1200": {
+            "vertical_threshold": 122,
+            "vertical_minLineLength": 103,
+            "vertical_maxLineGap": 3,
+            "threshold": 201,
+            "maxval": 257,
+            "canny_thresh": 37,
+            "cell_w": "128.56",
+            "cell_h": "127.22"
+        }
+    },
+    "charming": {
+        "2400x1080": {
+            "vertical_threshold": 134,
+            "vertical_minLineLength": 74,
+            "vertical_maxLineGap": 18,
+            "threshold": 153,
+            "maxval": 206,
+            "canny_thresh": 82,
+            "cell_w": "116.86",
+            "cell_h": "115.56"
+        }
+    },
+    "csdcdddddvjabdscadfadsasdfbvdfvdcuoouucyyiiyrrr": {
+        "2400x1080": {
+            "vertical_threshold": 272,
+            "vertical_minLineLength": 151,
+            "vertical_maxLineGap": 7,
+            "threshold": 140,
+            "maxval": 148,
+            "canny_thresh": 179,
+            "cell_w": "117.57",
+            "cell_h": "126.27"
+        }
+    },
+    "ab": {
+        "2400x1080": {
+            "vertical_threshold": 172,
+            "vertical_minLineLength": 108,
+            "vertical_maxLineGap": 3,
+            "threshold": 155,
+            "maxval": 138,
+            "canny_thresh": 80,
+            "cell_w": "117.43",
+            "cell_h": "126.57"
+        }
+    },
+    "abc": {
+        "2400x1080": {
+            "vertical_threshold": 238,
+            "vertical_minLineLength": 38,
+            "vertical_maxLineGap": 6,
+            "threshold": 212,
+            "maxval": 278,
+            "canny_thresh": 167,
+            "cell_w": "116.74",
+            "cell_h": "126.45"
+        }
+    },
+    "abcd": {
+        "2400x1080": {
+            "vertical_threshold": 130,
+            "vertical_minLineLength": 157,
+            "vertical_maxLineGap": 2,
+            "threshold": 183,
+            "maxval": 196,
+            "canny_thresh": 95,
+            "cell_w": "117.59",
+            "cell_h": "127.27"
+        }
+    },
+    "abcde": {
+        "2400x1080": {
+            "vertical_threshold": 267,
+            "vertical_minLineLength": 107,
+            "vertical_maxLineGap": 17,
+            "threshold": 287,
+            "maxval": 187,
+            "canny_thresh": 167,
+            "cell_w": "282.0",
+            "cell_h": "138.0"
+        }
+    },
+    "abcdef": {
+        "2400x1080": {
+            "vertical_threshold": 94,
+            "vertical_minLineLength": 30,
+            "vertical_maxLineGap": 4,
+            "threshold": 183,
+            "maxval": 249,
+            "canny_thresh": 165,
+            "cell_w": "115.68",
+            "cell_h": "126.46"
+        }
+    },
+    "abcdefg": {
+        "2400x1080": {
+            "vertical_threshold": 271,
+            "vertical_minLineLength": 141,
+            "vertical_maxLineGap": 5,
+            "threshold": 176,
+            "maxval": 119,
+            "canny_thresh": 189,
+            "cell_w": "116.96",
+            "cell_h": "126.61"
+        }
+    },
+    "abcdefgi": {
+        "2400x1080": {
+            "vertical_threshold": 185,
+            "vertical_minLineLength": 71,
+            "vertical_maxLineGap": 10,
+            "threshold": 192,
+            "maxval": 282,
+            "canny_thresh": 106,
+            "cell_w": "116.17",
+            "cell_h": "115.68"
+        }
+    },
+    "abcdefgijk": {
+        "2400x1080": {
+            "vertical_threshold": 171,
+            "vertical_minLineLength": 69,
+            "vertical_maxLineGap": 18,
+            "threshold": 228,
+            "maxval": 167,
+            "canny_thresh": 43,
+            "cell_w": "117.29",
+            "cell_h": "114.38"
+        }
+    },
+    "abcdefgijkl": {
+        "2400x1080": {
+            "vertical_threshold": 184,
+            "vertical_minLineLength": 88,
+            "vertical_maxLineGap": 14,
+            "threshold": 288,
+            "maxval": 197,
+            "canny_thresh": 138,
+            "cell_w": "116.29",
+            "cell_h": "116.23"
+        }
+    },
+    "abcdefgijklm": {
+        "2400x1080": {
+            "vertical_threshold": 63,
+            "vertical_minLineLength": 192,
+            "vertical_maxLineGap": 12,
+            "threshold": 184,
+            "maxval": 68,
+            "canny_thresh": 121,
+            "cell_w": "117.25",
+            "cell_h": "116.95"
+        }
+    },
+    "abcdefgijklmn": {
+        "2400x1080": {
+            "vertical_threshold": 208,
+            "vertical_minLineLength": 82,
+            "vertical_maxLineGap": 2,
+            "threshold": 188,
+            "maxval": 152,
+            "canny_thresh": 149,
+            "cell_w": "117.75",
+            "cell_h": "127.42"
+        }
+    },
+    "abcdefgijklmno": {
+        "2400x1080": {
+            "vertical_threshold": 190,
+            "vertical_minLineLength": 182,
+            "vertical_maxLineGap": 6,
+            "threshold": 177,
+            "maxval": 50,
+            "canny_thresh": 60,
+            "cell_w": "586.0",
+            "cell_h": "581.0"
+        }
+    },
+    "abcdefgijklmnop": {
+        "2400x1080": {
+            "vertical_threshold": 258,
+            "vertical_minLineLength": 34,
+            "vertical_maxLineGap": 15,
+            "threshold": 229,
+            "maxval": 197,
+            "canny_thresh": 46,
+            "cell_w": "115.72",
+            "cell_h": "116.98"
+        }
+    },
+    "abcdefgijklmnopq": {
+        "2400x1080": {
+            "vertical_threshold": 130,
+            "vertical_minLineLength": 101,
+            "vertical_maxLineGap": 2,
+            "threshold": 193,
+            "maxval": 244,
+            "canny_thresh": 89,
+            "cell_w": "117.0",
+            "cell_h": "117.54"
+        }
+    },
+    "abcdefgijklmnopqr": {
+        "2424x1080": {
+            "vertical_threshold": 229,
+            "vertical_minLineLength": 153,
+            "vertical_maxLineGap": 5,
+            "threshold": 187,
+            "maxval": 76,
+            "canny_thresh": 86,
+            "cell_w": "117.42",
+            "cell_h": "128.13"
+        }
+    },
+    "abcdefgijklmnopqrs": {
+        "2400x1080": {
+            "vertical_threshold": 184,
+            "vertical_minLineLength": 157,
+            "vertical_maxLineGap": 8,
+            "threshold": 247,
+            "maxval": 265,
+            "canny_thresh": 54,
+            "cell_w": "117.29",
+            "cell_h": "117.14"
+        }
+    },
+    "abcdefgijklmnopqrstu": {
+        "2424x1080": {
+            "vertical_threshold": 161,
+            "vertical_minLineLength": 129,
+            "vertical_maxLineGap": 15,
+            "threshold": 166,
+            "maxval": 221,
+            "canny_thresh": 79,
+            "cell_w": "116.74",
+            "cell_h": "126.74"
+        }
+    },
+    "abcdefgijklmnopqrstuv": {
+        "2424x1080": {
+            "vertical_threshold": 284,
+            "vertical_minLineLength": 192,
+            "vertical_maxLineGap": 7,
+            "threshold": 178,
+            "maxval": 236,
+            "canny_thresh": 171,
+            "cell_w": "118.0",
+            "cell_h": "127.44"
+        }
+    },
+    "abcdefgijklmnopqrstuvw": {
+        "2424x1080": {
+            "vertical_threshold": 57,
+            "vertical_minLineLength": 88,
+            "vertical_maxLineGap": 3,
+            "threshold": 238,
+            "maxval": 241,
+            "canny_thresh": 20,
+            "cell_w": "116.88",
+            "cell_h": "126.56"
+        }
+    },
+    "abcdefgijklmnopqrstuvwx": {
+        "2424x1080": {
+            "vertical_threshold": 282,
+            "vertical_minLineLength": 130,
+            "vertical_maxLineGap": 2,
+            "threshold": 273,
+            "maxval": 279,
+            "canny_thresh": 123,
+            "cell_w": "118.95",
+            "cell_h": "126.33"
+        }
+    },
+    "abcdefgijklmnopqrstuvwxy": {
+        "2424x1080": {
+            "vertical_threshold": 201,
+            "vertical_minLineLength": 79,
+            "vertical_maxLineGap": 16,
+            "threshold": 192,
+            "maxval": 277,
+            "canny_thresh": 127,
+            "cell_w": "117.89",
+            "cell_h": "127.47"
+        }
+    },
+    "abcdefgijklmnopqrstuvwxyz": {
+        "2424x1080": {
+            "vertical_threshold": 215,
+            "vertical_minLineLength": 173,
+            "vertical_maxLineGap": 15,
+            "threshold": 240,
+            "maxval": 119,
+            "canny_thresh": 163,
+            "cell_w": "117.95",
+            "cell_h": "128.34"
+        }
+    },
+    "abcz": {
+        "2400x1080": {
+            "vertical_threshold": 247,
+            "vertical_minLineLength": 54,
+            "vertical_maxLineGap": 3,
+            "threshold": 166,
+            "maxval": 90,
+            "canny_thresh": 90,
+            "cell_w": "115.86",
+            "cell_h": "115.29"
+        }
+    },
+    "abczas": {
+        "2400x1080": {
+            "vertical_threshold": 53,
+            "vertical_minLineLength": 27,
+            "vertical_maxLineGap": 5,
+            "threshold": 198,
+            "maxval": 234,
+            "canny_thresh": 147,
+            "cell_w": "114.49",
+            "cell_h": "115.01"
+        }
+    },
+    "abczased": {
+        "2400x1080": {
+            "vertical_threshold": 172,
+            "vertical_minLineLength": 132,
+            "vertical_maxLineGap": 13,
+            "threshold": 108,
+            "maxval": 105,
+            "canny_thresh": 41,
+            "cell_w": "115.0",
+            "cell_h": "114.89"
+        }
+    },
+    "abczasedu": {
+        "2400x1080": {
+            "vertical_threshold": 225,
+            "vertical_minLineLength": 194,
+            "vertical_maxLineGap": 4,
+            "threshold": 169,
+            "maxval": 280,
+            "canny_thresh": 81,
+            "cell_w": "117.29",
+            "cell_h": "116.67"
+        }
+    },
+    "abczasedudfgd": {
+        "2400x1080": {
+            "vertical_threshold": 156,
+            "vertical_minLineLength": 149,
+            "vertical_maxLineGap": 19,
+            "threshold": 118,
+            "maxval": 64,
+            "canny_thresh": 195,
+            "cell_w": "115.0",
+            "cell_h": "115.0"
+        }
+    },
+    "abczasedudfgdyy": {
+        "2400x1080": {
+            "vertical_threshold": 222,
+            "vertical_minLineLength": 97,
+            "vertical_maxLineGap": 3,
+            "threshold": 258,
+            "maxval": 51,
+            "canny_thresh": 88,
+            "cell_w": "116.29",
+            "cell_h": "116.14"
+        }
+    },
+    "abczasedudfgdyyrtr": {
+        "2400x1080": {
+            "vertical_threshold": 274,
+            "vertical_minLineLength": 66,
+            "vertical_maxLineGap": 8,
+            "threshold": 136,
+            "maxval": 296,
+            "canny_thresh": 135,
+            "cell_w": "115.44",
+            "cell_h": "115.89"
+        }
+    },
+    "cake_smash": {
+        "2400x1080": {
+            "vertical_threshold": 108,
+            "vertical_minLineLength": 64,
+            "vertical_maxLineGap": 2,
+            "threshold": 146,
+            "maxval": 59,
+            "canny_thresh": 44,
+            "cell_w": "177.95",
+            "cell_h": "186.41"
+        }
+    },
+    "cake_crush": {
+        "2400x1080": {
+            "vertical_threshold": 134,
+            "vertical_minLineLength": 87,
+            "vertical_maxLineGap": 6,
+            "threshold": 140,
+            "maxval": 112,
+            "canny_thresh": 68,
+            "cell_w": "116.0",
+            "cell_h": "117.0"
+        }
+    },
+    "candy_friends": {
+        "2400x1080": {
+            "vertical_threshold": 184,
+            "vertical_minLineLength": 125,
+            "vertical_maxLineGap": 9,
+            "threshold": 213,
+            "maxval": 249,
+            "canny_thresh": 162,
+            "cell_w": "115.56",
+            "cell_h": "115.86"
+        },
+        "2556x1179": {
+            "vertical_threshold": 284,
+            "vertical_minLineLength": 124,
+            "vertical_maxLineGap": 3,
+            "threshold": 287,
+            "maxval": 114,
+            "canny_thresh": 23,
+            "cell_w": "125.28",
+            "cell_h": "125.69"
+        },
+        "2868x1320": {
+            "vertical_threshold": 96,
+            "vertical_minLineLength": 160,
+            "vertical_maxLineGap": 5,
+            "threshold": 171,
+            "maxval": 201,
+            "canny_thresh": 80,
+            "cell_w": "139.56",
+            "cell_h": "140.33"
+        }
+    },
+    "candy_jelly": {
+        "2868x1320": {
+            "vertical_threshold": 198,
+            "vertical_minLineLength": 164,
+            "vertical_maxLineGap": 9,
+            "threshold": 231,
+            "maxval": 182,
+            "canny_thresh": 40,
+            "cell_w": "140.22",
+            "cell_h": "142.11"
+        }
+    },
+    "candy_soda": {
+        "2400x1080": {
+            "vertical_threshold": 184,
+            "vertical_minLineLength": 195,
+            "vertical_maxLineGap": 16,
+            "threshold": 207,
+            "maxval": 274,
+            "canny_thresh": 84,
+            "cell_w": "115.57",
+            "cell_h": "115.57"
+        }
+    },
+    "candy_saga": {
+        "2556x1179": {
+            "vertical_threshold": 92,
+            "vertical_minLineLength": 82,
+            "vertical_maxLineGap": 8,
+            "threshold": 188,
+            "maxval": 65,
+            "canny_thresh": 112,
+            "cell_w": "126.93",
+            "cell_h": "125.29"
+        }
+    },
+    "fruits_mania": {
+        "2868x1320": {
+            "vertical_threshold": 185,
+            "vertical_minLineLength": 102,
+            "vertical_maxLineGap": 12,
+            "threshold": 161,
+            "maxval": 239,
+            "canny_thresh": 30,
+            "cell_w": "140.24",
+            "cell_h": "155.11"
+        }
+    },
+    "chess": {
+        "2400x1080": {
+            "vertical_threshold": 298,
+            "vertical_minLineLength": 87,
+            "vertical_maxLineGap": 6,
+            "threshold": 172,
+            "maxval": 108,
+            "canny_thresh": 116,
+            "cell_w": "134.75",
+            "cell_h": "134.75"
+        }
     }
 }
