@@ -637,7 +637,7 @@ class ObjectsFinder:
                 to_draw_rects.append((int(x1[i]), int(y1[i]), int(x2[i]), int(y2[i])))
                 #plt.imshow(tpl)
                 #plt.show()
-                to_draw_labels.append((i, 0,0))
+                to_draw_labels.append((i, -1,0))
                 templates.append(None)
                 is_flat[i]=True
 
