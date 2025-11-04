@@ -1,6 +1,6 @@
 import os
 import time
-
+import subprocess
 from matplotlib.transforms import offset_copy
 
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
@@ -40,14 +40,16 @@ class Direction(Enum):
 direction = 0
 
 if __name__ == "__main__":
-    os.chdir("resources")
+    os.chdir("../resources")
 
 
     for x in range(4):
         direction = (x+1)%4
 
-        os.system("adb exec-out screencap -p > screenshot.png")
-        with Image.open("screenshot.png") as im:
+        with open("../screenshot.png", "wb") as f:
+            subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
+
+        with Image.open("../screenshot.png") as im:
             size = (im.size[0], im.size[1])
             # ox, dx, oy, dy = im.width//2*ac[direction][0]+offsets[0], im.width//2*ac[direction][1]+offsets[0], im.height//2*ac[direction][2]+offsets[1], im.height//2*ac[direction][3]+offsets[1]
             ox, dx, oy, dy = im.width//2+offsets[0], im.width//2+ad[direction][0]+offsets[0], im.height//2+offsets[1], im.height//2+ad[direction][1]+offsets[1]
@@ -77,13 +79,15 @@ if __name__ == "__main__":
                 f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'up {dx} {dy}'"
             ]
             
-            for move in movementsClient:
+            for move in movements:
                 print(move)
-                os.system(move)
-            # os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {int(ox)} {int(oy)} {int(dx)} {int(dy)}'")
-            # os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {int(ox)} {int(oy)} {int(dx)} {int(dy)}'")
+                subprocess.run(move, shell=True, check=True)
+            # subprocess.run(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {int(ox)} {int(oy)} {int(dx)} {int(dy)}'")
+            # subprocess.run(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {int(ox)} {int(oy)} {int(dx)} {int(dy)}'")
     time.sleep(1)
-    os.system("adb exec-out screencap -p > screenshot.png")
-    with Image.open("screenshot.png") as im:
+    with open("../screenshot.png", "wb") as f:
+        subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
+
+    with Image.open("../screenshot.png") as im:
         plt.imshow(im)
         plt.show()

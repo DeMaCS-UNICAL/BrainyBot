@@ -1,6 +1,6 @@
 import os
 from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
-
+import subprocess
 if __name__ == "__main__":
     size = (1080, 2400)
     ox, dx = int(size[0] / 2 * 1), int(size[0] / 2 * 1)
@@ -28,6 +28,6 @@ if __name__ == "__main__":
     ]
 
     for move in movements:
-        os.system(move)
+        subprocess.run(move)
 
-    # os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {ox} {oy} {dx} {dy}'")
+    # subprocess.run(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {ox} {oy} {dx} {dy}'")

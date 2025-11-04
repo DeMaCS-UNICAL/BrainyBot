@@ -8,3 +8,7 @@ class Direction(Enum):
 class Orientation(Enum):
     DESCENDING = 0
     ASCENDING = 1
+
+class MotionType(Enum):
+    SWIPE = 0
+    TAP = 1

@@ -1,7 +1,45 @@
+from logging import DEBUG, INFO, Formatter
+from threading import Thread
 import matplotlib.pyplot as plt
+import logging
+import subprocess
 from AI.src.stuffMerger.enums import *
 from AI.src.stuffMerger.utils.resources_utility import *
 from AI.src.stuffMerger.utils.image_processing_utility import *
+
+#https://talyian.github.io/ansicolors/
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+    # Niente, colori, non sono riuscito a farli funzionare bene...
+    formatter = Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
+    ch.setFormatter(formatter)
+    logger.addHandler(ch)
+
+TOTAL = 400  # px
+STAGES = 4
+STEP = TOTAL//STAGES  # px
+CHECK_RANGE = 30  # px
+CHECK_FREQUENCY = 1  # px
+DIRECTION = Direction.HORIZONTAL # 0 = horizontal, 1 = vertical
+ORIENTATION = Orientation.DESCENDING # 0 = descending, 1 = ascending
+PERFECT = False
+CAPTURE = True
+
+class Profmiavetecontagiatoafareclassipersingolithread(Thread):
+    def __init__(self, img0, crop1, shift):
+        super().__init__()
+        self.img0 = img0
+        self.crop1 = crop1
+        self.shift = shift
+        self.score = None
+        self.n_valid = None
+
+    def run(self):
+        self.score, self.n_valid = np_absolute_distance_image_comparison(self.img0, self.crop1)
+        logger.log(DEBUG, f"Score at shift {self.shift}: {self.score!r}")
 
 
 """
@@ -12,6 +50,7 @@ base_shift: how much the check image is shifted from the first image (can be neg
 check_range: range of offset to check (a, b) a->b (a can be negative)
 check_step: how many pixels between each check (1 = every pixel)
 direction: change the direction of the shift (0 = horizontal, 1 = vertical)
+orientation: change the orientation of the shift (basically if the delta is positive or negative)
 """
 def find_best_offset(
     _img0: Image.Image,
@@ -30,60 +69,48 @@ def find_best_offset(
     best_score = float("inf")
     best_shift = base_shift
 
+    threads = []
+
     for delta in range(check_range[0], check_range[1] + 1, check_step):
         shift = base_shift + (delta if orientation == Orientation.DESCENDING else -delta)
 
-        if orientation == Orientation.DESCENDING:
-            if direction == Direction.HORIZONTAL:
-                crop1 = np.roll(img1, shift, axis=1)
+        if direction == Direction.HORIZONTAL:
+            crop1 = np.roll(img1, shift, axis=1)
+            if orientation == Orientation.DESCENDING:
                 crop1[:, :shift] = 0
             else:
-                crop1 = np.roll(img1, shift, axis=0)
-                crop1[:shift, :] = 0
+                crop1[:, -shift:] = 0
         else:
-            if direction == Direction.HORIZONTAL:
-                crop1 = np.roll(img1, shift, axis=1)
-                crop1[:, shift:] = 0
+            crop1 = np.roll(img1, shift, axis=0)
+            if orientation == Orientation.DESCENDING:
+                crop1[:shift, :] = 0
             else:
-                crop1 = np.roll(img1, shift, axis=0)
-                crop1[shift:, :] = 0
+                crop1[-shift:, :] = 0
 
-        # if direction == Direction.HORIZONTAL:
-        #     crop1 = np.roll(img1, shift, axis=1)
-        #     if orientation == Orientation.DESCENDING:
-        #         crop1[:, :shift] = 0
-        #     else:
-        #         crop1[:, -shift:] = 0
-        # else:
-        #     crop1 = np.roll(img1, shift, axis=0)
-        #     if orientation == Orientation.DESCENDING:
-        #         crop1[:shift, :] = 0
-        #     else:
-        #         crop1[-shift:, :] = 0
+        t = SimilarityThread(img0, crop1, shift)
+        threads.append(t)
+        t.start()
 
-        score, n_valid = compare_images_alpha_overlap(img0, crop1)
+    for t in threads:
+        t.join()
 
-        if n_valid == 0:
-            continue
+    for t in threads:
+        if t.score < best_score:
+            best_score = t.score
+            best_shift = t.shift
+            if best_shift in check_range:
+                logger.log(logging.WARNING, f"The shift is at the border of the check_range, probably the search was a failure")
 
-        print(f"Score at {delta}: {score!r}")
-        if score < best_score:
-            best_score = score
-            best_shift = shift
+    logger.log(
+        DEBUG,
+        f"result: {best_shift} {best_score}"
+    )
 
     return best_shift, best_score
 
-STEP = 100  # px
-TOTAL = 400  # px
-CHECK_RANGE = 30  # px
-CHECK_FREQUENCY = 1  # px
-DIRECTION = Direction.HORIZONTAL # 0 = horizontal, 1 = vertical
-PERFECT = True
-CAPTURE = False
-ORIENTATION = Orientation.ASCENDING # 0 = descending, 1 = ascending
 
 if __name__ == "__main__":
-    os.chdir("resources")
+    os.chdir("../resources")
     if CAPTURE:
         get_image_set(
             perfect = PERFECT,
@@ -92,14 +119,13 @@ if __name__ == "__main__":
         )
 
     images = [Image.open(f"{'i_' if (not PERFECT) else ''}{'v_' if DIRECTION == Direction.VERTICAL else ''}{'r_' if ORIENTATION == Orientation.ASCENDING else ''}screenshot_{index}.png") for index in range(5)]
-    ignoreZone = make_alpha_mask_from_bw(Image.open("ignoreZoneIsland.png"))
-
+    ignoreZone = make_alpha_mask_from_bw(Image.open("isandempire_mask.png"))
 
     desk = Image.new("RGBA",
-                     (images[0].width+TOTAL+CHECK_RANGE, images[0].height) if DIRECTION == Direction.HORIZONTAL else
-                     (images[0].width, images[0].height+TOTAL+CHECK_RANGE),
-                     (255, 0, 0, 255)
-                     )
+            (images[0].width+TOTAL+CHECK_RANGE, images[0].height) if DIRECTION == Direction.HORIZONTAL else
+            (images[0].width, images[0].height+TOTAL+CHECK_RANGE),
+            (255, 0, 0, 255)
+        )
 
     prev_offset = desk.width-images[0].width if DIRECTION == Direction.HORIZONTAL else desk.height-images[0].height
     if ORIENTATION == Orientation.DESCENDING:
@@ -116,7 +142,7 @@ if __name__ == "__main__":
 
     offsets = []
 
-    for i in range(4):
+    for i in range(STAGES):
         best_shift, best_score = find_best_offset(
             _img0= images[i],
             _img1= images[i+1],
@@ -128,19 +154,19 @@ if __name__ == "__main__":
             orientation = ORIENTATION
         )
         delta = best_shift + (-STEP if ORIENTATION == Orientation.DESCENDING else STEP)
-
-        print(f"Best shift: {best_shift} px (delta vs STEP: {delta} px), score: {best_score:.4f}")
-
+        logger.log(INFO, f"Best shift: {best_shift} px (delta vs STEP: {delta} px), score: {best_score:.4f}")
         offsets.append(best_shift)
 
 
-    for i in range(4):
+    for i in range(STAGES):
         prev_offset+=offsets[i]
         desk.paste(images[i+1],
                 (prev_offset, 0) if DIRECTION == Direction.HORIZONTAL else
                 (0, prev_offset),
                 mask=ignoreZone
             )
+
+    logger.log(INFO, f"Total Distance x:{sum(offsets) if DIRECTION == Direction.HORIZONTAL else 0} y:{0 if DIRECTION == Direction.HORIZONTAL else sum(offsets)}")
 
     w, h = desk.size
     dpi = 100

@@ -1,12 +1,13 @@
 import os
 from PIL import ImageDraw, Image
 import matplotlib.pyplot as plt
-
+import subprocess
 if __name__ == "__main__":
-    os.chdir("resources")
-    os.system("adb exec-out screencap -p > screenshot.png")
+    os.chdir("../resources")
+    with open("../screenshot.png", "wb") as f:
+        subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
 
-    with Image.open("screenshot.png") as im:
+    with Image.open("../screenshot.png") as im:
         size = (im.size[0], im.size[1])
 
         ox, dx = int(size[0] / 2 * 1), int(size[0] / 2 * 1)

@@ -3,7 +3,7 @@ from PIL import ImageDraw, Image
 import matplotlib.pyplot as plt
 from enum import Enum
 import numpy as np
-
+import subprocess
 def getPerfectDataset():
     actions = [
         "adb shell input motionevent DOWN 600 1700",
@@ -15,12 +15,12 @@ def getPerfectDataset():
         "adb shell input motionevent UP 200 1700"
     ]
 
-    os.system(f"adb exec-out screencap -p > screenshot_{0}.png")
-    os.system(actions[0])
+    subprocess.run(f"adb exec-out screencap -p > screenshot_{0}.png")
+    subprocess.run(actions[0])
     for index, action in enumerate(actions[1:-1]):
-        os.system(action)
-        os.system(f"adb exec-out screencap -p > screenshot_{index+1}.png")
-    os.system(actions[-1])
+        subprocess.run(action)
+        subprocess.run(f"adb exec-out screencap -p > screenshot_{index+1}.png")
+    subprocess.run(actions[-1])
 
 def getInperfectDataset():
     actions = [
@@ -33,12 +33,12 @@ def getInperfectDataset():
         "adb shell input motionevent UP 200 1700"
     ]
 
-    os.system(f"adb exec-out screencap -p > i_screenshot_0.png")
-    os.system(actions[0])
+    subprocess.run(f"adb exec-out screencap -p > i_screenshot_0.png")
+    subprocess.run(actions[0])
     for index, action in enumerate(actions[1:-1]):
-        os.system(action)
-        os.system(f"adb exec-out screencap -p > i_screenshot_{index+1}.png")
-    os.system(actions[-1])
+        subprocess.run(action)
+        subprocess.run(f"adb exec-out screencap -p > i_screenshot_{index+1}.png")
+    subprocess.run(actions[-1])
 
 def makeAlphaIgnoreZone(_img: Image) -> Image:
     img = _img.convert('RGBA')
@@ -47,7 +47,7 @@ def makeAlphaIgnoreZone(_img: Image) -> Image:
     white_mask = np.all(arr == 255, axis=2)
     arr[~white_mask, 3] = 0
     result = Image.fromarray(arr)
-    result.save('ignoreZone_alpha.png')
+    result.save('islandempire_mask_alpha.png')
     return result
 
 def find_best_offset(
@@ -88,7 +88,7 @@ def find_best_offset(
 
     if mask_full.shape != (h0, w0):
         mask_img = PILImage.fromarray((mask_full.astype('uint8') * 255))
-        mask_img = mask_img.resize((w0, h0), resample=PILImage.NEAREST)
+        mask_img = mask_img.resize((w0, h0), resample=PILImage.Resampling.NEAREST)
         mask_full = (np.array(mask_img) > 0)
 
     best_score = float("inf")
@@ -134,11 +134,11 @@ CHECK_RANGE = 10  # px
 CHECK_FREQUENCY = 1  # px
 
 if __name__ == "__main__":
-    os.chdir("resources")
+    os.chdir("../resources")
     # getPerfectDataset()
     # getInperfectDataset()
     images = [Image.open(f"screenshot_{index}.png") for index in range(5)]
-    ignoreZone = makeAlphaIgnoreZone(Image.open("ignoreZone.png"))
+    ignoreZone = makeAlphaIgnoreZone(Image.open("minesweeper_mask.png"))
 
     prev_offset = 0
 
