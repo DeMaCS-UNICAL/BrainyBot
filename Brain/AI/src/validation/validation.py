@@ -1,9 +1,9 @@
 import os
-from languages.asp.asp_input_program import ASPInputProgram
+# from languages.asp.asp_input_program import ASPInputProgram
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 from AI.src.constants import RESOURCES_PATH
-from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem
+# from AI.src.candy_crush.dlvsolution.helpers import chooseDLVSystem
 
 from AI.src.abstraction.elementsStack import ElementsStacks
 from collections import defaultdict
@@ -56,37 +56,43 @@ class Validation:
         return cost_matrix
     
     def count_false_positives_negatives(self,detected_objects, ground_truth, distance_threshold=50):
-        cost_matrix = self.create_cost_matrix(detected_objects, ground_truth)
+            cost_matrix = self.create_cost_matrix(detected_objects, ground_truth)
 
-        # Hungarian algorithm
-        row_ind, col_ind = linear_sum_assignment(cost_matrix)
-        #for i, j in zip(row_ind, col_ind):
-         #   print(f"Oggetto rilevato {i} abbinato all'oggetto ground truth {j} con costo {cost_matrix[i, j]}")
-          #  print(detected_objects[i],ground_truth[j])
-        false_positives_by_label = defaultdict(int)
-        false_negatives_by_label = defaultdict(int)
+            # Hungarian algorithm
+            row_ind, col_ind = linear_sum_assignment(cost_matrix)
+            #for i, j in zip(row_ind, col_ind):
+            #   print(f"Oggetto rilevato {i} abbinato all'oggetto ground truth {j} con costo {cost_matrix[i, j]}")
+            #  print(detected_objects[i],ground_truth[j])
+            false_positives_by_label = defaultdict(int)
+            false_negatives_by_label = defaultdict(int)
+            true_positives_by_label = defaultdict(int)
 
-        matched_detected = [False] * len(detected_objects)
-        matched_ground_truth = [False] * len(ground_truth)
+            matched_detected = [False] * len(detected_objects)
+            matched_ground_truth = [False] * len(ground_truth)
+            
+            for i, j in zip(row_ind, col_ind):
+                det_label = detected_objects[i][1]
+                gt_label  = ground_truth[j][1]
+                if cost_matrix[i, j] > distance_threshold: 
+                    false_positives_by_label[detected_objects[i][1]] += 1
+                    false_negatives_by_label[ground_truth[j][1]] += 1
+                else:
+                    true_positives_by_label[gt_label]   += 1
+
+                matched_detected[i] = True
+                matched_ground_truth[j] = True
+            
+            for i, matched in enumerate(matched_detected):
+                if not matched:
+                    false_positives_by_label[detected_objects[i][1]] += 1
         
-        for i, j in zip(row_ind, col_ind):
-            if cost_matrix[i, j] > distance_threshold: 
-                false_positives_by_label[detected_objects[i][1]] += 1
-                false_negatives_by_label[ground_truth[j][1]] += 1
-          
+            for j, matched in enumerate(matched_ground_truth):
+                if not matched:
+                    false_negatives_by_label[ground_truth[j][1]] += 1
 
-            matched_detected[i] = True
-            matched_ground_truth[j] = True
-        
-        for i, matched in enumerate(matched_detected):
-            if not matched:
-                false_positives_by_label[detected_objects[i][1]] += 1
-       
-        for j, matched in enumerate(matched_ground_truth):
-            if not matched:
-                false_negatives_by_label[ground_truth[j][1]] += 1
-
-        return false_negatives_by_label,false_positives_by_label
+            
+            # true_negatives_by_label = defaultdict(int)  # not defined for detection without extra info
+            return false_negatives_by_label, false_positives_by_label, true_positives_by_label
     
     def validate_matches(self,matches_list,validation:list,threshold=50):
         #print("validating vision")
