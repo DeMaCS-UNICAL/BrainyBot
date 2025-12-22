@@ -183,19 +183,34 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
             #
             # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
             #
-            
             x1,y1,x2,y2 = cell1.x, cell1.y, cell2.x, cell2.y
             EL = 20  #pixels of swipe offset
             SX1 = x1
             SX2 = x2
             SY1 = y1
             SY2 = y2
+
+            if (abs(x1-x2) < 10):
+            #swipe vertical
+                SX1 = int( (x1+x2)/2+width/2 )
+                SX2 = SX1
+                SY1 = int(min(y1,y2)+EL) 
+                SY2 = int(max(y1,y2) + height+EL) 
+            else:
+            # assumiamo swipe orizzontale
+                SY1 = int((y1+y2)/2+height/2)
+                SY2 = int(SY1)
+                SX1 = int(min(x1,x2)+EL) 
+                SX2 = int(max(x1,x2) + width + EL)
+
             os.chdir(CLIENT_PATH)
             os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
             time.sleep(1)
             feedback = Feedback()
             success,abstraction,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
             matrix = abstraction[1]
+
+
 def read_validation_data(vision_validation, abstraction_validation):
     validation_vision=[]
     validation_abstraction=[]
