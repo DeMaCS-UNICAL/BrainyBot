@@ -160,42 +160,43 @@ def get_image_set(
     _run_motionevent(actions[-1])
 
 
-# def get_custom_image(
-#         orientation: Orientation = Orientation.DESCENDING,
-#         direction: Direction = Direction.HORIZONTAL,
-#         offset: int = 0,
-#         start_x: int = 540,
-#         start_y: int = 1200,
-#         name: str = "screenshot.png",
-# ) -> Image.Image:
-#     if offset <= 0:
-#         raise ValueError("offset must be positive")
-#     end_x = start_x
-#     end_y = start_y
-#     if direction == Direction.HORIZONTAL:
-#         end_x = start_x - offset if orientation == Orientation.DESCENDING else start_x + offset
-#     else:
-#         end_y = start_y - offset if orientation == Orientation.DESCENDING else start_y + offset
-#
-#     _run_motionevent(["adb", "shell", "input", "motionevent", "DOWN", str(start_x), str(start_y)])
-#     _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
-#     _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
-#     _run_adb_screencap_to(name)
-#     img = Image.open(name)
-#     img.load()
-#     return img
-
 def get_custom_image(
         orientation: Orientation = Orientation.DESCENDING,
         direction: Direction = Direction.HORIZONTAL,
         offset: int = 0,
         start_x: int = 540,
         start_y: int = 1200,
-        name: str = "screenshot.png"
-):
+        name: str = "screenshot.png",
+) -> Image.Image:
+    if offset <= 0:
+        raise ValueError("offset must be positive")
+    end_x = start_x
+    end_y = start_y
+    if direction == Direction.HORIZONTAL:
+        end_x = start_x - offset if orientation == Orientation.DESCENDING else start_x + offset
+    else:
+        end_y = start_y - offset if orientation == Orientation.DESCENDING else start_y + offset
+
+    # _run_motionevent(["adb", "shell", "input", "motionevent", "DOWN", str(start_x), str(start_y)])
+    # _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
+    # _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
+    
+    _run_adb_screencap_to(name)
     img = Image.open(name)
     img.load()
     return img
+
+# def get_custom_image(
+#         orientation: Orientation = Orientation.DESCENDING,
+#         direction: Direction = Direction.HORIZONTAL,
+#         offset: int = 0,
+#         start_x: int = 540,
+#         start_y: int = 1200,
+#         name: str = "screenshot.png"
+# ):
+#     img = Image.open(name)
+#     img.load()
+#     return img
 
 
 def get_custom_image_set(
@@ -232,8 +233,9 @@ def get_custom_image_set(
 
 
 def get_image() -> Image.Image:
-    # _run_adb_screencap_to("screenshot.png")
-    img = Image.open("x_0.png")
+    _run_adb_screencap_to("screenshot.png")
+    # img = Image.open("x_0.png")
+    img = Image.open("screenshot.png")
     img.load()
     return img
 

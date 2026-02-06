@@ -72,8 +72,7 @@ class MotionModule:
         x_scores: list[float] = []
         if destination_offset[0] != 0:
             x_steps = [destination_offset[0] // step_number[0] for _ in range(step_number[0])]
-            x_orientation = Orientation.DESCENDING if destination_offset[
-                                                          0] > 0 else Orientation.ASCENDING  # Forse ho invertito descending e ascending
+            x_orientation = Orientation.DESCENDING if destination_offset[0] > 0 else Orientation.ASCENDING  # Forse ho invertito descending e ascending
             if sum(x_steps) != destination_offset[0]:
                 x_steps[-1] += destination_offset[0] - sum(x_steps)
             x_images: list[Image.Image] = [get_image().convert("RGBA")]
