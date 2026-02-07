@@ -233,6 +233,7 @@ class MotionModule:
 
 
 if __name__ == "__main__":
+    from matplotlib import pyplot as plt
     md = MotionModule(
         image_mask=Image.open("resources/islandempire_mask_alpha.png"),
         screen_size=(1080, 2340)

@@ -3,20 +3,14 @@ from threading import Thread
 import matplotlib.pyplot as plt
 import logging
 import subprocess
+
 from AI.src.stuffMerger.enums import *
 from AI.src.stuffMerger.utils.resources_utility import *
 from AI.src.stuffMerger.utils.image_processing_utility import *
 
-#https://talyian.github.io/ansicolors/
-logger = logging.getLogger(__name__)
+from AI.src.constants import logger
+
 logger.setLevel(logging.INFO)
-if not logger.handlers:
-    ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
-    # Niente, colori, non sono riuscito a farli funzionare bene...
-    formatter = Formatter('%(asctime)s %(levelname)s %(name)s: %(message)s')
-    ch.setFormatter(formatter)
-    logger.addHandler(ch)
 
 TOTAL = 400  # px
 STAGES = 4
@@ -26,9 +20,9 @@ CHECK_FREQUENCY = 1  # px
 DIRECTION = Direction.HORIZONTAL # 0 = horizontal, 1 = vertical
 ORIENTATION = Orientation.DESCENDING # 0 = descending, 1 = ascending
 PERFECT = False
-CAPTURE = True
+CAPTURE = False
 
-class Profmiavetecontagiatoafareclassipersingolithread(Thread):
+class Runner(Thread):
     def __init__(self, img0, crop1, shift):
         super().__init__()
         self.img0 = img0
@@ -42,16 +36,6 @@ class Profmiavetecontagiatoafareclassipersingolithread(Thread):
         logger.log(DEBUG, f"Score at shift {self.shift}: {self.score!r}")
 
 
-"""
-_img0: image to match
-_img1: image to check
-_mask: mask for both images (only check alpha values, can be generated from a black and white image with make_alpha_mask_from_bw)
-base_shift: how much the check image is shifted from the first image (can be negative)
-check_range: range of offset to check (a, b) a->b (a can be negative)
-check_step: how many pixels between each check (1 = every pixel)
-direction: change the direction of the shift (0 = horizontal, 1 = vertical)
-orientation: change the orientation of the shift (basically if the delta is positive or negative)
-"""
 def find_best_offset(
     _img0: Image.Image,
     _img1: Image.Image,
@@ -62,6 +46,16 @@ def find_best_offset(
     direction: Direction = Direction.HORIZONTAL, # 0 = horizontal, 1 = vertical
     orientation: Orientation = Orientation.DESCENDING
 ):
+    """
+    _img0: image to match
+    _img1: image to check
+    _mask: mask for both images (only check alpha values, can be generated from a black and white image with make_alpha_mask_from_bw)
+    base_shift: how much the check image is shifted from the first image (can be negative)
+    check_range: range of offset to check (a, b) a->b (a can be negative)
+    check_step: how many pixels between each check (1 = every pixel)
+    direction: change the direction of the shift (0 = horizontal, 1 = vertical)
+    orientation: change the orientation of the shift (basically if the delta is positive or negative)
+    """
     mask = np.array(_mask, dtype=np.int32)
     img0 = apply_mask_make_transparent(np.array(_img0, dtype=np.int32), mask)
     img1 = apply_mask_make_transparent(np.array(_img1, dtype=np.int32), mask)
@@ -87,7 +81,7 @@ def find_best_offset(
             else:
                 crop1[-shift:, :] = 0
 
-        t = SimilarityThread(img0, crop1, shift)
+        t = SimilaritySingleAxisThread(img0, crop1, shift)
         threads.append(t)
         t.start()
 
@@ -110,15 +104,17 @@ def find_best_offset(
 
 
 if __name__ == "__main__":
-    os.chdir("../resources")
+    os.chdir("resources/cache")
     if CAPTURE:
         get_image_set(
             perfect = PERFECT,
             vertical = DIRECTION == Direction.VERTICAL,
+            horizontal = DIRECTION == Direction.HORIZONTAL,
             orientation = ORIENTATION,
+            save_location = "single_axis/"
         )
 
-    images = [Image.open(f"{'i_' if (not PERFECT) else ''}{'v_' if DIRECTION == Direction.VERTICAL else ''}{'r_' if ORIENTATION == Orientation.ASCENDING else ''}screenshot_{index}.png") for index in range(5)]
+    images = [Image.open(f"single_axis/{'i_' if (not PERFECT) else ''}{'v_' if DIRECTION == Direction.VERTICAL else ''}{'r_' if ORIENTATION == Orientation.ASCENDING else ''}screenshot_{index}.png") for index in range(5)]
     ignoreZone = make_alpha_mask_from_bw(Image.open("isandempire_mask.png"))
 
     desk = Image.new("RGBA",
