@@ -57,6 +57,32 @@ def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray
 
     return img_rgba
 
+def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
+    """
+    Inverts the alpha channel of an RGBA image.
+    Accepts either a numpy array or a PIL Image and returns a numpy array (int32).
+    255 (opaque) becomes 0 (transparent) and viceversa.
+    """
+    # convert PIL Image to numpy int32 (helper to_int32 is defined in the module)
+    if isinstance(img, Image.Image):
+        res = to_int32(img)
+    else:
+        res = img.copy()
+
+    # If grayscale or single-channel, nothing to invert
+    if res.ndim == 2:
+        return res
+
+    # If RGB (3 channels), no alpha to invert
+    if res.shape[2] != 4:
+        return res
+
+    # Ensure integer type to avoid underflow on subtraction
+    if res.dtype != np.int32:
+        res = res.astype(np.int32)
+
+    res[:, :, 3] = 255 - res[:, :, 3]
+    return res
 
 # Stuff I like to use
 def to_rgba(arr: np.ndarray, h: int, w: int) -> np.ndarray:
@@ -69,7 +95,9 @@ def to_rgba(arr: np.ndarray, h: int, w: int) -> np.ndarray:
         return np.concatenate([arr, alpha], axis=2).astype(np.int32)
     raise ValueError("Unsupported channel count")
 
-def to_uint8(arr: np.ndarray) -> np.ndarray:
+def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
+    if isinstance(arr, Image.Image):
+        arr = to_int32(arr)
     a = np.array(arr, copy=False)
     if a.dtype != np.uint8:
         a = np.clip(a, 0, 255).astype(np.uint8)
@@ -79,6 +107,8 @@ def to_grayscale(img: np.ndarray) -> np.ndarray:
     h, w = img.shape[:2]
     return cv2.cvtColor(to_uint8(to_rgba(img, h, w)), cv2.COLOR_RGBA2GRAY)
 
+def to_int32(img: Image.Image) -> np.ndarray:
+    return np.array(img, dtype=np.int32)
 
 # Overlap similarity
 def np_absolute_distance_image_comparison(img0: Image.Image | np.ndarray, img1: Image.Image | np.ndarray) -> tuple[float, int]:
@@ -343,8 +373,58 @@ def find_best_offset(
     return best_shift, best_score
 
 
-def find_offset_orb(img0, img1, mask=None):
-    orb = cv2.ORB_create(nfeatures=2000)
+def find_offset_orb(img0, img1, mask=None, used_detector: int = 0):
+    """
+    Finds the offset between two images using feature matching with keypoints.
+
+    This function calculates the relative offset (translation in x and y directions)
+    between two input images by detecting keypoints and matching them, using one of
+    several feature detection techniques. Optionally, a mask can be provided to
+    focus on certain regions for keypoint detection and matching.
+
+    [WARNING] do not apply the mask before the step, pass the whole images and the mask here
+    you will be held accountable for the problems you cause by not using the mask correctly
+
+    Parameters:
+        img0: The first input image as a numpy array.
+        img1: The second input image as a numpy array, which will be compared to the first.
+        mask: Optional. A mask as a numpy array where non-zero values indicate regions to
+              focus on for keypoint detection and matching.
+        used_detector: An integer representing the detector to use. Defaults to 0.
+                       Acceptable values are:
+                       - 0: ORB
+                       - 1: AKAZE
+                       - 2: SIFT
+
+    Returns:
+        A tuple (dx, dy, confidence):
+            - dx: float, the estimated x offset between the two images.
+            - dy: float, the estimated y offset between the two images.
+            - confidence: float, a value between 0 and 1 indicating the confidence
+                          of the estimated offset based on inliers and the total
+                          number of matches.
+                          
+    Notes:
+        - I hate python indentation
+        - another viable detector is fast(brief) but it's not a drop in replacement like the one supported
+    """
+    
+    # This is the implementation of fast, but it's more code to allow for this to be switchable
+    # so it's not worth it, if you need this it's easy to implement
+    # it's this way because fast does not have a descriptor included so we have to provide it ourself
+    # fast = cv2.FastFeatureDetector_create()
+    # brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+    # kp0 = fast.detect(img0, mask_cv)
+    # kp1 = fast.detect(img1, mask_cv)
+    # kp0, des0 = brief.compute(img0_gray, kp0)
+    # kp1, des1 = brief.compute(img1_gray, kp1)
+    
+    match used_detector:
+        case 0: detector = cv2.ORB_create(nfeatures=2000)
+        case 1: detector = cv2.AKAZE_create(nfeatures=2000)
+        case 2: detector = cv2.SIFT_create(nfeatures=2000)
+        case _: detector = cv2.ORB_create(nfeatures=2000)
+    
     img0_gray = to_grayscale(img0)
     img1_gray = to_grayscale(img1)
     
@@ -366,13 +446,17 @@ def find_offset_orb(img0, img1, mask=None):
             mask_keep = (m != 0)
         mask_cv = mask_keep.astype(np.uint8) * 255
     
-    kp0, des0 = orb.detectAndCompute(img0_gray, mask_cv)
-    kp1, des1 = orb.detectAndCompute(img1_gray, mask_cv)
+    kp0, des0 = detector.detectAndCompute(img0_gray, mask_cv)
+    kp1, des1 = detector.detectAndCompute(img1_gray, mask_cv)
     
     if des0 is None or des1 is None:
         return 0, 0, 0
     
     bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    
+    match used_detector:
+        case 0, 1, _: bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        case 2: bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
     matches = bf.match(des0, des1)
     
     if len(matches) < 4:
@@ -395,8 +479,13 @@ def find_offset_orb(img0, img1, mask=None):
     
     return 0, 0, 0
 
-def visualize_orb_matches(img0, img1, mask=None):
-    orb = cv2.ORB_create(nfeatures=2000)
+def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
+    match used_detector:
+        case 0:detector = cv2.ORB_create(nfeatures=2000)
+        case 1:detector = cv2.AKAZE_create(nfeatures=2000)
+        case 2:detector = cv2.SIFT_create(nfeatures=2000)
+        case _:detector = cv2.ORB_create(nfeatures=2000)
+    
     img0_gray = to_grayscale(img0)
     img1_gray = to_grayscale(img1)
 
@@ -416,18 +505,29 @@ def visualize_orb_matches(img0, img1, mask=None):
         else:
             mask_keep = (m != 0)
         mask_cv = mask_keep.astype(np.uint8) * 255
-    kp0, des0 = orb.detectAndCompute(img0_gray, mask_cv)
-    kp1, des1 = orb.detectAndCompute(img1_gray, mask_cv)
+    kp0, des0 = detector.detectAndCompute(img0_gray, mask_cv)
+    kp1, des1 = detector.detectAndCompute(img1_gray, mask_cv)
+    
     if des0 is None or des1 is None:
         return cv2.drawMatches(img0, [], img1, [], [], None), (0, 0)
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    
+    match used_detector:
+        case 0: bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        case 1: bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        case 2: bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=True)
+        case _: bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+    
     matches = bf.match(des0, des1)
     matches = sorted(matches, key=lambda x: x.distance)
+    
     if not matches:
         return cv2.drawMatches(img0, kp0, img1, kp1, [], None), (0, 0)
+    
     src_pts = np.float32([kp0[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
     dst_pts = np.float32([kp1[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
+    
     matrix, inliers = cv2.estimateAffinePartial2D(src_pts, dst_pts, method=cv2.RANSAC)
+    
     matches_mask = []
     if inliers is not None:
         matches_mask = inliers.ravel().tolist()
@@ -444,7 +544,8 @@ def visualize_orb_matches(img0, img1, mask=None):
     
     vis_img = cv2.drawMatches(img0, kp0, img1, kp1, matches_to_draw, None, **draw_params)
     dx, dy = (matrix[0, 2], matrix[1, 2]) if matrix is not None else (0, 0)
-    return vis_img, (dx, dy)
+    confidence = np.sum(inliers) / len(matches) if len(matches) > 0 else 0
+    return vis_img, (dx, dy, confidence)
 
 
 if __name__ == "__main__":
@@ -469,18 +570,21 @@ if __name__ == "__main__":
     b = np.array(Image.open("test_material/single_axis/screenshot_1.png"))
     # a = apply_mask_make_transparent(a, mask)
     # b = apply_mask_make_transparent(b, mask)
-    b = np.roll(b, 77, axis=1)
-    b[:, :77] = 0
+    # b = np.roll(b, 77, axis=1)
+    # b[:, :77] = 0
+    x_movement = 100
+    y_movement = 20
+    b = np.roll(b, x_movement, axis=1)
+    b = np.roll(b, y_movement, axis=0)
+    b[:, :x_movement] = 0
+    b[:y_movement, :] = 0
 
     fig, axs = plt.subplots(1, 3, figsize=(20, 10))
     axs[0].imshow(a)
     axs[1].imshow(b)
     img, _ = visualize_orb_matches(a, b, mask)
-    
-    # Save full resolution image
     Image.fromarray(img).save("orb_matches_full_res.png")
-    
     axs[2].imshow(Image.fromarray(img))
     plt.show()
-    print(cv2_match_template(a, b))
+    # print(cv2_match_template(a, b))
     print(find_offset_orb(a, b, mask))

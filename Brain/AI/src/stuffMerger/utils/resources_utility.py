@@ -1,4 +1,5 @@
 import subprocess
+import random
 from typing import List
 
 import numpy as np
@@ -15,8 +16,11 @@ def _run_adb_screencap_to(path: str) -> None:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
 
 
-def _run_motionevent(parts: List[str]) -> None:
-    subprocess.run(parts, check=True)
+def _run_motionevent(parts: List[str] | str) -> None:
+    if isinstance(parts, str):
+        os.system(parts)
+    else:
+        subprocess.run(parts, check=True)
 
 
 def get_custom_image(
@@ -102,12 +106,36 @@ def get_custom_image_set(
     _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
     return images
 
+def generate_steps(
+        start: int,
+        step_size: int,
+        count: int,
+        perfect: bool,
+        orientation: Orientation
+) -> List[int]:
+    steps = [start]
+    current = start
+    direction = -1 if orientation == Orientation.DESCENDING else 1
+
+    for _ in range(count):
+        delta = step_size
+        if not perfect:
+            noise = random.randint(-5, 5)
+            delta += noise
+
+        current += delta * direction
+        steps.append(current)
+    return steps
+
 def get_image_set(
         perfect: bool = True,
         vertical: bool = False,
         horizontal: bool = False,
         orientation: Orientation = Orientation.DESCENDING,
         save_location: str = "",
+        step_size: int = 100,
+        start_x: int | None = None,
+        start_y: int | None = None,
 ):
     """
     Generates image set by simulating motion events and capturing screenshots,
@@ -115,43 +143,65 @@ def get_image_set(
     [REQUIRED] a device with android 13 or higher or that support adb -> motionevent
     [WARNING] if save_location is provided it should end with "/"
     """
-    y_steps = [1700] * 5
-    x_steps = [600] * 5
+    if start_x is None:
+        start_x = 200 if horizontal and orientation == Orientation.ASCENDING else 600
+    if start_y is None:
+        start_y = 1300 if vertical and orientation == Orientation.ASCENDING else 1700
+
+    count = 5
 
     if not vertical and not horizontal:
         raise ValueError("At least one of vertical or horizontal must be True")
 
+    # if vertical:
+    #     match (orientation, perfect):
+    #         case (Orientation.DESCENDING, True): y_steps = [1700, 1600, 1500, 1400, 1300]
+    #         case (Orientation.ASCENDING, True): y_steps = [1300, 1400, 1500, 1600, 1700]
+    #         case (Orientation.DESCENDING, False): y_steps = [1700, 1597, 1491, 1394, 1289]
+    #         case (Orientation.ASCENDING, False): y_steps = [1300, 1397, 1491, 1594, 1689]
+    # if horizontal:
+    #     match (orientation, perfect):
+    #         case (Orientation.DESCENDING, True): x_steps = [600, 500, 400, 300, 200]
+    #         case (Orientation.ASCENDING, True): x_steps = [200, 300, 400, 500, 600]
+    #         case (Orientation.DESCENDING, False): x_steps = [600, 497, 391, 294, 189]
+    #         case (Orientation.ASCENDING, False): x_steps = [200, 297, 391, 494, 589]
+
+    # actions = [
+    #     ["adb", "shell", "input", "motionevent", "DOWN", str(x_steps[0]), str(y_steps[0])],
+    #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[1]), str(y_steps[1])],
+    #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[2]), str(y_steps[2])],
+    #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[3]), str(y_steps[3])],
+    #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[4]), str(y_steps[4])],
+    #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[0]), str(y_steps[0])],
+    #     ["adb", "shell", "input", "motionevent", "UP", str(x_steps[0]), str(y_steps[0])],
+    # ]
+    
+    x_steps = [start_x] * count
+    y_steps = [start_y] * count
+    
     if vertical:
-        match (orientation, perfect):
-            case (Orientation.DESCENDING, True): y_steps = [1700, 1600, 1500, 1400, 1300]
-            case (Orientation.ASCENDING, True): y_steps = [1300, 1400, 1500, 1600, 1700]
-            case (Orientation.DESCENDING, False): y_steps = [1700, 1597, 1491, 1394, 1289]
-            case (Orientation.ASCENDING, False): y_steps = [1300, 1397, 1491, 1594, 1689]
+        y_steps = generate_steps(start_y, step_size, count, perfect, orientation)
     if horizontal:
-        match (orientation, perfect):
-            case (Orientation.DESCENDING, True): x_steps = [600, 500, 400, 300, 200]
-            case (Orientation.ASCENDING, True): x_steps = [200, 300, 400, 500, 600]
-            case (Orientation.DESCENDING, False): x_steps = [600, 497, 391, 294, 189]
-            case (Orientation.ASCENDING, False): x_steps = [200, 297, 391, 494, 589]
+        x_steps = generate_steps(start_x, step_size, count, perfect, orientation)
 
     actions = [
-        ["adb", "shell", "input", "motionevent", "DOWN", str(x_steps[0]), str(y_steps[0])],
-        ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[1]), str(y_steps[1])],
-        ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[2]), str(y_steps[2])],
-        ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[3]), str(y_steps[3])],
-        ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[4]), str(y_steps[4])],
-        ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[0]), str(y_steps[0])],
-        ["adb", "shell", "input", "motionevent", "UP", str(x_steps[0]), str(y_steps[0])],
+        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
+        for start_x, start_y, end_x, end_y in zip(x_steps, y_steps, x_steps[1:], y_steps[1:])
     ]
-
-    # old_prefix: image_prefix = f"{'i_' if not perfect else ''}{'v_' if vertical else ''}{'r_' if orientation != Orientation.DESCENDING else ''}"
+    actions.append(
+        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {x_steps[-1]} {y_steps[-1]} {x_steps[0]} {y_steps[0]}'"
+    )
+    
     image_prefix = f"{'i_' if not perfect else ''}{'v_' if vertical else ''}{'h_' if horizontal else ''}{'r_' if orientation != Orientation.DESCENDING else ''}"
     
+    old_directory: str = os.getcwd()
     _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_0.png")
-    _run_motionevent(actions[0])
-    for index, action in enumerate(actions[1:-1]):
+    for index, action in enumerate(actions[1:]):
+        os.chdir(CLIENT_PATH)
+        print(os.getcwd())
         _run_motionevent(action)
-        _run_adb_screencap_to(f"{image_prefix}screenshot_{index + 1}.png")
+        os.chdir(old_directory)
+        _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_{index + 1}.png")
     _run_motionevent(actions[-1])
 
 def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Image.Image:
