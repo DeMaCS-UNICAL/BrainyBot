@@ -81,7 +81,7 @@ def find_best_offset(
             else:
                 crop1[-shift:, :] = 0
 
-        t = SimilaritySingleAxisThread(img0, crop1, shift)
+        t = SimilarityThread(img0, crop1, shift)
         threads.append(t)
         t.start()
 

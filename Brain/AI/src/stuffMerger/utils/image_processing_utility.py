@@ -84,16 +84,21 @@ def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
     res[:, :, 3] = 255 - res[:, :, 3]
     return res
 
+
 # Stuff I like to use
 def to_rgba(arr: np.ndarray, h: int, w: int) -> np.ndarray:
     if arr.ndim == 2:
         arr = np.stack([arr, arr, arr], axis=2)
-    if arr.shape[2] == 4:
-        return arr.astype(np.int32)
-    if arr.shape[2] == 3:
-        alpha = np.full((h, w, 1), 255, dtype=arr.dtype)
-        return np.concatenate([arr, alpha], axis=2).astype(np.int32)
+    match arr.shape[2]:
+        case 4: return to_int32(arr)
+        case 3:
+            alpha = np.full((h, w, 1), 255, dtype=arr.dtype)
+            return to_int32(np.concatenate([arr, alpha], axis=2))
     raise ValueError("Unsupported channel count")
+
+def to_grayscale(arr: np.ndarray) -> np.ndarray:
+    h, w = arr.shape[:2]
+    return cv2.cvtColor(to_uint8(to_rgba(arr, h, w)), cv2.COLOR_RGBA2GRAY)
 
 def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
     if isinstance(arr, Image.Image):
@@ -103,12 +108,12 @@ def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
         a = np.clip(a, 0, 255).astype(np.uint8)
     return a
 
-def to_grayscale(img: np.ndarray) -> np.ndarray:
-    h, w = img.shape[:2]
-    return cv2.cvtColor(to_uint8(to_rgba(img, h, w)), cv2.COLOR_RGBA2GRAY)
+def to_int32(arr: np.ndarray | Image.Image) -> np.ndarray:
+    match isinstance(arr, Image.Image):
+        case True: return np.array(arr, dtype=np.int32)
+        case False: return arr.astype(np.int32)
+    raise ValueError("Unsupported type") #I'm proud of myself, a raised exception!!! what a well written piece of code 😂
 
-def to_int32(img: Image.Image) -> np.ndarray:
-    return np.array(img, dtype=np.int32)
 
 # Overlap similarity
 def np_absolute_distance_image_comparison(img0: Image.Image | np.ndarray, img1: Image.Image | np.ndarray) -> tuple[float, int]:
@@ -117,15 +122,13 @@ def np_absolute_distance_image_comparison(img0: Image.Image | np.ndarray, img1: 
     return: (mean absolute distance, number of considered pixels)
     0 = identical images
     """
-    if isinstance(img0, Image.Image):
-        img0 = np.array(img0, dtype=np.int32)
-    if isinstance(img1, Image.Image):
-        img1 = np.array(img1, dtype=np.int32)
+    img0 = to_int32(img0)
+    img1 = to_int32(img1)
     if img0.shape[:2] != img1.shape[:2]:
         raise ValueError("Images must have the same dimensions")
 
     h, w = img0.shape[:2]
-    # ensure images are not RGB
+    # rgb images will break stuff so do not remove this piece of code, we need them rgba
     img0rgba = to_rgba(img0, h, w)
     img1rgba = to_rgba(img1, h, w)
 
@@ -177,7 +180,7 @@ def cv2_match_template(img0: np.ndarray, img1: np.ndarray, method=cv2.TM_SQDIFF_
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     return float(np.clip(1.0 - min_val, 0.0, 1.0))
 
-class SimilaritySingleAxisThread(Thread):
+class SimilarityThread(Thread):
     """
     Execute the similarity computation in a separate thread and store the result in self.score
     The comparison algorithms can be changed default one is cv2_match_template that is the fastest
@@ -230,34 +233,21 @@ class SimilaritySingleAxisThread(Thread):
         self.times.append(time4 - time3)
         self.scores.append(s4)
 
-def check_benchmarked_single_axis_algorithms(threads: list[SimilaritySingleAxisThread]) -> None:
+def check_benchmarked_similarity_algorithms(threads: list[SimilarityThread]) -> None:
     def find_min(scores):
-        min_score = float("inf")
+        min_score = float("inf") #if we use scores[0] it will raise an error if list is empty, just thia voids useless checks
         for s in scores:
             if s < min_score:
                 min_score = s
         return min_score
 
     # # average times and best scores for each method
-    t1 = sum((t.times[0] for t in threads), datetime.timedelta()) / len(threads)
-    t2 = sum((t.times[1] for t in threads), datetime.timedelta()) / len(threads)
-    t3 = sum((t.times[2] for t in threads), datetime.timedelta()) / len(threads)
-    t4 = sum((t.times[3] for t in threads), datetime.timedelta()) / len(threads)
-
-    score1 = find_min([t.scores[0] for t in threads])
-    score2 = find_min([t.scores[1] for t in threads])
-    score3 = find_min([t.scores[2] for t in threads])
-    score4 = find_min([t.scores[3] for t in threads])
-
-    shift1 = [t.shift for t in threads if t.scores[0] == score1][0]
-    shift2 = [t.shift for t in threads if t.scores[1] == score2][0]
-    shift3 = [t.shift for t in threads if t.scores[2] == score3][0]
-    shift4 = [t.shift for t in threads if t.scores[3] == score4][0]
-
-    logger.log(
-        DEBUG,
-        f"Time breakdown:\nmethod1 {shift1},{score1},{t1}\nmethod2 {shift2},{score2},{t2}\nmethod3 {shift3},{score3},{t3}\nmethod4 {shift4},{score4},{t4}"
-    )
+    
+    for i, t in enumerate(threads):
+        time = sum((t.times[i] for t in threads), datetime.timedelta()) / len(threads)
+        score = find_min([t.scores[i] for t in threads])
+        shift = [t.shift for t in threads if t.scores[0] == score][0]
+        logger.debug(f"Method {i}:\t{shift},\t{score},\t{time}")
 
 
 # Offset detection
@@ -348,7 +338,7 @@ def find_best_offset(
             else:
                 crop1[-shift:, :] = 0
 
-        t = SimilaritySingleAxisThread(img0, crop1, shift)
+        t = SimilarityThread(img0, crop1, shift)
         threads.append(t)
         t.start()
 
@@ -420,10 +410,10 @@ def find_offset_orb(img0, img1, mask=None, used_detector: int = 0):
     # kp1, des1 = brief.compute(img1_gray, kp1)
     
     match used_detector:
-        case 0: detector = cv2.ORB_create(nfeatures=2000)
-        case 1: detector = cv2.AKAZE_create(nfeatures=2000)
-        case 2: detector = cv2.SIFT_create(nfeatures=2000)
-        case _: detector = cv2.ORB_create(nfeatures=2000)
+        case 0: detector = cv2.ORB_create() #nfeatures=2000
+        case 1: detector = cv2.AKAZE_create()
+        case 2: detector = cv2.SIFT_create() #nfeatures=2000
+        case _: detector = cv2.ORB_create() #nfeatures=2000
     
     img0_gray = to_grayscale(img0)
     img1_gray = to_grayscale(img1)
@@ -482,7 +472,7 @@ def find_offset_orb(img0, img1, mask=None, used_detector: int = 0):
 def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     match used_detector:
         case 0:detector = cv2.ORB_create(nfeatures=2000)
-        case 1:detector = cv2.AKAZE_create(nfeatures=2000)
+        case 1:detector = cv2.AKAZE_create()
         case 2:detector = cv2.SIFT_create(nfeatures=2000)
         case _:detector = cv2.ORB_create(nfeatures=2000)
     
@@ -548,6 +538,58 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     return vis_img, (dx, dy, confidence)
 
 
+def show_image_full_resolution(img: Image.Image | np.ndarray, title: str | None = None, dpi: int = 100, max_inches: float = 16.0):
+    """
+    Display a PIL Image or numpy array in a matplotlib window attempting to preserve full image resolution.
+    Needed because using pycharm with remote deevelopment on wsl only matplotlib appears so I need this
+
+    Behavior:
+    - If possible, opens a figure whose pixel dimensions match the image (1:1 mapping) by setting
+      figsize = (width/dpi, height/dpi) and figure dpi.
+    - If the resulting window would be larger than `max_inches` on the longest side, the image is
+      uniformly downscaled to fit within that constraint to avoid creating an enormous window.
+    - Uses interpolation='nearest' to avoid smoothing and preserve pixel-perfect rendering.
+
+    Parameters:
+        img: PIL.Image.Image or numpy.ndarray
+        title: optional window title
+        dpi: DPI used for the matplotlib figure
+        max_inches: maximum inches allowed for the longest figure side
+    """
+
+    if isinstance(img, Image.Image):
+        arr = np.array(img)
+    else:
+        arr = img
+
+    if arr is None:
+        raise ValueError("No image provided")
+
+    if arr.ndim == 2:
+        h, w = arr.shape
+    else:
+        h, w = arr.shape[:2]
+
+    max_px_allowed = int(dpi * max_inches)
+    scale = 1.0
+    if max(h, w) > max_px_allowed:
+        scale = max_px_allowed / max(h, w)
+
+    display_w = max(1, int(w * scale))
+    display_h = max(1, int(h * scale))
+
+    figsize = (display_w / dpi, display_h / dpi)
+
+    fig = plt.figure(figsize=figsize, dpi=dpi)
+    ax = fig.add_subplot(1, 1, 1)
+    ax.imshow(arr, interpolation='nearest')
+    ax.axis('off')
+    if title:
+        ax.set_title(title)
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    plt.show()
+
+
 if __name__ == "__main__":
     import os
     import matplotlib.pyplot as plt
@@ -567,24 +609,28 @@ if __name__ == "__main__":
     # print(cv2_match_template(a, b))
 
     a = np.array(Image.open("test_material/single_axis/screenshot_0.png"))
-    b = np.array(Image.open("test_material/single_axis/screenshot_1.png"))
+    b = np.array(Image.open("test_material/single_axis/screenshot_0.png"))
     # a = apply_mask_make_transparent(a, mask)
     # b = apply_mask_make_transparent(b, mask)
     # b = np.roll(b, 77, axis=1)
     # b[:, :77] = 0
-    x_movement = 100
-    y_movement = 20
+    x_movement = 130
+    y_movement = 130
     b = np.roll(b, x_movement, axis=1)
     b = np.roll(b, y_movement, axis=0)
-    b[:, :x_movement] = 0
-    b[:y_movement, :] = 0
+    # b[:, :x_movement] = 0
+    # b[:y_movement, :] = 0
 
-    fig, axs = plt.subplots(1, 3, figsize=(20, 10))
-    axs[0].imshow(a)
-    axs[1].imshow(b)
-    img, _ = visualize_orb_matches(a, b, mask)
-    Image.fromarray(img).save("orb_matches_full_res.png")
-    axs[2].imshow(Image.fromarray(img))
-    plt.show()
-    # print(cv2_match_template(a, b))
-    print(find_offset_orb(a, b, mask))
+    # Show the two images at (nearly) full resolution. If they're extremely large, they will be
+    # uniformly scaled down so the longest side fits within `max_inches` inches on screen.
+    # show_image_full_resolution(a, title="Original", dpi=100, max_inches=16.0)
+    # show_image_full_resolution(b, title=f"Shifted ({x_movement}px,{y_movement}px)", dpi=100, max_inches=16.0)
+
+    for i in range(3):
+        start = datetime.datetime.now()
+        img, res = visualize_orb_matches(a, b, mask, i)
+        print(datetime.datetime.now() - start, res)
+        Image.fromarray(img).save(f"matches_{i}.png")
+        # visualize orb matches (may be large) using our helper
+        # show_image_full_resolution(img, title=f"ORB matches detector {i}", dpi=100, max_inches=16.0)
+    

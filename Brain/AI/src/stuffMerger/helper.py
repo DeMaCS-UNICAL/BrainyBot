@@ -20,14 +20,14 @@ games = {
 
 screensizes = {
     "p10lite": (1080, 1920),
-    "pocof7ultra": (1080, 2400),
+    "f7ultra": (1080, 2400),
 }
 
 # Should be adjusted phone-game not only phone
 # Not every game allows for the same range of motion
 motionareas = {
     "p10lite": ((300, 300), (1700, 1700)),
-    "pocof7ultra": ((300, 300), (2100, 2100)),
+    "f7ultra": ((300, 300), (2100, 2100)),
 }
 
 if __name__ == "__main__":
