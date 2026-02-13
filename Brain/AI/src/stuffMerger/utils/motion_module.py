@@ -1,10 +1,16 @@
 from logging import INFO
 
+import numpy as np
+
 from AI.src.stuffMerger.enums import MotionType
 from AI.src.stuffMerger.utils.image_processing_utility import *
+from AI.src.stuffMerger.utils.pen_calibration import SwipeCalibrator
 from AI.src.stuffMerger.utils.resources_utility import *
 
-class MotionModule:
+from AI.src.constants import  *
+
+
+class OldMotionModule:
     """
     image_mask: PIL Image used as mask for the movement, should be RGBA with transparency where the map is to be ignored,
         ignored zones are feasible for movement.
@@ -16,10 +22,8 @@ class MotionModule:
     motion_options: ((x,y), (x,y), (x,y), (x,y)) up, right, down, left positions for tap motion
         [REQUIRED IF motion_type is TAP]
     """
-    #TODO: another possible motion type is TAP_AND_HOLD where times define how much we move in a specific direction
-    #TODO: diagonal movements, the current image checking is able to confront them but for different angles than 45° it
-    # will need a specific implementation for the image offsetting before the comparison, also before that optimizing the
-    # offset checking algorithm would be appreciated since the images to check are squared (x and y at the same time)
+    # TODO: another possible motion type is TAP_AND_HOLD where times define how much we move in a specific direction
+    # TODO: proper diagonal support
     def __init__(self,
                  image_mask: Image.Image,
                  screen_size: tuple[int, int],
@@ -40,8 +44,6 @@ class MotionModule:
             raise ValueError("motion_area must be defined when motion_type is SWIPE")
         elif self.motion_type == MotionType.TAP and self.motion_options is None:
             raise ValueError("motion_options must be defined when motion_type is TAP")
-
-
 
 
     def move(self,
@@ -192,10 +194,6 @@ class MotionModule:
 
         return (sum(x_offsets), sum(x_scores) / len(x_scores)), (sum(y_offsets), sum(y_scores) / len(y_scores))
 
-    """
-    destination: (x, y) define where you want to go relative to an absolute map position
-    return: ((x_offset, x_error), (y_offset, y_error))
-    """
 
     def goto(self,
              destination: tuple[int, int]
@@ -232,9 +230,51 @@ class MotionModule:
         print(x_offset)
 
 
+class MotionModule:
+    def __init__(self,
+        ui_mask: Image.Image | np.array,
+        swipe_calibrator: SwipeCalibrator
+    ):
+        match isinstance(ui_mask, Image.Image):
+            case True: self.__ui_mask: np.ndarray = to_int32(ui_mask)
+            case False: self.__ui_mask: np.ndarray = ui_mask
+        self.desk = Image.new("RGBA", (self.__ui_mask.shape[0], self.__ui_mask.height), (0, 0, 0, 0))# Check if an image with dim(0, 0) can exist
+        self.swipe_calibrator = swipe_calibrator
+
+    # TODO: move then estimate movement, and recalculate next movements
+    # TODO: merge images at correct angles/offset between them
+    # TODO: keep track of where we are regarding an initial position
+    # TODO: a function to reset the position
+    # TODO: a function to check and explore the map boundaries
+    # TODO: a function to define the motion area from the mask
+
+    @staticmethod
+    def __angle_to_offset(distance: float, angle: float):
+        return np.cos(angle) * distance, np.sin(angle) * distance
+    
+    def __resize_canvas(self, desk: Image.Image, screen_size: tuple[int, int]):
+    
+
+    def move_with_angle(self, distance: float, angle: float):
+        pass
+
+    def move_with_offset(self, offset: tuple[int, int]):
+        pass
+    
+    def move_with_time(self):
+        pass
+    
+    def move_with_tap(self):
+        pass
+    
+    def goto(self, destination: tuple[int, int]):
+        pass
+
+    
+
 if __name__ == "__main__":
     from matplotlib import pyplot as plt
-    md = MotionModule(
+    md = OldMotionModule(
         image_mask=Image.open("resources/islandempire_mask_alpha.png"),
         screen_size=(1080, 2340)
     )

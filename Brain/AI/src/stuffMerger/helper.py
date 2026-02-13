@@ -1,4 +1,4 @@
-from AI.src.stuffMerger.motion_module import MotionModule
+from AI.src.stuffMerger.utils.motion_module import OldMotionModule
 from matplotlib import pyplot as plt
 from PIL import Image
 
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     import os
     print(os.getcwd())
     print(os.listdir())
-    md = MotionModule(
+    md = OldMotionModule(
         image_mask=Image.open(games[GAME][1]),
         screen_size=screensizes[PHONE],
         motion_area=motionareas[PHONE],
