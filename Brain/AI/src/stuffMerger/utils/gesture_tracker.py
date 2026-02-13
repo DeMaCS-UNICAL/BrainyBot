@@ -17,6 +17,12 @@ class Gesture:
 	end_x: int
 	end_y: int
 	timestamp: float
+	
+	def __str__(self):
+		return f"""[⌚ ] {time.ctime(gesture.timestamp)}
+		[🏁] ({gesture.start_x}, {gesture.start_y})
+		[🏅] ({gesture.end_x}, {gesture.end_y})
+		[📐] ({gesture.end_x - gesture.start_x}, {gesture.end_y - gesture.start_y}, {sqrt((gesture.end_x - gesture.start_x) ** 2 + (gesture.end_y - gesture.start_y) ** 2)})"""
 
 
 class GestureTracker(threading.Thread):
@@ -120,17 +126,6 @@ class GestureTracker(threading.Thread):
 			except Exception:
 				pass
 
-def print_gesture(gesture: Gesture) -> str:
-	# note: adb timestamps are relative to device (boot) time
-	# the printed time will most likely not match the one on the pc/server
-
-	output = f"""[⌚ ] {time.ctime(gesture.timestamp)}
-[🏁] ({gesture.start_x}, {gesture.start_y})
-[🏅] ({gesture.end_x}, {gesture.end_y})
-[📐] ({gesture.end_x - gesture.start_x}, {gesture.end_y - gesture.start_y}, {sqrt((gesture.end_x - gesture.start_x) ** 2 + (gesture.end_y - gesture.start_y) ** 2)})"""
-	
-	return output
-
 
 if __name__ == "__main__":
 	gesture_queue = queue.Queue()
@@ -144,7 +139,7 @@ if __name__ == "__main__":
 		while True:
 			try:
 				gesture = gesture_queue.get(timeout=0.1)
-				print(print_gesture(gesture))
+				logger.info(f"\n{gesture}")
 			except queue.Empty:
 				continue
 

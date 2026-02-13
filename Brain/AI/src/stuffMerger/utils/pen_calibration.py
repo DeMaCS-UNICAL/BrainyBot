@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.linear_model import LinearRegression
 import os
 
-from AI.src.stuffMerger.utils.gesture_tracker import GestureTracker, print_gesture
+from AI.src.stuffMerger.utils.gesture_tracker import GestureTracker
 from AI.src.constants import logger, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 
 
@@ -95,14 +95,14 @@ class SwipeCalibrator:
 		# Process X Data
 		for i in range(2, 9):
 			gesture = gesture_queue.get(timeout=5)
-			logger.info(print_gesture(gesture))
+			logger.info(gesture)
 			logger.info(f"[🧪] ({self.cmds[i - 2]})")
 			self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y])
 		
 		# Process Y Data
 		for i in range(2, 9):
 			gesture = gesture_queue.get(timeout=5)
-			logger.info(print_gesture(gesture))
+			logger.info(gesture)
 			logger.info(f"[🧪] ({self.cmds[i + 5]})")  # 7-2=5
 			self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y])
 			
@@ -149,20 +149,42 @@ if __name__ == "__main__":
 	tracker.start()
 	
 	try:
+		taget_x = int(input("x:"))
+		taget_y = int(input("y:"))
+		
+		cmd_needed = cal.get_calibrated_command(taget_x, taget_y)
+		
+		# Test swipe
+		os.system(
+			f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {100} {1000} {100 + int(cmd_needed[0])} {1000 + int(cmd_needed[1])}'")
+		sleep(3)
+		# Dummy
+		os.system(
+			f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
+		sleep(3)
+		
+		logger.info(
+			f"\n{gesture_queue.get(timeout=5)}\n[🧪]: {taget_x}, {taget_y}\n[🚂]: X={cmd_needed[0]:.2f}, Y={cmd_needed[1]:.2f}")
+		
 		while True:
 			taget_x = int(input("x:"))
 			taget_y = int(input("y:"))
 			
 			cmd_needed = cal.get_calibrated_command(taget_x, taget_y)
 			
+			
+			# Test swipe
 			os.system(
 				f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {100} {1000} {100 + int(cmd_needed[0])} {1000 + int(cmd_needed[1])}'")
 			sleep(3)
+			# Burn previous dummy
+			gesture_queue.get()
+			# Dummy
 			os.system(
 				f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
 			sleep(3)
 			
-			logger.info(f"\n{print_gesture(gesture_queue.get(timeout=5))}\n[🧪]: {taget_x}, {taget_y}\n[🚂]: X={cmd_needed[0]:.2f}, Y={cmd_needed[1]:.2f}")
+			logger.info(f"\n{gesture_queue.get(timeout=5)}\n[🧪]: {taget_x}, {taget_y}\n[🚂]: X={cmd_needed[0]:.2f}, Y={cmd_needed[1]:.2f}")
 
 	finally:
 		logger.info("Exiting...")
