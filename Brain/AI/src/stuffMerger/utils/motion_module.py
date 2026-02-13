@@ -1,13 +1,16 @@
-from logging import INFO
-
-import numpy as np
-
 from AI.src.stuffMerger.enums import MotionType
 from AI.src.stuffMerger.utils.image_processing_utility import *
 from AI.src.stuffMerger.utils.pen_calibration import SwipeCalibrator
 from AI.src.stuffMerger.utils.resources_utility import *
 
 from AI.src.constants import  *
+
+import os
+from logging import INFO
+import mahotas
+
+import numpy as np
+from PIL import ImageDraw, Image
 
 
 class OldMotionModule:
@@ -229,17 +232,25 @@ class OldMotionModule:
 
         print(x_offset)
 
-
 class MotionModule:
     def __init__(self,
-        ui_mask: Image.Image | np.array,
-        swipe_calibrator: SwipeCalibrator
+        ui_mask: Image.Image | np.ndarray,
+        swipe_calibrator: SwipeCalibrator,
+        motion_type: MotionType = MotionType.SWIPE
     ):
         match isinstance(ui_mask, Image.Image):
-            case True: self.__ui_mask: np.ndarray = to_int32(ui_mask)
-            case False: self.__ui_mask: np.ndarray = ui_mask
-        self.desk = Image.new("RGBA", (self.__ui_mask.shape[0], self.__ui_mask.height), (0, 0, 0, 0))# Check if an image with dim(0, 0) can exist
+            case True: self._ui_mask: np.ndarray = to_int32(ui_mask)
+            case False: self._ui_mask: np.ndarray = ui_mask
+        height, width = self._ui_mask.shape[:2]
+        # array RGBA trasparente (0 = trasparente)
+        self.desk = np.zeros((height, width, 4), dtype=np.uint8)
         self.swipe_calibrator = swipe_calibrator
+        self._position: tuple[int, int] = (0, 0)
+        self._positions_history: list[tuple[int, int]] = [(0, 0)]
+        self._frames_history: list[np.ndarray] = []
+        self._motion_type: MotionType = motion_type
+        self._motion_area: tuple[tuple[int, int], tuple[int, int]] | None = None
+        self.calculate_motion_area()
 
     # TODO: move then estimate movement, and recalculate next movements
     # TODO: merge images at correct angles/offset between them
@@ -249,16 +260,79 @@ class MotionModule:
     # TODO: a function to define the motion area from the mask
 
     @staticmethod
-    def __angle_to_offset(distance: float, angle: float):
+    def _angle_to_offset(self, distance: float, angle: float):
         return np.cos(angle) * distance, np.sin(angle) * distance
     
-    def __resize_canvas(self, desk: Image.Image, screen_size: tuple[int, int]):
-    
-
-    def move_with_angle(self, distance: float, angle: float):
+    def _add_frame_to_desk(self, next_frame: np.ndarray, coordinates: tuple[int, int]):
         pass
 
+    def _calculate_offset(self) -> tuple[float, float]:
+        dx, dy, confidence = calculate_offset(
+            self._frames_history[-2],
+            self._frames_history[-1],
+            self._ui_mask
+        )
+        logger.debug(f"dx = {dx}, dy = {dy}, confidence = {confidence}")
+        return dx, dy
+    
+    def calculate_motion_area(self, borders: int = 10):
+        """
+        Parameters:
+            borders: the distance we want to maintain from the border of the mask
+        https://www.geeksforgeeks.org/dsa/largest-rectangular-area-in-a-histogram-using-stack/
+        """
+
+        if self._ui_mask.ndim == 3:
+            binary_mask = self._ui_mask[:, :, 3] != 0
+        else:
+            binary_mask = self._ui_mask != 0
+
+        distance_map = mahotas.distance(binary_mask)
+        valid_region = distance_map > borders
+
+        rows, cols = valid_region.shape
+        heights = np.zeros(cols, dtype=np.int32)
+        max_area = 0
+        best_rect = ((0, 0), (0, 0))
+
+        for r in range(rows):
+            heights = np.where(valid_region[r], heights + 1, 0)
+            stack = [-1]
+            for c in range(cols + 1):
+                h = heights[c] if c < cols else 0
+                while stack[-1] != -1 and heights[stack[-1]] >= h:
+                    height = heights[stack.pop()]
+                    width = c - stack[-1] - 1
+                    area = height * width
+                    if area > max_area:
+                        max_area = area
+                        best_rect = ((stack[-1] + 1, r - height + 1), (c, r + 1))
+                stack.append(c)
+
+        self._motion_area = best_rect
+    
+    @staticmethod
+    def _swipe(self, offset_x: int, offset_y: int):
+    
+        old_directory: str = os.getcwd()
+        os.chdir(CLIENT_PATH)
+        # os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
+        os.chdir(old_directory)
+
+    def ensure_history(self):
+        if len(self._frames_history) < 2:
+            self._frames_history.append(run_adb_screencap_to_memory())
+
     def move_with_offset(self, offset: tuple[int, int]):
+        """
+        Parameters:
+            offset: int(x), int(y), how much you want to move, DO NOT calibrate this value
+        """
+        self.ensure_history()
+        self.swipe_calibrator.get_calibrated_command(*offset)
+        pass
+        
+    def move_with_angle(self, distance: float, angle: float):
         pass
     
     def move_with_time(self):
@@ -269,23 +343,45 @@ class MotionModule:
     
     def goto(self, destination: tuple[int, int]):
         pass
-
     
+    def get_pil_desk(self) -> Image.Image:
+        return Image.fromarray(self.desk, mode="RGBA")
+
+
+class TestMotionModule(MotionModule):
+    def test_draw_largest_bbox(self, output_path: str = "bbox_output.png"):
+        self.calculate_motion_area()
+        if self._motion_area is not None:
+            (x1, y1), (x2, y2) = self._motion_area
+            print(f"Bounding Box found: {self._motion_area}")
+            img = Image.fromarray(self._ui_mask.astype(np.uint8))
+            draw = ImageDraw.Draw(img)
+            draw.rectangle([x1, y1, x2 - 1, y2 - 1], fill="green", outline="red", width=5)
+            img.save(output_path)
+            print(f"Image saved to {output_path}")
+        else:
+            print("No bounding box calculated.")
+
 
 if __name__ == "__main__":
-    from matplotlib import pyplot as plt
-    md = OldMotionModule(
-        image_mask=Image.open("resources/islandempire_mask_alpha.png"),
-        screen_size=(1080, 2340)
-    )
-    desk = Image.new("RGBA", (3000, 3000), (255, 0, 0))
-    # print(
-    #     md.move(
-    #         step_number = (12, 5),
-    #         destination_offset= (1200, 500),
-    #         desk = desk
-    #     )
+    print(os.getcwd())
+    motion_module = TestMotionModule(ui_mask=Image.open("../resources/ignoreZone.png").convert("RGBA"), swipe_calibrator=None)
+    
+    motion_module.test_draw_largest_bbox()
+    
+    # from matplotlib import pyplot as plt
+    # md = OldMotionModule(
+    #     image_mask=Image.open("resources/islandempire_mask_alpha.png"),
+    #     screen_size=(1080, 2340)
     # )
-    print(md.calculate_map_size())
-    plt.imshow(desk)
-    plt.show()
+    # desk = Image.new("RGBA", (3000, 3000), (255, 0, 0))
+    # # print(
+    # #     md.move(
+    # #         step_number = (12, 5),
+    # #         destination_offset= (1200, 500),
+    # #         desk = desk
+    # #     )
+    # # )
+    # print(md.calculate_map_size())
+    # plt.imshow(desk)
+    # plt.show()

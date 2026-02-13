@@ -11,6 +11,19 @@ from skimage.metrics import structural_similarity
 from AI.src.constants import logger
 from AI.src.stuffMerger.enums import Direction, Orientation
 
+def sanitize_mask(arr: np.ndarray) -> np.ndarray:
+    """
+    Ensures the mask is an opacity mask with only fully white pixels left
+    """
+    if arr.ndim == 3 and arr.shape[2] == 4:
+        mask_keep = (np.all(arr[:, :, :3] == 255, axis=2)) & (arr[:, :, 3] == 255)
+    elif arr.ndim == 3 and arr.shape[2] == 3:
+        mask_keep = np.all(arr == 255, axis=2)
+    else:
+        raise ValueError("Unsupported mask format")
+        
+    return mask_keep
+
 # Conversions functions
 def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray:
     """
@@ -20,23 +33,12 @@ def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray
         with make_alpha_mask_from_bw function
     return: image with alpha channel applied according to the mask
     1) if the mask pixel is white (255,255,255) the corresponding image pixel is kept
-    2) if the mask pixel alpha channel is 255 the corresponding image pixel is kept
+    2) if the mask pixel alpha channel is 255 (opaque) the corresponding image pixel is kept
     3) otherwise the corresponding image pixel is made transparent
     """
-    h, w = img.shape[:2]
-    img_rgba = to_rgba(img, h, w)
-    m = np.array(mask)
-
-    if m.ndim == 3 and m.shape[2] == 4:
-        rgb = m[:, :, :3]
-        alpha = m[:, :, 3]
-        white_mask = np.all(rgb == 255, axis=2)
-        alpha_mask = (alpha == 255)
-        mask_keep = white_mask | alpha_mask
-    elif m.ndim == 3 and m.shape[2] == 3:
-        mask_keep = np.all(m == 255, axis=2)
-    else:
-        mask_keep = (m != 0)
+    img_rgba = to_rgba(img, *img.shape[:2])
+    h, w = img_rgba.shape[:2]
+    mask_keep = sanitize_mask(mask)
 
     # This way we can try and fix the mask if the resolution is different but this should not happen normally
     if mask_keep.shape != (h, w):
@@ -44,12 +46,9 @@ def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray
         """
         https://medium.com/@epcm18/image-resampling-in-image-processing-f7b597ee78a8
         """
-        mask_img = Image.fromarray((mask_keep.astype('uint8') * 255))
-        mask_img = mask_img.resize((w, h), resample=Image.Resampling.NEAREST)
-        mask_keep = (np.array(mask_img) > 0)
+        mask_keep = cv2.resize(mask_keep.astype(np.uint8), (w, h), interpolation=cv2.INTER_NEAREST)
 
     mask_keep = mask_keep.astype(bool)
-
     inv = ~mask_keep
     if inv.any():
         img_rgba[inv, :3] = 0
@@ -86,13 +85,13 @@ def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
 
 
 # Stuff I like to use
-def to_rgba(arr: np.ndarray, h: int, w: int) -> np.ndarray:
+def to_rgba(arr: np.ndarray, height: int, width: int) -> np.ndarray:
     if arr.ndim == 2:
         arr = np.stack([arr, arr, arr], axis=2)
     match arr.shape[2]:
         case 4: return to_int32(arr)
         case 3:
-            alpha = np.full((h, w, 1), 255, dtype=arr.dtype)
+            alpha = np.full((height, width, 1), 255, dtype=arr.dtype)
             return to_int32(np.concatenate([arr, alpha], axis=2))
     raise ValueError("Unsupported channel count")
 
@@ -204,10 +203,6 @@ class SimilarityThread(Thread):
     def run(self):
         self.score = 1 - self.algorithm(self.img0, self.crop1)
         logger.log(DEBUG, f"Score at shift {self.shift}: old {self.score!r}")
-    
-    # def execute_and_save_score_and_time(self, algorithm: Callable[[np.ndarray, np.ndarray], float | any]):
-    #     time_start = datetime.datetime.now()
-    #     self.times.append(datetime.datetime.now() - time_start)
     
     def benchmark_algorithms(self):
         time0 = datetime.datetime.now()
@@ -363,7 +358,7 @@ def find_best_offset(
     return best_shift, best_score
 
 
-def find_offset_orb(img0, img1, mask=None, used_detector: int = 0):
+def calculate_offset(img0: np.ndarray, img1: np.ndarray, mask: np.ndarray = None, used_detector: int = 0) -> tuple[float, float, float]:
     """
     Finds the offset between two images using feature matching with keypoints.
 
@@ -424,10 +419,7 @@ def find_offset_orb(img0, img1, mask=None, used_detector: int = 0):
         m = np.array(mask)
         h, w = img0_gray.shape
         if m.shape[:2] != (h, w):
-            m_img = Image.fromarray(to_uint8(m))
-            m_img = m_img.resize((w, h), resample=Image.Resampling.NEAREST)
-            m = np.array(m_img)
-        
+            m = cv2.resize(to_uint8(m), (w, h), interpolation=cv2.INTER_NEAREST)
         if m.ndim == 3 and m.shape[2] == 4:
             mask_keep = (np.all(m[:, :, :3] == 255, axis=2)) | (m[:, :, 3] == 255)
         elif m.ndim == 3 and m.shape[2] == 3:
@@ -485,9 +477,7 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
         m = np.array(mask)
         h, w = img0_gray.shape
         if m.shape[:2] != (h, w):
-            m_img = Image.fromarray(to_uint8(m))
-            m_img = m_img.resize((w, h), resample=Image.Resampling.NEAREST)
-            m = np.array(m_img)
+            m = cv2.resize(to_uint8(m), (w, h), interpolation=cv2.INTER_NEAREST)
         if m.ndim == 3 and m.shape[2] == 4:
             mask_keep = (np.all(m[:, :, :3] == 255, axis=2)) | (m[:, :, 3] == 255)
         elif m.ndim == 3 and m.shape[2] == 3:
@@ -596,7 +586,7 @@ if __name__ == "__main__":
 
     os.chdir("../resources/")
     print(os.getcwd())
-    mask = np.array(Image.open("test_material/islandempire_mask_alpha.png"))
+    local_mask = np.array(Image.open("test_material/islandempire_mask_alpha.png"))
     
     # a = np.array(Image.open("cache/screenshot_0.png"))
     # b = np.array(Image.open("cache/screenshot_0.png"))
@@ -628,7 +618,7 @@ if __name__ == "__main__":
 
     for i in range(3):
         start = datetime.datetime.now()
-        img, res = visualize_orb_matches(a, b, mask, i)
+        img, res = visualize_orb_matches(a, b, local_mask, i)
         print(datetime.datetime.now() - start, res)
         Image.fromarray(img).save(f"matches_{i}.png")
         # visualize orb matches (may be large) using our helper

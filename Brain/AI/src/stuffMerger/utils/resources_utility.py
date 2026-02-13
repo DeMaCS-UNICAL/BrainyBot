@@ -1,6 +1,7 @@
 import subprocess
 import random
 from typing import List
+import struct
 
 import numpy as np
 from PIL import Image
@@ -15,6 +16,39 @@ def _run_adb_screencap_to(path: str) -> None:
     with open(path, "wb") as f:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
 
+def run_adb_screencap_to_memory(slow_usb: bool = False) -> np.ndarray :
+    """
+    https://stackoverflow.com/questions/43900380/faster-command-than-adb-shell-screencap
+    """
+    
+    if slow_usb:
+        cmd = ['adb', 'exec-out', 'sh -c "screencap | gzip -1"']
+    else:
+        cmd = ["adb", "exec-out", "screencap"]
+    
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    # Read the 12-byte header (Width, Height, Format) formed by 3 uint
+    header = process.stdout.read(12)
+    if len(header) < 12:
+        raise Exception("Failed to read image header")
+    
+    width, height, pixel_format = struct.unpack("<III", header)
+    buffer_size = width * height * 4
+    raw_data = process.stdout.read(buffer_size)
+    
+    if len(raw_data) != buffer_size:
+        raise Exception("Incomplete read of image data")
+    
+    # Numpy you're beautiful
+    image = np.frombuffer(raw_data, dtype=np.uint8)
+    image = image.reshape((height, width, 4))
+    
+    # Optional: Clean up
+    process.stdout.close()
+    process.wait()
+    
+    return image
 
 def _run_motionevent(parts: List[str] | str) -> None:
     if isinstance(parts, str):
