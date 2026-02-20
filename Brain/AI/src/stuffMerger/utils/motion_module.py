@@ -252,6 +252,7 @@ class MotionModule:
         height, width = self._ui_mask.shape[:2]
         # array RGBA trasparente (0 = trasparente)
         self.desk = np.zeros((height, width, 4), dtype=np.uint8)
+        self.desk_offset = (0, 0)
         self.swipe_calibrator = swipe_calibrator
         self._position: tuple[int, int] = (0, 0)
         self._positions_history: list[tuple[int, int]] = []
@@ -275,8 +276,39 @@ class MotionModule:
     def angle_to_offset(distance: float, angle: float):
         return np.cos(angle) * distance, np.sin(angle) * distance
     
+    def _expand_desk(self, x: int, y: int, width: int, height: int):
+        current_x, current_y = self.desk_offset
+        desk_h, desk_w = self.desk.shape[:2]
+
+        min_x = min(current_x, x)
+        min_y = min(current_y, y)
+        max_x = max(current_x + desk_w, x + width)
+        max_y = max(current_y + desk_h, y + height)
+
+        if min_x < current_x or min_y < current_y or max_x > current_x + desk_w or max_y > current_y + desk_h:
+            new_w = max_x - min_x
+            new_h = max_y - min_y
+            new_desk = np.zeros((new_h, new_w, 4), dtype=np.uint8)
+
+            offset_x = current_x - min_x
+            offset_y = current_y - min_y
+
+            new_desk[offset_y:offset_y + desk_h, offset_x:offset_x + desk_w] = self.desk
+            self.desk = new_desk
+            self.desk_offset = (min_x, min_y)
+
     def _add_frame_to_desk(self, frame: np.ndarray, coordinates: tuple[int, int]):
-        pass
+        masked_frame = apply_mask_make_transparent(frame, self._ui_mask).astype(np.uint8)
+        h, w = masked_frame.shape[:2]
+        x, y = coordinates
+
+        self._expand_desk(x, y, w, h)
+
+        desk_x = x - self.desk_offset[0]
+        desk_y = y - self.desk_offset[1]
+
+        mask = masked_frame[:, :, 3] > 0
+        self.desk[desk_y:desk_y + h, desk_x:desk_x + w][mask] = masked_frame[mask]
     
     def _add_last_frame_to_desk(self):
         self._add_frame_to_desk(self._frames_history[-1], coordinates=self._position)
@@ -357,11 +389,13 @@ class MotionModule:
             logger.info(f"Desired offset {offset} is out of bounds for the motion area.")
             return None
 
-        # Center the swipe vector in the available space
-        start_x = (min_x + max_x - target_x) // 2
+        # Center the swipe vector in the available space (kinda works)
+        # start_x = (min_x + max_x - target_x) // 2 # <- +x ; -> -x
+        start_x = (min_x + max_x + target_x) // 2 # <- -x ; -> +x
         start_y = (min_y + max_y - target_y) // 2
 
-        end_x = start_x + target_x
+        # end_x = start_x + target_x # <- +x ; -> -x
+        end_x = start_x - target_x # <- -x ; -> +x
         end_y = start_y + target_y
 
         return int(start_x), int(start_y), int(end_x), int(end_y)
@@ -405,10 +439,12 @@ class MotionModule:
             #Note: here you should NOT retry with multiple swipes command, the move command should only do ONE action
             return None
         self._swipe(*swipe)
+        
         self._frames_history.append(run_adb_screencap_to_memory(save_file = f"test_{len(self._frames_history)}.png"))
         dx, dy, confidence = self._calculate_offset()
-        self._position = (self._position[0] + int(dx), self._position[1] + int(dy))
+        self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
         self._positions_history.append(self._position)
+        self._add_last_frame_to_desk()
         self._clamp_frame_history()
         
         return dx, dy
@@ -480,8 +516,8 @@ class MotionModule:
             x_distance = destination[0] - self._position[0]
             y_distance = destination[1] - self._position[1]
             
-            clamped_x = int(max(-max_x_movement, min(max_x_movement, x_distance)))
-            clamped_y = int(max(-max_y_movement, min(max_y_movement, y_distance)))
+            clamped_x = int(max(-(max_x_movement//2), min((max_x_movement//2), x_distance)))
+            clamped_y = int(max(-(max_y_movement//2), min((max_y_movement//2), y_distance)))
             
             movement = (clamped_x, clamped_y)
             
@@ -492,6 +528,8 @@ class MotionModule:
     def get_pil_desk(self) -> Image.Image:
         return Image.fromarray(self.desk, mode="RGBA")
 
+    def position(self):
+        return self._position
 
 class TestMotionModule(MotionModule):
     def test_draw_largest_bbox(self, output_path: str = "bbox_output.png"):
@@ -523,8 +561,15 @@ if __name__ == "__main__":
         ui_mask=Image.open("../resources/p10lite/islandempire_mask_alpha.png").convert("RGBA"),
         swipe_calibrator=cal
     )
-    motion_module.move_with_offset((0,200))
-    
+    # motion_module.move_with_offset((300,0))
+    # motion_module.move_with_offset((300,0))
+    # motion_module.move_with_offset((300,0))
+    motion_module.goto((900,0))
+    # motion_module.move_with_offset((-200,0))
+    # motion_module.move_with_offset((0,200))
+    # motion_module.move_with_offset((0,-200))
+    print(motion_module.position())
+    Image.fromarray(motion_module.desk).save("desk2.png")
     # motion_module.test_draw_largest_bbox()
     
     # from matplotlib import pyplot as plt
