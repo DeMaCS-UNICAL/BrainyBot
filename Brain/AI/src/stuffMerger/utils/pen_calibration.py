@@ -35,16 +35,25 @@ class SwipeCalibrator:
 		self.is_trained = True
 		logger.info("Calibration complete.")
 	
-	def get_calibrated_command(self, target_dx, target_dy):
-		"""Returns the [x, y] command needed to achieve the target swipe"""
+	def get_calibrated_command(self, target_dx, target_dy) -> tuple[float, float]:
+		"""
+		Returns:
+			the [x, y] command needed to achieve the target swipe
+		"""
 		if not self.is_trained:
-			raise ValueError("Model is not trained!")
+			return target_dx, target_dy
 		
 		prediction = self.model.predict([[target_dx, target_dy]])
 		return prediction[0]
 	
 	def plot_calibration(self, max_range=1000, save_path="calibration_map.png"):
-		"""Generates the visualization of the calibration map"""
+		"""
+		Generates the visualization of the calibration map
+		
+		Parameters:
+			max_range the max offset
+		
+		"""
 		if not self.is_trained:
 			print("Train the model first!")
 			return

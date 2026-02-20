@@ -16,8 +16,13 @@ def _run_adb_screencap_to(path: str) -> None:
     with open(path, "wb") as f:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
 
-def run_adb_screencap_to_memory(slow_usb: bool = False) -> np.ndarray :
+def run_adb_screencap_to_memory(slow_usb: bool = True) -> np.ndarray :
     """
+    Parameters:
+        slow_usb: if True, uses adb exec-out screencap | gzip -1 to save bandwidth,
+            otherwise uses adb exec-out screencap to save cpu cycles
+    Returns:
+        np.ndarray: image data in RGBA format
     https://stackoverflow.com/questions/43900380/faster-command-than-adb-shell-screencap
     """
     
@@ -28,14 +33,20 @@ def run_adb_screencap_to_memory(slow_usb: bool = False) -> np.ndarray :
     
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     
+    if slow_usb:
+        import gzip
+        stream = gzip.GzipFile(fileobj=process.stdout, mode='rb')
+    else:
+        stream = process.stdout
+
     # Read the 12-byte header (Width, Height, Format) formed by 3 uint
-    header = process.stdout.read(12)
+    header = stream.read(12)
     if len(header) < 12:
         raise Exception("Failed to read image header")
     
     width, height, pixel_format = struct.unpack("<III", header)
     buffer_size = width * height * 4
-    raw_data = process.stdout.read(buffer_size)
+    raw_data = stream.read(buffer_size)
     
     if len(raw_data) != buffer_size:
         raise Exception("Incomplete read of image data")
@@ -45,6 +56,8 @@ def run_adb_screencap_to_memory(slow_usb: bool = False) -> np.ndarray :
     image = image.reshape((height, width, 4))
     
     # Optional: Clean up
+    if slow_usb:
+        stream.close()
     process.stdout.close()
     process.wait()
     
@@ -101,7 +114,7 @@ def get_custom_image(
 
 def get_image(name: str | None = "screenshot.png") -> Image.Image:
     old_directory: str = os.getcwd()
-    os.chdir(SCREENSHOT_PATH)
+    # os.chdir(SCREENSHOT_PATH)
     _run_adb_screencap_to(name)
     img = Image.open(name)
     img.load()
@@ -247,3 +260,36 @@ def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Imag
     result = Image.fromarray(arr)
     result.save(f"{name}.png")
     return result
+
+
+if __name__ == "__main__":
+    import time
+    print("1. Testing Fast USB Method (Memory)...")
+    try:
+        start = time.time()
+        img_fast = run_adb_screencap_to_memory(slow_usb=False)
+        print(f"   Time: {time.time() - start:.4f}s")
+        Image.fromarray(img_fast).save("fast.png")
+        print("   Success: Saved fast.png")
+    except Exception as e:
+        print(f"   Failed: {e}")
+
+    print("2. Testing Slow USB Method (Gzip)...")
+    try:
+        start = time.time()
+        img_slow = run_adb_screencap_to_memory(slow_usb=True)
+        print(f"   Time: {time.time() - start:.4f}s")
+        Image.fromarray(img_slow).save("slow.png")
+        print("   Success: Saved slow.png")
+    except Exception as e:
+        print(f"   Failed: {e}")
+
+    print("3. Testing Standard Method (File)...")
+    try:
+        start = time.time()
+        img_old = get_image("standard.png")
+        print(f"   Time: {time.time() - start:.4f}s")
+        img_old.save("standard.png")
+        print("   Success: Saved standard.png")
+    except Exception as e:
+        print(f"   Failed: {e}")
