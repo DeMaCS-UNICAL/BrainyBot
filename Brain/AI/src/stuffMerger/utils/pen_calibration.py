@@ -151,7 +151,7 @@ if __name__ == "__main__":
 		cal.save()
 	
 	cal.train()
-	cal.plot_calibration()
+	# cal.plot_calibration()
 	
 	gesture_queue = queue.Queue()
 	tracker = GestureTracker(gesture_queue)

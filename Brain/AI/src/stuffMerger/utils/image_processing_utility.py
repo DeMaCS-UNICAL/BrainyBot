@@ -586,7 +586,7 @@ if __name__ == "__main__":
 
     os.chdir("../resources/")
     print(os.getcwd())
-    local_mask = np.array(Image.open("test_material/islandempire_mask_alpha.png"))
+    local_mask = np.array(Image.open("p10lite/islandempire_mask_alpha.png"))
     
     # a = np.array(Image.open("cache/screenshot_0.png"))
     # b = np.array(Image.open("cache/screenshot_0.png"))
@@ -598,16 +598,16 @@ if __name__ == "__main__":
     # b = apply_mask_make_transparent(b, mask)
     # print(cv2_match_template(a, b))
 
-    a = np.array(Image.open("test_material/single_axis/screenshot_0.png"))
-    b = np.array(Image.open("test_material/single_axis/screenshot_0.png"))
+    a = np.array(Image.open("test_material/test_0.png"))
+    b = np.array(Image.open("test_material/test_1.png"))
     # a = apply_mask_make_transparent(a, mask)
     # b = apply_mask_make_transparent(b, mask)
     # b = np.roll(b, 77, axis=1)
     # b[:, :77] = 0
-    x_movement = 130
-    y_movement = 130
-    b = np.roll(b, x_movement, axis=1)
-    b = np.roll(b, y_movement, axis=0)
+    # x_movement = 130
+    # y_movement = 130
+    # b = np.roll(b, x_movement, axis=1)
+    # b = np.roll(b, y_movement, axis=0)
     # b[:, :x_movement] = 0
     # b[:y_movement, :] = 0
 
@@ -619,6 +619,7 @@ if __name__ == "__main__":
     for i in range(3):
         start = datetime.datetime.now()
         img, res = visualize_orb_matches(a, b, local_mask, i)
+        # res = calculate_offset(a, b, local_mask, i)
         print(datetime.datetime.now() - start, res)
         Image.fromarray(img).save(f"matches_{i}.png")
         # visualize orb matches (may be large) using our helper

@@ -236,7 +236,8 @@ class MotionModule:
     def __init__(self,
         ui_mask: Image.Image | np.ndarray,
         swipe_calibrator: SwipeCalibrator,
-        motion_type: MotionType = MotionType.SWIPE
+        motion_type: MotionType = MotionType.SWIPE,
+        image_history_size: int = 10
     ):
         """
         Parameters:
@@ -253,8 +254,9 @@ class MotionModule:
         self.desk = np.zeros((height, width, 4), dtype=np.uint8)
         self.swipe_calibrator = swipe_calibrator
         self._position: tuple[int, int] = (0, 0)
-        self._positions_history: list[tuple[int, int]] = [(0, 0)]
+        self._positions_history: list[tuple[int, int]] = []
         self._frames_history: list[np.ndarray] = []
+        self._frame_history_size: int = image_history_size
         self._motion_type: MotionType = motion_type
         self._motion_area: tuple[tuple[int, int], tuple[int, int]] | None = None
         if motion_type == MotionType.SWIPE:
@@ -270,7 +272,7 @@ class MotionModule:
     # TODO: a function to define the motion area from the mask
 
     @staticmethod
-    def angle_to_offset(self, distance: float, angle: float):
+    def angle_to_offset(distance: float, angle: float):
         return np.cos(angle) * distance, np.sin(angle) * distance
     
     def _add_frame_to_desk(self, frame: np.ndarray, coordinates: tuple[int, int]):
@@ -283,10 +285,13 @@ class MotionModule:
         """
         Calculates the offset between the last two frames in the history, using the UI mask to ignore irrelevant areas.
         """
+        # Image.fromarray(self._frames_history[-2]).save("saved0.png")
+        # Image.fromarray(self._frames_history[-1]).save("saved1.png")
         dx, dy, confidence = calculate_offset(
             self._frames_history[-2],
             self._frames_history[-1],
-            self._ui_mask
+            self._ui_mask,
+            1
         )
         logger.debug(f"dx = {dx}, dy = {dy}, confidence = {confidence}")
         return dx, dy, confidence
@@ -362,19 +367,27 @@ class MotionModule:
         return int(start_x), int(start_y), int(end_x), int(end_y)
     
     @staticmethod
-    def _swipe(self, start_x: int, start_y: int, end_x: int, end_y: int):
+    def _swipe(start_x: int, start_y: int, end_x: int, end_y: int):
         old_directory: str = os.getcwd()
         os.chdir(CLIENT_PATH)
         os.system(f"python3 client3.py --url {TAPPY_ORIGINAL_SERVER_PROTOCOL}://{TAPPY_ORIGINAL_SERVER_IP}:{TAPPY_ORIGINAL_SERVER_PORT} --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
         os.chdir(old_directory)
+
+    def _clamp_frame_history(self, keep: int = None):
+        if keep is None: keep = self._frame_history_size
+        self._frames_history = self._frames_history[-keep:]
 
     def _ensure_history(self):
         """
         Make sure there are at least one frame in the history, so we can calculate the offset.
         """
         if len(self._frames_history) < 2:
-            self._positions_history.append(self._position) # Only to keep the history "zippable"
-            self._frames_history.append(run_adb_screencap_to_memory())
+            self._positions_history.append(self._position)
+            self._frames_history.append(run_adb_screencap_to_memory(save_file = f"test_{len(self._frames_history)}.png"))
+
+    @staticmethod
+    def distance(point_a: tuple[int, int], point_b: tuple[int, int]) -> float:
+        return ((point_a[0] - point_b[0]) ** 2 + (point_a[1] - point_b[1]) ** 2) ** 0.5
 
     def move_with_offset(self, offset: tuple[int, int]) -> tuple[float, float] | None:
         """
@@ -382,8 +395,8 @@ class MotionModule:
         Parameters:
             offset: int(x), int(y), how much you want to move, DO NOT pre-calibrate these values
         Returns:
-            offset_x, offset_y: None if something went wrong
-        """
+            offset_x, offset_y || None if something went wrong
+        """    
         self._ensure_history()
         command = self.swipe_calibrator.get_calibrated_command(*offset)
         command = int(command[0]), int(command[1])
@@ -392,8 +405,11 @@ class MotionModule:
             #Note: here you should NOT retry with multiple swipes command, the move command should only do ONE action
             return None
         self._swipe(*swipe)
-        self._frames_history.append(run_adb_screencap_to_memory())
+        self._frames_history.append(run_adb_screencap_to_memory(save_file = f"test_{len(self._frames_history)}.png"))
         dx, dy, confidence = self._calculate_offset()
+        self._position = (self._position[0] + int(dx), self._position[1] + int(dy))
+        self._positions_history.append(self._position)
+        self._clamp_frame_history()
         
         return dx, dy
         
@@ -438,8 +454,40 @@ class MotionModule:
         """
         pass
     
-    def goto(self, destination: tuple[int, int]):
-        pass
+    def goto(self, destination: tuple[int, int], acceptable_distance: float = 50):
+        """
+        Goes to an absolute destination
+        Parameters:
+            destination: the absolute destination, in pixels (x, y)
+            acceptable_distance: the maximum distance from the destination we are willing to accept
+        Returns:
+            The final absolute position (x,y)
+        """
+        
+        if self._motion_area is None:
+            # It's redundant, but I feel safer
+            self.calculate_motion_area()
+        
+        # min-max
+        max_x_movement = abs(self._motion_area[0][0] - self._motion_area[1][0])
+        max_y_movement = abs(self._motion_area[0][1] - self._motion_area[1][1])
+        
+        #TODO: if we fails to move 2/3 times return the current position and stop
+        
+        while (dist := self.distance(self._position, destination)) > acceptable_distance:
+            logger.debug(f"Distance to destination: {dist}")
+
+            x_distance = destination[0] - self._position[0]
+            y_distance = destination[1] - self._position[1]
+            
+            clamped_x = int(max(-max_x_movement, min(max_x_movement, x_distance)))
+            clamped_y = int(max(-max_y_movement, min(max_y_movement, y_distance)))
+            
+            movement = (clamped_x, clamped_y)
+            
+            self.move_with_offset(movement)
+
+        return self._position
     
     def get_pil_desk(self) -> Image.Image:
         return Image.fromarray(self.desk, mode="RGBA")
@@ -465,9 +513,19 @@ class TestMotionModule(MotionModule):
 
 if __name__ == "__main__":
     logger.debug(os.getcwd())
-    motion_module = TestMotionModule(ui_mask=Image.open("../resources/ignoreZone.png").convert("RGBA"), swipe_calibrator=None)
     
-    motion_module.test_draw_largest_bbox()
+    cal = SwipeCalibrator()
+    cal.load()
+    cal.train()
+    # cal.plot_calibration()
+    
+    motion_module = MotionModule(
+        ui_mask=Image.open("../resources/p10lite/islandempire_mask_alpha.png").convert("RGBA"),
+        swipe_calibrator=cal
+    )
+    motion_module.move_with_offset((0,200))
+    
+    # motion_module.test_draw_largest_bbox()
     
     # from matplotlib import pyplot as plt
     # md = OldMotionModule(

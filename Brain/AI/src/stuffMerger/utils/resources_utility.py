@@ -16,11 +16,12 @@ def _run_adb_screencap_to(path: str) -> None:
     with open(path, "wb") as f:
         subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
 
-def run_adb_screencap_to_memory(slow_usb: bool = True) -> np.ndarray :
+def run_adb_screencap_to_memory(slow_usb: bool = True, save_file: str | None = None) -> np.ndarray :
     """
     Parameters:
         slow_usb: if True, uses adb exec-out screencap | gzip -1 to save bandwidth,
             otherwise uses adb exec-out screencap to save cpu cycles
+        save_file: if not None, saves the image to the specified file
     Returns:
         np.ndarray: image data in RGBA format
     https://stackoverflow.com/questions/43900380/faster-command-than-adb-shell-screencap
@@ -60,6 +61,9 @@ def run_adb_screencap_to_memory(slow_usb: bool = True) -> np.ndarray :
         stream.close()
     process.stdout.close()
     process.wait()
+    
+    if save_file is not None:
+        Image.fromarray(image).save(save_file)
     
     return image
 

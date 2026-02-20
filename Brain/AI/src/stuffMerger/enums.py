@@ -12,6 +12,7 @@ class Orientation(Enum):
 class MotionType(Enum):
     SWIPE = 0
     TAP = 1
+    TIMED = 2
     
 class Towards(Enum):
     TOP = 0
