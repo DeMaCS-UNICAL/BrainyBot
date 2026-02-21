@@ -362,13 +362,13 @@ class SwipeCalibrator:
                     logger.info("Max iterations reached for this target.")
                     break
                 
-                Kp = 1.0
-                current_cmd[0] += Kp * (target[0] - actual_dx)
-                current_cmd[1] += Kp * (target[1] - actual_dy)
+                variant = 1.0
+                current_cmd[0] += variant * (target[0] - actual_dx)
+                current_cmd[1] += variant * (target[1] - actual_dy)
                 
                 local_iterations += 1
     
-    def automatic_deep_calibration(self):
+    def automatic_deep_calibration(self, target_error: float = 0.02, max_iterations: int = 5):
         """
         ⚠️Warning using value of x/y too small without moving on the other axis WILL result in the program crashing
         due to the inability of the GestureTracker to detect those movements!
@@ -377,16 +377,16 @@ class SwipeCalibrator:
         start_time = datetime.datetime.now()
         
         calibration_points = [
-            (150, 0), (300, 0), (600, 0), (850, 0),
-            (0, 150), (0, 300), (0, 600), (0, 850),
-            (150, 150), (300, 300), (600, 600), (850, 850),
+            (150, 0),   (300, 0),   (600, 0),   (800, 0),
+            (0, 150),   (0, 300),   (0, 600),   (0, 800),
+            (150, 150), (300, 300), (600, 600), (800, 800),
         ]
         
         for target in calibration_points:
             self.deep_calibration(
                 target = target,
-                target_error = 0.02,
-                max_iterations = 5
+                target_error = target_error,
+                max_iterations = max_iterations
             )
         
         finish_time = datetime.datetime.now()
@@ -462,29 +462,36 @@ class SwipeCalibrator:
 if __name__ == "__main__":
     TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
     CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
+    # PREFIX = "test_0_"
+    PREFIX = ""
+    TARGET_ERROR = 0.03
+    MAX_ITERATIONS = 7
+    # CALIBRATION_NAME = f"automatic_deep_calibration_{TARGET_ERROR}_{MAX_ITERATIONS}"
+    CALIBRATION_NAME = f"automatic_calibration"
+    load = False
     
     __cal = SwipeCalibrator(method='linear_regression')
     # __cal.deep_calibration((600, 0))
     
-    if False:
-        __cal.load("test_0_example_deep_calibration.pkl")
+
+    if load:
+        __cal.load(f"{PREFIX}{CALIBRATION_NAME}.pkl")
+        # __cal.load("test_0_example_deep_calibration.pkl")
     else:
-        # __cal.automatic_calibration()
-        # __cal.deep_calibration(
-        #     target = (600, 0),
-        #     target_error = 0.02,
-        #     max_iterations = 5
+        # __cal.automatic_deep_calibration(
+        #     target_error = TARGET_ERROR,
+        #     max_iterations = MAX_ITERATIONS
         # )
-        __cal.automatic_deep_calibration()
-        __cal.save("test_0_automatic_deep_calibration.pkl")
+        __cal.automatic_calibration()
+        __cal.save(f"{PREFIX}{CALIBRATION_NAME}.pkl")
     
     __cal.train()
-    # __cal.plot_vector_calibration(save_path="calibration_vectors.png")
-    # __cal.plot_heatmap_calibration(save_path="calibration_heatmap.png")
-    # __cal.plot_connected_pairs(save_path="calibration_pairs.png")
-    # __cal.plot_vector_calibration()
-    # __cal.plot_heatmap_calibration()
-    # __cal.plot_connected_pairs()
+    # __cal.plot_vector_calibration(save_path=f"{CALIBRATION_NAME}_vectors.png")
+    # __cal.plot_heatmap_calibration(save_path=f"{CALIBRATION_NAME}_heatmap.png")
+    # __cal.plot_connected_pairs(save_path=f"{CALIBRATION_NAME}_pairs.png")
+    __cal.plot_vector_calibration()
+    __cal.plot_heatmap_calibration()
+    __cal.plot_connected_pairs()
     
     with GestureTracker() as tracker:
         try:
