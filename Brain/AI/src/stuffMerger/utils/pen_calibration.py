@@ -364,7 +364,7 @@ if __name__ == "__main__":
             
             # Test swipe
             os.system(
-                f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {100} {1000} {100 + int(cmd_needed[0])} {1000 + int(cmd_needed[1])}'")
+                f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(cmd_needed[0])} {500 + int(cmd_needed[1])}'")
             sleep(3)
             
             if not first_run:

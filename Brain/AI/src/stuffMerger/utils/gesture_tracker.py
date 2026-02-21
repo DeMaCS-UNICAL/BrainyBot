@@ -1,12 +1,15 @@
-import asyncio
 import queue
 import re
 import threading
 import time
+import math
+import subprocess
+import select
+import os
+import pty
+
 from dataclasses import dataclass
 from typing import Any
-
-from numpy.ma.core import sqrt
 
 from AI.src.constants import logger
 
@@ -19,11 +22,13 @@ class Gesture:
 	timestamp: float
 	
 	def __str__(self):
-		return f"""[⌚ ] {time.ctime(self.timestamp)}
-[🏁] ({self.start_x}, {self.start_y})
-[🏅] ({self.end_x}, {self.end_y})
-[📐] ({self.end_x - self.start_x}, {self.end_y - self.start_y}, {sqrt((self.end_x - self.start_x) ** 2 + (self.end_y - self.start_y) ** 2)})"""
-
+		dx = self.end_x - self.start_x
+		dy = self.end_y - self.start_y
+		dist = math.hypot(dx, dy)
+		return (f"[⌚ ] {time.ctime(self.timestamp)}\n"
+		        f"[🏁] ({self.start_x}, {self.start_y})\n"
+		        f"[🏅] ({self.end_x}, {self.end_y})\n"
+		        f"[📐] ({dx}, {dy}, {dist:.2f})")
 
 class GestureTracker(threading.Thread):
 	def __init__(self, output_queue: queue.Queue | None = queue.Queue()):
@@ -39,91 +44,117 @@ class GestureTracker(threading.Thread):
 		# how long (seconds) without events counts as gesture separation
 		self.inactivity_threshold = 1.0
 	
-	async def _producer(self):
-		self.__process = await asyncio.create_subprocess_exec('adb', 'shell', 'getevent', '-lt',
-		                                                      stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-		process = self.__process
-		
-		# start with simple None defaults (avoid using type expressions as values)
-		curr_start: dict[str, Any] = {'X': None, 'Y': None}
-		curr_end: dict[str, Any] = {'X': None, 'Y': None}
-		active = False
-		last_event_ts: float | None = None
-		
-		while not self.__stop:
-			try:
-				line_bytes = await process.stdout.readline()
-			except ValueError:
-				break
-
-			if not line_bytes:
-				break
-			line = line_bytes.decode(errors='ignore')
-			
-			# extract adb-provided timestamp if present
-			ts_match = self.__ts_pattern.search(line)
-			ts = float(ts_match.group(1)) if ts_match else None
-			
-			# check for axis events
-			# pattern now captures the hex value in group 1
-			match = self.__pattern.search(line)
-			if match:
-				hex_val = match.group(1)
-				# determine axis from the line explicitly (safer than relying on a capture group)
-				if 'ABS_MT_POSITION_X' in line:
-					axis = 'X'
-				else:
-					axis = 'Y'
-				val = int(hex_val, 16)
-				
-				if active and ts is not None and last_event_ts is not None:
-					dt = ts - last_event_ts
-					if dt > self.inactivity_threshold:
-						# flush previous gesture
-						s_x, s_y = curr_start['X'], curr_start['Y']
-						e_x, e_y = curr_end['X'], curr_end['Y']
-						if all(v is not None for v in [s_x, s_y, e_x, e_y]):
-							# use adb timestamp (last_event_ts) as the gesture timestamp
-							ts_for_g = float(last_event_ts) if last_event_ts is not None else time.time()
-							g = Gesture(int(s_x), int(s_y), int(e_x), int(e_y), ts_for_g)
-							self.output_queue.put(g)
-						
-						# start a new gesture context
-						curr_start = {'X': None, 'Y': None}
-						curr_end = {'X': None, 'Y': None}
-						active = False
-				
-				if not active:
-					active = True
-					curr_start = {'X': None, 'Y': None}
-				
-				if curr_start[axis] is None:
-					curr_start[axis] = val
-				curr_end[axis] = val
-				
-				if ts is not None:
-					last_event_ts = ts
-		
-		# loop ended (process closed or stop requested) -> flush any active gesture
-		if active:
-			s_x, s_y = curr_start['X'], curr_start['Y']
-			e_x, e_y = curr_end['X'], curr_end['Y']
-			if all(v is not None for v in [s_x, s_y, e_x, e_y]):
-				ts_for_g = float(last_event_ts) if last_event_ts is not None else time.time()
-				g = Gesture(int(s_x), int(s_y), int(e_x), int(e_y), ts_for_g)
-				self.output_queue.put(g)
-	
 	def run(self):
-		# It's way more reliable than doing the detect simply using thread
-		# why? probably my shitty threading code but this work so...
-		asyncio.run(self._producer())
+		master_fd, slave_fd = pty.openpty()
 		
+		try:
+			self.__process = subprocess.Popen(
+				['adb', 'shell', 'getevent', '-lt'],
+				stdout=slave_fd,
+				stderr=subprocess.PIPE,
+				stdin=subprocess.PIPE,
+				close_fds=True
+			)
+			os.close(slave_fd)
+			
+			curr_start: dict[str, Any] = {'X': None, 'Y': None}
+			curr_end: dict[str, Any] = {'X': None, 'Y': None}
+			active = False
+			last_event_ts: float | None = None
+			buffer = ""
+			
+			while not self.__stop:
+				if self.__process.poll() is not None:
+					break
+
+				# 0.1 is just to be ready when the stop() command arrives
+				# probably some better implementation using threading would be best but this is a side component
+				rlist, _, _ = select.select([master_fd], [], [], 0.1)
+				
+				if not rlist:
+					continue
+				
+				try:
+					data = os.read(master_fd, 1024).decode('utf-8', errors='ignore')
+				except OSError:
+					break
+				
+				if not data:
+					break
+				
+				buffer += data
+				while '\n' in buffer:
+					line, buffer = buffer.split('\n', 1)
+					line = line.strip()
+					if not line:
+						continue
+					
+					ts_match = self.__ts_pattern.search(line)
+					ts = float(ts_match.group(1)) if ts_match else None
+					
+					match = self.__pattern.search(line)
+					if match:
+						hex_val = match.group(1)
+						if 'ABS_MT_POSITION_X' in line:
+							axis = 'X'
+						else:
+							axis = 'Y'
+						val = int(hex_val, 16)
+						
+						if active and (ts is not None) and (last_event_ts is not None):
+							dt = ts - last_event_ts
+							if dt > self.inactivity_threshold:
+								s_x, s_y = curr_start['X'], curr_start['Y']
+								e_x, e_y = curr_end['X'], curr_end['Y']
+								if all(v is not None for v in [s_x, s_y, e_x, e_y]):
+									ts_for_g = float(last_event_ts) if last_event_ts is not None else time.time()
+									g = Gesture(int(s_x), int(s_y), int(e_x), int(e_y), ts_for_g)
+									self.output_queue.put(g)
+								
+								curr_start = {'X': None, 'Y': None}
+								curr_end = {'X': None, 'Y': None}
+								active = False
+						
+						if not active:
+							active = True
+							curr_start = {'X': None, 'Y': None}
+						
+						if curr_start[axis] is None:
+							curr_start[axis] = val
+						curr_end[axis] = val
+						
+						if ts is not None:
+							last_event_ts = ts
+			
+			if active:
+				s_x, s_y = curr_start['X'], curr_start['Y']
+				e_x, e_y = curr_end['X'], curr_end['Y']
+				if all(v is not None for v in [s_x, s_y, e_x, e_y]):
+					ts_for_g = float(last_event_ts) if last_event_ts is not None else time.time()
+					g = Gesture(int(s_x), int(s_y), int(e_x), int(e_y), ts_for_g)
+					self.output_queue.put(g)
+
+		finally:
+			try:
+				os.close(master_fd)
+			except Exception as e:
+				logger.error(e)
+				pass
+			
+			if self.__process:
+				try:
+					self.__process.terminate()
+				except Exception as e:
+					logger.error(e)
+					pass
+
 	def stop(self):
 		self.__stop = True
 		if self.__process:
 			try:
 				self.__process.terminate()
-			except Exception:
+			except Exception as e:
+				logger.error(e)
 				pass
 
 
