@@ -80,15 +80,21 @@ class SwipeCalibrator:
 			print(f"Plot saved to {save_path}")
 		plt.show()
 	
-	def calibrate(self):
+	def automatic_calibration(self):
 		gesture_queue = queue.Queue()
 		tracker = GestureTracker(gesture_queue)
 		tracker.start()
 		
-		# Get x data
+		# Get X data
 		for i in range(2, 9):
 			self.cmds.append([100 * i, 0])
 			os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {200 + 100 * i} {1000}'")
+			sleep(3)
+			
+		# Get X half step
+		for i in range(1, 9, 2):
+			self.cmds.append([200 + 50 * i, 0])
+			os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {200 + 200 + 50 * i} {1000}'")
 			sleep(3)
 		
 		# Get Y data
@@ -96,27 +102,84 @@ class SwipeCalibrator:
 			self.cmds.append([0, 100 * i])
 			os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {500} {200} {500} {200 + 100 * i}'")
 			sleep(3)
-		
+			
+		# Get Y half step
+		for i in range(1, 9, 2):
+			self.cmds.append([0, 200 + 50 * i])
+			os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {500} {200} {500} {200 + 200 + 50 * i}'")
+			sleep(3)
+			
+		# Get XY Data combined
+		for i in range(2, 9):
+			self.cmds.append([100 * i, 100 * i])
+			os.system(
+				f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {200} {200 + 100 * i} {200 + 100 * i}'")
+			sleep(3)
+			
+		# Get XY Data combined half step
+		for i in range(1, 9, 2):
+			self.cmds.append([200 + 50 * i, 200 + 50 * i])
+			os.system(
+				f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {200} {200 + 200 + 50 * i} {200 + 200 + 50 * i}'")
+			sleep(3)
+	
 		# Dummy capture Because my capturer capture the next group based on adb timestamp
 		os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
 		sleep(3)
 		
-		# Process X Data
-		for i in range(2, 9):
-			gesture = gesture_queue.get(timeout=5)
+		queue_to_list = [gesture_queue.get(timeout=5) for _ in range(gesture_queue.qsize())]
+		for cmd, gesture in zip(self.cmds, queue_to_list):
 			logger.info(gesture)
-			logger.info(f"[🧪] ({self.cmds[i - 2]})")
+			logger.info(f"[🧪] ({cmd})")
 			self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y])
 		
-		# Process Y Data
-		for i in range(2, 9):
-			gesture = gesture_queue.get(timeout=5)
-			logger.info(gesture)
-			logger.info(f"[🧪] ({self.cmds[i + 5]})")  # 7-2=5
-			self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y])
-			
+		# # Process X Data
+		# for i in range(2, 9):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i - 2]})")
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 8, _ = 0 -> 6 (7)
+		#
+		# # Process X half step
+		# for i in range(1, 9, 2):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i + 5]})") # -2+7
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 7, _ = 7 -> 10 (4)
+		#
+		# # Process Y Data
+		# for i in range(2, 9):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i + 9]})")  # -2+7+4
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 8, _ = 11 -> 19 (7)
+		#
+		# # Process Y half step
+		# for i in range(1, 9, 2):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i + 16]})")  # -2+7+4+7
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 7, _ = 20 -> 23 (4)
+		#
+		# # Process XY Data combined
+		# for i in range(2, 9):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i + 20]})")  # -2+7+4+7+4
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 8, _ = 24 -> 32 (7)
+		#
+		# # Process XY Data combined half step
+		# for i in range(1, 9, 2):
+		# 	gesture = gesture_queue.get(timeout=5)
+		# 	logger.info(gesture)
+		# 	logger.info(f"[🧪] ({self.cmds[i + 27]})")  # -2+7+4+7+4+7
+		# 	self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y]) # i = 7, _ = 33 -> 36 (4)
+		
 		tracker.stop()
 		tracker.join()
+	
+	def manual_calibration(self):
+		pass
 	
 	def load(self, filename: str | None = "dati_xy.pkl"):
 		if not filename.endswith(".pkl"):
@@ -145,13 +208,13 @@ if __name__ == "__main__":
 	cal = SwipeCalibrator()
 	
 	if True:
-		cal.load()
+		cal.load("test_0_example_calibration.pkl")
 	else:
-		cal.calibrate()
-		cal.save()
+		cal.automatic_calibration()
+		cal.save("test_0_example_calibration.pkl")
 	
 	cal.train()
-	# cal.plot_calibration()
+	cal.plot_calibration()
 	
 	gesture_queue = queue.Queue()
 	tracker = GestureTracker(gesture_queue)

@@ -490,28 +490,32 @@ class MotionModule:
         """
         pass
     
-    def goto(self, destination: tuple[int, int], acceptable_distance: float = 50):
+    def goto(self, destination: tuple[int, int], acceptable_distance: float = 50, cutoff_distance: float = 10.0):
         """
         Goes to an absolute destination
         Parameters:
             destination: the absolute destination, in pixels (x, y)
             acceptable_distance: the maximum distance from the destination we are willing to accept
+            cutoff_distance: the minimum average distance from the destination we need to maintain in the last 3 moves
+                to keep trying, to avoid infinite loops when we're stuck
         Returns:
             The final absolute position (x,y)
         """
         
         if self._motion_area is None:
-            # It's redundant, but I feel safer
+            # It's redundant because at this point should be already instantiated, but I feel safer
             self.calculate_motion_area()
         
-        # min-max
+        # min - max
         max_x_movement = abs(self._motion_area[0][0] - self._motion_area[1][0])
         max_y_movement = abs(self._motion_area[0][1] - self._motion_area[1][1])
         
-        #TODO: if we fails to move 2/3 times return the current position and stop
+        distance_history = []
         
-        while (dist := self.distance(self._position, destination)) > acceptable_distance:
+        while ((dist := self.distance(self._position, destination)) > acceptable_distance) and \
+                np.mean(distance_history[-3:]) > cutoff_distance:
             logger.debug(f"Distance to destination: {dist}")
+            distance_history.append(dist)
 
             x_distance = destination[0] - self._position[0]
             y_distance = destination[1] - self._position[1]

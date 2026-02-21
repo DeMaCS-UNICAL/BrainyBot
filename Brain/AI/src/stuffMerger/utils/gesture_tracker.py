@@ -19,10 +19,10 @@ class Gesture:
 	timestamp: float
 	
 	def __str__(self):
-		return f"""[⌚ ] {time.ctime(gesture.timestamp)}
-		[🏁] ({gesture.start_x}, {gesture.start_y})
-		[🏅] ({gesture.end_x}, {gesture.end_y})
-		[📐] ({gesture.end_x - gesture.start_x}, {gesture.end_y - gesture.start_y}, {sqrt((gesture.end_x - gesture.start_x) ** 2 + (gesture.end_y - gesture.start_y) ** 2)})"""
+		return f"""[⌚ ] {time.ctime(self.timestamp)}
+[🏁] ({self.start_x}, {self.start_y})
+[🏅] ({self.end_x}, {self.end_y})
+[📐] ({self.end_x - self.start_x}, {self.end_y - self.start_y}, {sqrt((self.end_x - self.start_x) ** 2 + (self.end_y - self.start_y) ** 2)})"""
 
 
 class GestureTracker(threading.Thread):
