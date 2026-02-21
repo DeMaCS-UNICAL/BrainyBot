@@ -7,6 +7,7 @@ import subprocess
 import select
 import os
 import pty
+from contextlib import AbstractContextManager
 
 from dataclasses import dataclass
 from typing import Any
@@ -25,15 +26,15 @@ class Gesture:
 		dx = self.end_x - self.start_x
 		dy = self.end_y - self.start_y
 		dist = math.hypot(dx, dy)
-		return (f"[⌚ ] {time.ctime(self.timestamp)}\n"
-		        f"[🏁] ({self.start_x}, {self.start_y})\n"
-		        f"[🏅] ({self.end_x}, {self.end_y})\n"
-		        f"[📐] ({dx}, {dy}, {dist:.2f})")
+		return (f"[⌚] {time.ctime(self.timestamp)}\n"
+		        f"[🏁] Start: \t[{self.start_x}, {self.start_y}]\n"
+		        f"[🏅] Finish:\t[{self.end_x}, {self.end_y}]\n"
+		        f"[📐] Measured:\t[{dx}, {dy}] {dist:.2f}")
 
-class GestureTracker(threading.Thread):
-	def __init__(self, output_queue: queue.Queue | None = queue.Queue()):
+class GestureTracker(threading.Thread, AbstractContextManager):
+	def __init__(self, output_queue: queue.Queue | None = None):
 		super().__init__(daemon=True)
-		self.output_queue = output_queue
+		self.output_queue = output_queue or queue.Queue()
 		# You could add other stuff like finger touchdown and so on... it's out of my scope tough
 		# use character class instead of single-char alternation to avoid a linter warning
 		self.__pattern = re.compile(r"ABS_MT_POSITION_[XY]\s+([0-9a-f]+)")
@@ -43,6 +44,14 @@ class GestureTracker(threading.Thread):
 		self.__process = None
 		# how long (seconds) without events counts as gesture separation
 		self.inactivity_threshold = 1.0
+
+	def __enter__(self):
+		self.start()
+		return self
+
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.stop()
+		self.join()
 	
 	def run(self):
 		master_fd, slave_fd = pty.openpty()
