@@ -9,7 +9,7 @@ from PIL import Image
 import os
 from AI.src.constants import SCREENSHOT_PATH, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 
-from AI.src.stuffMerger.enums import Orientation, Direction
+from AI.src.motion_module.enums import Orientation, Direction
 
 
 def _run_adb_screencap_to(path: str) -> None:

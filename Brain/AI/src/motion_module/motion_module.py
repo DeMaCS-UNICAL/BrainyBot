@@ -11,10 +11,10 @@ from PIL import ImageDraw, Image
 
 from AI.src.constants import logger, TAPPY_ORIGINAL_SERVER_PROTOCOL, TAPPY_ORIGINAL_SERVER_PORT, \
     TAPPY_ORIGINAL_SERVER_IP, CLIENT_PATH
-from AI.src.stuffMerger.enums import MotionType, Towards
-from AI.src.stuffMerger.utils.image_processing_utility import to_int32, apply_mask_make_transparent, calculate_offset
-from AI.src.stuffMerger.utils.pen_calibration import SwipeCalibrator
-from AI.src.stuffMerger.utils.resources_utility import run_adb_screencap_to_memory
+from AI.src.motion_module.enums import MotionType, Towards
+from AI.src.motion_module.utils.image_processing_utility import to_int32, apply_mask_make_transparent, calculate_offset
+from AI.src.motion_module.utils.pen_calibration import SwipeCalibrator
+from AI.src.motion_module.utils.resources_utility import run_adb_screencap_to_memory
 
 
 class Worker(threading.Thread):
@@ -461,7 +461,7 @@ if __name__ == "__main__":
     # cal.plot_calibration()
     
     motion_module = MotionModule(
-        ui_mask=Image.open("../resources/p10lite/islandempire_mask_alpha.png").convert(
+        ui_mask=Image.open("resources/p10lite/islandempire_mask_alpha.png").convert(
             "RGBA"
         ),
         swipe_calibrator=cal,
@@ -474,7 +474,7 @@ if __name__ == "__main__":
     logger.debug(motion_module.goto((0, 0)))
     
     print(motion_module.position())
-    Image.fromarray(motion_module.desk).save("desk2.png")
+    Image.fromarray(motion_module.desk).save("utils/desk2.png")
 # motion_module.test_draw_largest_bbox()
 
 # from matplotlib import pyplot as plt

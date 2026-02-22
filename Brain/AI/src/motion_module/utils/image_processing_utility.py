@@ -9,7 +9,7 @@ from PIL import Image
 from skimage.metrics import structural_similarity
 
 from AI.src.constants import logger
-from AI.src.stuffMerger.enums import Direction, Orientation
+from AI.src.motion_module.enums import Direction, Orientation
 
 
 def sanitize_mask(arr: np.ndarray) -> np.ndarray:

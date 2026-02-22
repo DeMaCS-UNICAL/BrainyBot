@@ -13,7 +13,7 @@ from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 from sklearn.multioutput import MultiOutputRegressor
 
 # Internal libraries
-from AI.src.stuffMerger.utils.gesture_tracker import GestureTracker
+from AI.src.motion_module.utils.gesture_tracker import GestureTracker
 from AI.src.constants import logger, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
 
 
