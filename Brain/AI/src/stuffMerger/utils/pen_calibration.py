@@ -460,14 +460,31 @@ class SwipeCalibrator:
             pickle.dump(data_to_save, f)
 
 if __name__ == "__main__":
+    import argparse
+    import  sys
+    parser = argparse.ArgumentParser(description="Run the calibration script")
+    parser.add_argument("--method", type=str, default="linear_regression", help="Method to use for the calibration"
+                                                                                "linear_regression (default), linear_interpolation, ransac_regression, huber_regression")
+    parser.add_argument("--manual", action="store_true", help="Choose the calibration swipes manually")
+    parser.add_argument("--deep", action="store_true", help="Run the deep calibration (slow but more accurate)")
+    parser.add_argument("--target_error", type=float, default=0.03, help="Target error for the deep calibration", required="--deep" in sys.argv)
+    parser.add_argument("--max_iterations", type=int, default=5, help="Max iterations for the deep calibration", required="--deep" in sys.argv)
+    
+    parser.add_argument("--load_from_file", action="store_true", help="Load the calibration from a file")
+    parser.add_argument("--save_to_file", action="store_true", help="Save the calibration to a file")
+    parser.add_argument("--plot_vector_calibration", action="store_true", help="Plot the vector calibration")
+    parser.add_argument("--plot_heatmap_calibration", action="store_true", help="Plot the heatmap calibration")
+    parser.add_argument("--plot_connected_pairs", action="store_true", help="Plot the commanded vs measured swipes connected by lines")
+    print(parser.parse_args())
+    
     TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
     CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
-    # PREFIX = "test_0_"
-    PREFIX = ""
+    PREFIX = "test_1_"
+    # PREFIX = ""
     TARGET_ERROR = 0.03
-    MAX_ITERATIONS = 7
-    # CALIBRATION_NAME = f"automatic_deep_calibration_{TARGET_ERROR}_{MAX_ITERATIONS}"
-    CALIBRATION_NAME = f"automatic_calibration"
+    MAX_ITERATIONS = 5
+    CALIBRATION_NAME = f"automatic_deep_calibration_{TARGET_ERROR}_{MAX_ITERATIONS}"
+    # CALIBRATION_NAME = f"automatic_calibration"
     load = False
     
     __cal = SwipeCalibrator(method='linear_regression')
@@ -478,11 +495,11 @@ if __name__ == "__main__":
         __cal.load(f"{PREFIX}{CALIBRATION_NAME}.pkl")
         # __cal.load("test_0_example_deep_calibration.pkl")
     else:
-        # __cal.automatic_deep_calibration(
-        #     target_error = TARGET_ERROR,
-        #     max_iterations = MAX_ITERATIONS
-        # )
-        __cal.automatic_calibration()
+        __cal.automatic_deep_calibration(
+            target_error = TARGET_ERROR,
+            max_iterations = MAX_ITERATIONS
+        )
+        # __cal.automatic_calibration()
         __cal.save(f"{PREFIX}{CALIBRATION_NAME}.pkl")
     
     __cal.train()
