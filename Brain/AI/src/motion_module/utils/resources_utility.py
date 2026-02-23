@@ -1,5 +1,6 @@
 import subprocess
 import random
+from contextlib import AbstractContextManager
 from typing import List
 import struct
 
@@ -7,8 +8,7 @@ import numpy as np
 from PIL import Image
 
 import os
-from AI.src.constants import SCREENSHOT_PATH, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
-
+from AI.src.constants import SCREENSHOT_PATH, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP, logger
 from AI.src.motion_module.enums import Orientation, Direction
 
 
@@ -95,12 +95,8 @@ def get_custom_image(
     # _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
     # _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
     
-    old_directory: str = os.getcwd()
-    os.chdir(CLIENT_PATH)
     os.system(
-        f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
-    os.chdir(old_directory)
-    
+        f"python3 {CLIENT_PATH}/client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
     return get_image(name)
 
 
@@ -117,12 +113,10 @@ def get_custom_image(
 #     return img
 
 def get_image(name: str | None = "screenshot.png") -> Image.Image:
-    old_directory: str = os.getcwd()
-    # os.chdir(SCREENSHOT_PATH)
-    _run_adb_screencap_to(name)
-    img = Image.open(name)
-    img.load()
-    os.chdir(old_directory)
+    with DoStuffElsewhere(SCREENSHOT_PATH):
+        _run_adb_screencap_to(name)
+        img = Image.open(name)
+        img.load()
     return img
 
 def get_custom_image_set(
@@ -245,13 +239,10 @@ def get_image_set(
     
     image_prefix = f"{'i_' if not perfect else ''}{'v_' if vertical else ''}{'h_' if horizontal else ''}{'r_' if orientation != Orientation.DESCENDING else ''}"
     
-    old_directory: str = os.getcwd()
     _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_0.png")
     for index, action in enumerate(actions[1:]):
-        os.chdir(CLIENT_PATH)
-        print(os.getcwd())
-        _run_motionevent(action)
-        os.chdir(old_directory)
+        with DoStuffElsewhere(CLIENT_PATH):
+            _run_motionevent(action)
         _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_{index + 1}.png")
     _run_motionevent(actions[-1])
 
@@ -266,34 +257,59 @@ def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Imag
     return result
 
 
+class DoStuffElsewhere(AbstractContextManager):
+    def __exit__(self, exc_type, exc_value, traceback):
+        os.chdir(self.old_directory)
+    
+    def __enter__(self):
+        self.old_directory = os.getcwd()
+        try:
+            os.chdir(self.location)
+        except Exception as e:
+            logger.error(f"Failed to change directory to {self.location}: {e}")
+            raise e
+        return self
+    
+    def __init__(self, location: str) -> None:
+        self.location = location
+        self.old_directory: str
+        
+        
+
 if __name__ == "__main__":
     import time
-    print("1. Testing Fast USB Method (Memory)...")
-    try:
-        start = time.time()
-        img_fast = run_adb_screencap_to_memory(slow_usb=False)
-        print(f"   Time: {time.time() - start:.4f}s")
-        Image.fromarray(img_fast).save("fast.png")
-        print("   Success: Saved fast.png")
-    except Exception as e:
-        print(f"   Failed: {e}")
-
-    print("2. Testing Slow USB Method (Gzip)...")
-    try:
-        start = time.time()
-        img_slow = run_adb_screencap_to_memory(slow_usb=True)
-        print(f"   Time: {time.time() - start:.4f}s")
-        Image.fromarray(img_slow).save("slow.png")
-        print("   Success: Saved slow.png")
-    except Exception as e:
-        print(f"   Failed: {e}")
-
-    print("3. Testing Standard Method (File)...")
-    try:
-        start = time.time()
-        img_old = get_image("standard.png")
-        print(f"   Time: {time.time() - start:.4f}s")
-        img_old.save("standard.png")
-        print("   Success: Saved standard.png")
-    except Exception as e:
-        print(f"   Failed: {e}")
+    
+    print(os.getcwd())
+    with DoStuffElsewhere(SCREENSHOT_PATH):
+        print(os.getcwd())
+    print(os.getcwd())
+    
+    # print("1. Testing Fast USB Method (Memory)...")
+    # try:
+    #     start = time.time()
+    #     img_fast = run_adb_screencap_to_memory(slow_usb=False)
+    #     print(f"   Time: {time.time() - start:.4f}s")
+    #     Image.fromarray(img_fast).save("fast.png")
+    #     print("   Success: Saved fast.png")
+    # except Exception as e:
+    #     print(f"   Failed: {e}")
+    #
+    # print("2. Testing Slow USB Method (Gzip)...")
+    # try:
+    #     start = time.time()
+    #     img_slow = run_adb_screencap_to_memory(slow_usb=True)
+    #     print(f"   Time: {time.time() - start:.4f}s")
+    #     Image.fromarray(img_slow).save("slow.png")
+    #     print("   Success: Saved slow.png")
+    # except Exception as e:
+    #     print(f"   Failed: {e}")
+    #
+    # print("3. Testing Standard Method (File)...")
+    # try:
+    #     start = time.time()
+    #     img_old = get_image("standard.png")
+    #     print(f"   Time: {time.time() - start:.4f}s")
+    #     img_old.save("standard.png")
+    #     print("   Success: Saved standard.png")
+    # except Exception as e:
+    #     print(f"   Failed: {e}")

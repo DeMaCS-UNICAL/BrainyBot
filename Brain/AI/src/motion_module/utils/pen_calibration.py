@@ -14,7 +14,8 @@ from sklearn.multioutput import MultiOutputRegressor
 
 # Internal libraries
 from AI.src.motion_module.utils.gesture_tracker import GestureTracker
-from AI.src.constants import logger, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
+from AI.src.constants import logger, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP, MOTION_CALIBRATION_PATH, SCREENSHOT_PATH
+from AI.src.motion_module.utils.resources_utility import DoStuffElsewhere
 
 
 class SwipeCalibrator:
@@ -33,20 +34,25 @@ class SwipeCalibrator:
 
     
     def train(self,
-              commanded_swipes: list[list[int]] | None = None,
-              measured_swipes: list[list[int]] | None = None,
-              method: str | None = None,
+              commanded_swipes: list[list[int]] = None,
+              measured_swipes: list[list[int]] = None,
+              method: str = None,
               drop_first: bool = False,
-              outlier_zscore_thresh: float | None = None,
-        ):
+              outlier_zscore_threshold: float = None,
+              ):
         """
+        Train the model
         Parameters:
             commanded_swipes: A list of pairs (dx, dy) that the pen should have performed
             measured_swipes: A list of pairs (dx, dy) that the pen actually performed
             method: None (default, will use the one used in the class creation),
                 "linear_regression", "linear_interpolation", "ransac_regression", "huber_regression"
             drop_first: if True, drop the first sample (useful if the first capture is noisy)
-            outlier_zscore_thresh: if not None, remove measured samples with z-score > thresh (on measured magnitude)
+                example: the first we set [0, 0] = (0, 0) and we want to skip this
+            outlier_zscore_threshold: remove measured samples with z-score > thresh (on measured magnitude)
+                this tries to remove from the calibration garbage data
+        Notes:
+            - drop_first could be transformed in drop_selected: list[index]
         """
         if commanded_swipes is None:
             commanded_swipes = self.cmds
@@ -68,13 +74,13 @@ class SwipeCalibrator:
             measured = measured[1:]
             commanded = commanded[1:]
         
-        if outlier_zscore_thresh is not None and measured.shape[0] >= 3:
+        if outlier_zscore_threshold is not None and measured.shape[0] >= 3:
             mags = np.linalg.norm(measured, axis=1)
             m_mean = np.mean(mags)
             m_std = np.std(mags)
             if m_std > 0:
                 z = (mags - m_mean) / m_std
-                mask = np.abs(z) <= outlier_zscore_thresh
+                mask = np.abs(z) <= outlier_zscore_threshold
                 if not np.all(mask):
                     logger.info(f"Removing {np.sum(~mask)} outlier(s) from calibration data by z-score")
                     measured = measured[mask]
@@ -120,128 +126,6 @@ class SwipeCalibrator:
         
         prediction = self._predict(np.array([[target_dx, target_dy]]))
         return prediction[0]
-    
-    def plot_vector_calibration(self, max_range: int = 1000, save_path: str | None = None):
-        """
-        Generates the visualization of the calibration map with vectors
-        
-        Parameters:
-            max_range: the max offset
-            save_path: path to save the plot
-        """
-        if not self.is_trained:
-            raise ValueError("Train the model first!")
-        
-        grid_size = 10
-        x, y = np.meshgrid(np.linspace(0, max_range, grid_size), np.linspace(0, max_range, grid_size))
-        
-        flat_x, flat_y = x.flatten(), y.flatten()
-        targets = np.column_stack((flat_x, flat_y))
-        commands = self._predict(targets)
-        
-        plt.figure(figsize=(8, 6))
-        # Plot the "push" vectors: (Command - Target)
-        plt.quiver(flat_x, flat_y, commands[:, 0] - flat_x, commands[:, 1] - flat_y, color='blue', alpha=0.6,
-                   label='Correction Vector')
-
-        plt.title(f"Calibration Map: Required 'Push' to overcome Friction ({self.method})")
-        plt.xlabel("Desired X Displacement")
-        plt.ylabel("Desired Y Displacement")
-        plt.legend()
-        plt.grid(True)
-        if save_path is not None:
-            plt.savefig(save_path)
-            logger.info(f"Plot saved to {save_path}")
-        plt.show()
-
-    def plot_heatmap_calibration(self, max_range: int = 1000, save_path: str | None = None):
-        """
-        Generates a heatmap visualization of the calibration map showing the magnitude of correction.
-        
-        Parameters:
-            max_range: the max offset
-            save_path: path to save the plot
-        """
-        if not self.is_trained:
-            raise ValueError("Train the model first!")
-        
-        grid_size = 50
-        x_linspace = np.linspace(0, max_range, grid_size)
-        y_linspace = np.linspace(0, max_range, grid_size)
-        x, y = np.meshgrid(x_linspace, y_linspace)
-        
-        flat_x, flat_y = x.flatten(), y.flatten()
-        targets = np.column_stack((flat_x, flat_y))
-        commands = self._predict(targets)
-        
-        # Calculate the magnitude of the correction vector (Command - Target)
-        correction_vectors = commands - targets
-        correction_magnitudes = np.linalg.norm(correction_vectors, axis=1)
-        z = correction_magnitudes.reshape(x.shape)
-        
-        plt.figure(figsize=(10, 8))
-        plt.pcolormesh(x, y, z, shading='auto', cmap='viridis')
-        plt.colorbar(label='Correction Magnitude (pixels)')
-        
-        # Plot original training points if available (measured acts)
-        if len(self.acts) > 0:
-            acts_arr = np.array(self.acts)
-            plt.plot(acts_arr[:, 0], acts_arr[:, 1], "ok", markersize=4, label="Measured Points")
-            plt.legend(loc="upper right")
-            
-        plt.title(f"Calibration Heatmap: Correction Magnitude ({self.method})")
-        plt.xlabel("Desired X Displacement")
-        plt.ylabel("Desired Y Displacement")
-        plt.axis("equal")
-        
-        if save_path is not None:
-            plt.savefig(save_path)
-            logger.info(f"Heatmap saved to {save_path}")
-        plt.show()
-
-    def plot_connected_pairs(self, save_path: str | None = None):
-        """
-        Plots the commanded vs measured swipes connected by lines.
-        This helps visualize the error for each specific training point.
-        
-        Parameters:
-            save_path: path to save the plot
-        """
-        if len(self.cmds) == 0 or len(self.acts) == 0:
-            raise ValueError("No training data available to plot pairs")
-        
-        cmds_arr = np.array(self.cmds)
-        acts_arr = np.array(self.acts)
-        
-        if len(cmds_arr) != len(acts_arr):
-            logger.warning("Commands and Acts arrays have different lengths, truncating to minimum")
-            min_len = min(len(cmds_arr), len(acts_arr))
-            cmds_arr = cmds_arr[:min_len]
-            acts_arr = acts_arr[:min_len]
-            
-        plt.figure(figsize=(10, 8))
-        
-        # Plot commanded points
-        plt.scatter(cmds_arr[:, 0], cmds_arr[:, 1], c='blue', label='Commanded (Desired)', marker='o')
-        
-        # Plot measured points
-        plt.scatter(acts_arr[:, 0], acts_arr[:, 1], c='red', label='Measured (Actual)', marker='x')
-        
-        # Draw lines connecting them
-        for i in range(len(cmds_arr)):
-            plt.plot([cmds_arr[i, 0], acts_arr[i, 0]], [cmds_arr[i, 1], acts_arr[i, 1]], 'k-', alpha=0.3)
-            
-        plt.title("Calibration: Commanded vs Measured Pairs")
-        plt.xlabel("X Displacement")
-        plt.ylabel("Y Displacement")
-        plt.legend()
-        plt.grid(True)
-        plt.axis("equal")
-        
-        if save_path is not None:
-            plt.savefig(save_path)
-            logger.info(f"Pairs plot saved to {save_path}")
-        plt.show()
     
     def automatic_calibration(self):
         with GestureTracker() as tracker:
@@ -440,24 +324,189 @@ class SwipeCalibrator:
         self.cmds = []
         self.acts = []
     
-    def load(self, filename: str | None = "dati_xy.pkl"):
-        if not filename.endswith(".pkl"):
-            raise ValueError("File must be a pickle file")
+    @staticmethod
+    def _assemble_file_string_prefix(
+            test_n: int = None,
+            robot: str = "brainybot1",
+            pen: str = "pinky_thing",
+            suffix: str = None
+        ) -> str:
+        match (test_n is None, suffix is None):
+            case (True, True): return f"{robot}_{pen}"
+            case (True, False): return f"{robot}_{pen}_{suffix}"
+            case (False, True): return f"{test_n}_{robot}_{pen}"
+            case (False, False): return f"{test_n}_{robot}_{pen}_{suffix}"
+
+    def load(self,
+             filename: str = None,
+             test_n: int = None,
+             robot: str = "brainybot1",
+             pen: str = "pinky_thing",
+             suffix: str = None
+        ):
         
-        with open(filename, 'rb') as f:
-            caricato = pickle.load(f)
+        prefix = None
+        if filename is None:
+            prefix = self._assemble_file_string_prefix(test_n, robot, pen, suffix)
+        else:
+            if not filename.endswith(".pkl"):
+                raise ValueError("File must be a pickle file")
+        
+        with DoStuffElsewhere(MOTION_CALIBRATION_PATH):
+            if prefix is not None:
+                for f in os.listdir():
+                    if os.path.isfile(f) and f.endswith(".pkl") and f.startswith(prefix):
+                        filename = f
+                        break
+            
+            with open(filename, 'rb') as f:
+                caricato = pickle.load(f)
         
         self.cmds = caricato["cmds"]
         self.acts = caricato["acts"]
     
-    def save(self, filename: str | None = "dati_xy.pkl"):
+    def save(self,
+             filename: str = None,
+             test_n: int = None,
+             robot: str = "brainybot1",
+             pen: str = "pinky_thing",
+             suffix: str = None
+        ):
+        if filename is None:
+            filename = f"{self._assemble_file_string_prefix(test_n, robot, pen, suffix)}.pkl"
+        
         if not filename.endswith(".pkl"):
             raise ValueError("File must be a pickle file")
         
         data_to_save = {"cmds": self.cmds, "acts": self.acts}
         
-        with open(filename, 'wb') as f:
-            pickle.dump(data_to_save, f)
+        with DoStuffElsewhere(MOTION_CALIBRATION_PATH):
+            with open(filename, 'wb') as f:
+                pickle.dump(data_to_save, f)
+    
+    def plot_vector_calibration(self, max_range: int = 1000, plot_filename: str = None):
+        """
+        Generates the visualization of the calibration map with vectors
+
+        Parameters:
+            max_range: the max offset
+            plot_filename: name of the plot
+        """
+        if not self.is_trained:
+            raise ValueError("Train the model first!")
+        
+        grid_size = 10
+        x, y = np.meshgrid(np.linspace(0, max_range, grid_size), np.linspace(0, max_range, grid_size))
+        
+        flat_x, flat_y = x.flatten(), y.flatten()
+        targets = np.column_stack((flat_x, flat_y))
+        commands = self._predict(targets)
+        
+        plt.figure(figsize=(8, 6))
+        # Plot the "push" vectors: (Command - Target)
+        plt.quiver(flat_x, flat_y, commands[:, 0] - flat_x, commands[:, 1] - flat_y, color='blue', alpha=0.6,
+                   label='Correction Vector')
+        
+        plt.title(f"Calibration Map: Required 'Push' to overcome Friction ({self.method})")
+        plt.xlabel("Desired X Displacement")
+        plt.ylabel("Desired Y Displacement")
+        plt.legend()
+        plt.grid(True)
+        if plot_filename is not None:
+            with DoStuffElsewhere(SCREENSHOT_PATH):
+                plt.savefig(plot_filename)
+            logger.info(f"Plot saved to {plot_filename}")
+        plt.show()
+    
+    def plot_heatmap_calibration(self, max_range: int = 1000, save_path: str | None = None):
+        """
+        Generates a heatmap visualization of the calibration map showing the magnitude of correction.
+
+        Parameters:
+            max_range: the max offset
+            save_path: path to save the plot
+        """
+        if not self.is_trained:
+            raise ValueError("Train the model first!")
+        
+        grid_size = 50
+        x_linspace = np.linspace(0, max_range, grid_size)
+        y_linspace = np.linspace(0, max_range, grid_size)
+        x, y = np.meshgrid(x_linspace, y_linspace)
+        
+        flat_x, flat_y = x.flatten(), y.flatten()
+        targets = np.column_stack((flat_x, flat_y))
+        commands = self._predict(targets)
+        
+        # Calculate the magnitude of the correction vector (Command - Target)
+        correction_vectors = commands - targets
+        correction_magnitudes = np.linalg.norm(correction_vectors, axis=1)
+        z = correction_magnitudes.reshape(x.shape)
+        
+        plt.figure(figsize=(10, 8))
+        plt.pcolormesh(x, y, z, shading='auto', cmap='viridis')
+        plt.colorbar(label='Correction Magnitude (pixels)')
+        
+        # Plot original training points if available (measured acts)
+        if len(self.acts) > 0:
+            acts_arr = np.array(self.acts)
+            plt.plot(acts_arr[:, 0], acts_arr[:, 1], "ok", markersize=4, label="Measured Points")
+            plt.legend(loc="upper right")
+        
+        plt.title(f"Calibration Heatmap: Correction Magnitude ({self.method})")
+        plt.xlabel("Desired X Displacement")
+        plt.ylabel("Desired Y Displacement")
+        plt.axis("equal")
+        
+        if save_path is not None:
+            plt.savefig(save_path)
+            logger.info(f"Heatmap saved to {save_path}")
+        plt.show()
+    
+    def plot_connected_pairs(self, save_path: str | None = None):
+        """
+        Plots the commanded vs measured swipes connected by lines.
+        This helps visualize the error for each specific training point.
+
+        Parameters:
+            save_path: path to save the plot
+        """
+        if len(self.cmds) == 0 or len(self.acts) == 0:
+            raise ValueError("No training data available to plot pairs")
+        
+        cmds_arr = np.array(self.cmds)
+        acts_arr = np.array(self.acts)
+        
+        if len(cmds_arr) != len(acts_arr):
+            logger.warning("Commands and Acts arrays have different lengths, truncating to minimum")
+            min_len = min(len(cmds_arr), len(acts_arr))
+            cmds_arr = cmds_arr[:min_len]
+            acts_arr = acts_arr[:min_len]
+        
+        plt.figure(figsize=(10, 8))
+        
+        # Plot commanded points
+        plt.scatter(cmds_arr[:, 0], cmds_arr[:, 1], c='blue', label='Commanded (Desired)', marker='o')
+        
+        # Plot measured points
+        plt.scatter(acts_arr[:, 0], acts_arr[:, 1], c='red', label='Measured (Actual)', marker='x')
+        
+        # Draw lines connecting them
+        for i in range(len(cmds_arr)):
+            plt.plot([cmds_arr[i, 0], acts_arr[i, 0]], [cmds_arr[i, 1], acts_arr[i, 1]], 'k-', alpha=0.3)
+        
+        plt.title("Calibration: Commanded vs Measured Pairs")
+        plt.xlabel("X Displacement")
+        plt.ylabel("Y Displacement")
+        plt.legend()
+        plt.grid(True)
+        plt.axis("equal")
+        
+        if save_path is not None:
+            plt.savefig(save_path)
+            logger.info(f"Pairs plot saved to {save_path}")
+        plt.show()
+
 
 if __name__ == "__main__":
     import argparse

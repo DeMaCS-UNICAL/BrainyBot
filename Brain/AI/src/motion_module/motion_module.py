@@ -5,6 +5,7 @@ from collections import Counter
 
 # Python
 import mahotas
+import math
 import numpy as np
 # External libraries
 from PIL import ImageDraw, Image
@@ -35,6 +36,14 @@ class MotionModule:
             The swipe calibrator (if provided) need to be already trained.
         motion_type: the type of motion you want to use, default is swipe.
         force_headless: if True the module will use adb for movements.
+        start_position: where you start (will also expand the desk to fit your position)
+    How to use:
+        - To properly use the motion module you should implement in you application a set of actions
+        - When the motion module moves it fills the desk with the (screenshot - the mask) at your position
+        - When you want to scan it with cv2 or other method you can request the desk with 'get_desk_copy' or 'get_pil_desk'
+        - If you want to clear the whole map and scan it from scratch you can call 'clear_desk'
+        - If your position no longer matches the one accounted for by the module you can reset it with 'set_current_position' but you may want to 'collapse_desk' after
+        - When you want to (tap 1000, 1000) do not go to (1000, 1000) use 'goto_for_action' and execute the action at the returned value
     """
     
     def __init__(
@@ -44,7 +53,7 @@ class MotionModule:
             motion_type: MotionType = MotionType.SWIPE,
             image_history_size: int = 10,
             force_headless: bool = False,
-    
+            start_position: tuple[int, int] = (0, 0),
     ):
         match isinstance(ui_mask, Image.Image):
             case True:
@@ -53,10 +62,11 @@ class MotionModule:
                 self._ui_mask: np.ndarray = ui_mask
         height, width = self._ui_mask.shape[:2]
         # array RGBA trasparente (0 = trasparente)
-        self.desk = np.zeros((height, width, 4), dtype=np.uint8)
-        self.desk_offset = (0, 0)
+        self._desk = np.zeros((height, width, 4), dtype=np.uint8)
+        self._desk_offset = start_position
+        self._expand_desk(start_position, (width, height))
         self.swipe_calibrator = swipe_calibrator
-        self._position: tuple[int, int] = (0, 0)
+        self._position: tuple[int, int] = start_position
         self._positions_history: list[tuple[int, int]] = []
         self._frames_history: list[np.ndarray] = []
         self._frame_history_size: int = image_history_size
@@ -64,7 +74,7 @@ class MotionModule:
         self._motion_area: tuple[tuple[int, int], tuple[int, int]] | None = None
         if motion_type == MotionType.SWIPE:
             self.calculate_motion_area()
-        self.force_headless = force_headless
+        self._force_headless = force_headless
     
     # TODO: add a way to auto-train the swipe calibrator
     # TODO: add confidence threshold to have some kind of security net for wrong movement, and a correction for them
@@ -86,9 +96,9 @@ class MotionModule:
             coordinates: x, y of the top-left corner of the area.
             size: width, height of the area.
         """
-        current_pos = np.array(self.desk_offset)
+        current_pos = np.array(self._desk_offset)
         # shape is (h, w) but we all know that (w, h) is superior so flip it
-        current_size = np.array(self.desk.shape[:2][::-1])
+        current_size = np.array(self._desk.shape[:2][::-1])
         
         new_pos = np.array(coordinates)
         new_size = np.array(size)
@@ -107,10 +117,10 @@ class MotionModule:
             offset_x, offset_y = offset
             current_w, current_h = current_size
             
-            new_desk[offset_y: offset_y + current_h, offset_x: offset_x + current_w] = self.desk
+            new_desk[offset_y: offset_y + current_h, offset_x: offset_x + current_w] = self._desk
             
-            self.desk = new_desk
-            self.desk_offset = tuple(min_coords)
+            self._desk = new_desk
+            self._desk_offset = tuple(min_coords)
     
     def _add_frame_to_desk(self, frame: np.ndarray, coordinates: tuple[int, int]):
         """
@@ -127,11 +137,11 @@ class MotionModule:
         
         self._expand_desk((x, y), (w, h))
         
-        desk_x = x - self.desk_offset[0]
-        desk_y = y - self.desk_offset[1]
+        desk_x = x - self._desk_offset[0]
+        desk_y = y - self._desk_offset[1]
         
         mask = masked_frame[:, :, 3] > 0
-        self.desk[desk_y: desk_y + h, desk_x: desk_x + w][mask] = masked_frame[mask]
+        self._desk[desk_y: desk_y + h, desk_x: desk_x + w][mask] = masked_frame[mask]
     
     def _add_last_frame_to_desk(self):
         """
@@ -254,15 +264,12 @@ class MotionModule:
     
     @staticmethod
     def __swipe_robot(start_x: int, start_y: int, end_x: int, end_y: int):
-        old_directory: str = os.getcwd()
-        os.chdir(CLIENT_PATH)
         os.system(
-            f"python3 client3.py --url {TAPPY_ORIGINAL_SERVER_PROTOCOL}://{TAPPY_ORIGINAL_SERVER_IP}:{TAPPY_ORIGINAL_SERVER_PORT} --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
+            f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_PROTOCOL}://{TAPPY_ORIGINAL_SERVER_IP}:{TAPPY_ORIGINAL_SERVER_PORT} --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
         )
-        os.chdir(old_directory)
     
     def _swipe(self, start_x: int, start_y: int, end_x: int, end_y: int):
-        if self.force_headless:
+        if self._force_headless:
             return self.__swipe_adb(start_x, start_y, end_x, end_y)
         return self.__swipe_robot(start_x, start_y, end_x, end_y)
     
@@ -365,7 +372,7 @@ class MotionModule:
             destination: tuple[int, int],
             acceptable_distance: float = 50,
             cutoff_distance: float = 10.0,
-    ):
+    ) -> tuple[int, int]:
         """
         Goes to an absolute destination
         Parameters:
@@ -374,7 +381,7 @@ class MotionModule:
             cutoff_distance: the minimum average distance from the destination we need to maintain in the last 3 moves
                 to keep trying, to avoid infinite loops when we're stuck
         Returns:
-            The final absolute position (x,y)
+            The distance moved from the starting position, in pixels (x, y)
         """
         
         if self._motion_area is None:
@@ -386,6 +393,7 @@ class MotionModule:
         max_y_movement = abs(self._motion_area[0][1] - self._motion_area[1][1])
         
         movement_history = []
+        delta_history: list[tuple[float, float]] = []
         while (
                 (dist := self.distance(self._position, destination)) > acceptable_distance
         ) and (
@@ -407,12 +415,58 @@ class MotionModule:
             movement = (clamped_x, clamped_y)
             
             dx, dy = self.move_with_offset(movement)
+            delta_history.append((dx, dy))
             movement_history.append(np.linalg.norm(dx - dy))
         
-        return self._position
+        return sum([round(x[0]) for x in delta_history]), sum([round(y[1]) for y in delta_history])
+    
+    def goto_for_action(self, desired_center: tuple[int, int]) -> tuple[int, int] | None:
+        """
+        Move the map to that your "Action" can be set in the middle of the screen
+        If it cannot do it will return None, otherwise it will return the position where you should execute the action
+        Parameters:
+            desired_center: the destination where you want to set your "Action" button, in pixels (x, y) (map coordinates)
+            maximum_distance: the maximum distance from the destination we are willing to accept
+        Returns:
+            the final screen coordinates where you should execute the action, in pixels (x, y) || None if it failed
+        """
+        if self._motion_area is None:
+            self.calculate_motion_area()
+
+        height, width = self._ui_mask.shape[:2]
+        center_screen_x = width // 2
+        center_screen_y = height // 2
+        
+        # actual_position_x, actual_position_y = self._position
+        # actual_center_x, actual_center_y = (actual_position_x + center_screen_x, actual_position_y + center_screen_y)
+        
+        desired_center_x, desired_center_y = desired_center
+        desired_position_x, desired_position_y = (desired_center_x - center_screen_x,
+                                                  desired_center_y - center_screen_y)
+        
+        distance = self.goto((desired_position_x, desired_position_y))
+        if distance is None:
+            return None
+        
+        final_screen_x = desired_center_x - self._position[0]
+        final_screen_y = desired_center_y - self._position[1]
+        
+        if not (0 <= final_screen_x <= width and 0 <= final_screen_y <= height):
+            return None
+        
+        # final_position_x, final_position_y = self._position
+        # final_position_error_x, final_position_error_y = (desired_position_x - final_position_x,
+        #                                                   desired_position_y - final_position_y)
+        # final_center_x, final_center_y = (center_screen_x - final_position_error_x,
+        #                                   center_screen_y - final_position_error_y)
+        
+        return final_screen_x, final_screen_y
     
     def get_pil_desk(self) -> Image.Image:
-        return Image.fromarray(self.desk, mode="RGBA")
+        return Image.fromarray(self._desk, mode="RGBA")
+    
+    def get_desk_copy(self) -> np.ndarray:
+        return self._desk.copy()
     
     def clear_desk(self):
         """
@@ -421,11 +475,34 @@ class MotionModule:
         ⚠️This will not reset the position, goto(0,0) before doing this
         ⚠️This will clear the frame_history
         """
-        self.desk = np.zeros_like(self.desk)
+        self._desk = np.zeros_like(self._desk)
         self._frames_history.clear()
     
-    def position(self):
+    def position(self) -> tuple[int, int]:
+        """
+        Returns:
+            the current position, in pixels (x, y)
+        """
         return self._position
+    
+    def set_current_position(self, position: tuple[int, int]):
+        """
+        Will set the current position without adding frames to the desk
+        ⚠️If you're not sure about where you are do not use this function!
+        Parameters:
+            position: the new position, in pixels (x, y)
+        """
+        self._position = position
+        self._desk_offset = position
+        
+    def collapse_desk(self):
+        """
+        Will clear the desk and resize to the minimum size for the actual position starting from (0, 0)
+        """
+        height, width = self._ui_mask.shape[:2]
+        self._desk = np.zeros((height, width, 4), dtype=np.uint8)
+        self._desk_offset = self._position
+        self._expand_desk(self._position, (width, height))
 
 
 class TestMotionModule(MotionModule):
@@ -474,7 +551,7 @@ if __name__ == "__main__":
     logger.debug(motion_module.goto((0, 0)))
     
     print(motion_module.position())
-    Image.fromarray(motion_module.desk).save("utils/desk2.png")
+    Image.fromarray(motion_module._desk).save("utils/desk2.png")
 # motion_module.test_draw_largest_bbox()
 
 # from matplotlib import pyplot as plt
