@@ -45,7 +45,7 @@ class MotionModule:
         - If your position no longer matches the one accounted for by the module you can reset it with 'set_current_position' but you may want to 'collapse_desk' after
         - When you want to (tap 1000, 1000) do not go to (1000, 1000) use 'goto_for_action' and execute the action at the returned value
         - If you use the desk to campionate for the position where to tap you should call 'desk_to_position' and use those coordinated for the movement
-        because the desk by itself does not account for possible negative movements
+        because the desk (0,0) does not match the position (0,0) if you moved backwards
     """
     
     def __init__(

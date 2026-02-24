@@ -510,85 +510,124 @@ class SwipeCalibrator:
 
 if __name__ == "__main__":
     import argparse
-    import  sys
+    import sys
+    
+    # Define defaults or overrides if necessary
+    TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
+    CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
+
     parser = argparse.ArgumentParser(description="Run the calibration script")
-    parser.add_argument("--method", type=str, default="linear_regression", help="Method to use for the calibration"
-                                                                                "linear_regression (default), linear_interpolation, ransac_regression, huber_regression")
+    parser.add_argument("--method", type=str, default="linear_regression", 
+                        help="Method to use for the calibration: linear_regression (default), linear_interpolation, ransac_regression, huber_regression")
     parser.add_argument("--manual", action="store_true", help="Choose the calibration swipes manually")
     parser.add_argument("--deep", action="store_true", help="Run the deep calibration (slow but more accurate)")
-    parser.add_argument("--target_error", type=float, default=0.03, help="Target error for the deep calibration", required="--deep" in sys.argv)
-    parser.add_argument("--max_iterations", type=int, default=5, help="Max iterations for the deep calibration", required="--deep" in sys.argv)
     
+    # Check if --deep is in args to make parameters required
+    deep_required = "--deep" in sys.argv
+    parser.add_argument("--target_error", type=float, default=0.03, help="Target error for the deep calibration", required=deep_required)
+    parser.add_argument("--max_iterations", type=int, default=5, help="Max iterations for the deep calibration", required=deep_required)
+    
+    parser.add_argument("--test", action="store_true", help="At the end of the execution let the user test the calibration")
+
     parser.add_argument("--load_from_file", action="store_true", help="Load the calibration from a file")
     parser.add_argument("--save_to_file", action="store_true", help="Save the calibration to a file")
     parser.add_argument("--plot_vector_calibration", action="store_true", help="Plot the vector calibration")
     parser.add_argument("--plot_heatmap_calibration", action="store_true", help="Plot the heatmap calibration")
     parser.add_argument("--plot_connected_pairs", action="store_true", help="Plot the commanded vs measured swipes connected by lines")
-    print(parser.parse_args())
     
-    TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
-    CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
-    PREFIX = "test_1_"
-    # PREFIX = ""
-    TARGET_ERROR = 0.03
-    MAX_ITERATIONS = 5
-    CALIBRATION_NAME = f"automatic_deep_calibration_{TARGET_ERROR}_{MAX_ITERATIONS}"
-    # CALIBRATION_NAME = f"automatic_calibration"
-    load = False
+    args = parser.parse_args()
     
-    __cal = SwipeCalibrator(method='linear_regression')
-    # __cal.deep_calibration((600, 0))
+    __cal = SwipeCalibrator(method=args.method)
     
-
-    if load:
-        __cal.load(f"{PREFIX}{CALIBRATION_NAME}.pkl")
-        # __cal.load("test_0_example_deep_calibration.pkl")
-    else:
-        __cal.automatic_deep_calibration(
-            target_error = TARGET_ERROR,
-            max_iterations = MAX_ITERATIONS
-        )
-        # __cal.automatic_calibration()
-        __cal.save(f"{PREFIX}{CALIBRATION_NAME}.pkl")
-    
-    __cal.train()
-    # __cal.plot_vector_calibration(save_path=f"{CALIBRATION_NAME}_vectors.png")
-    # __cal.plot_heatmap_calibration(save_path=f"{CALIBRATION_NAME}_heatmap.png")
-    # __cal.plot_connected_pairs(save_path=f"{CALIBRATION_NAME}_pairs.png")
-    __cal.plot_vector_calibration()
-    __cal.plot_heatmap_calibration()
-    __cal.plot_connected_pairs()
-    
-    with GestureTracker() as tracker:
+    if args.load_from_file:
         try:
-            __first_run = True
-            while True:
-                __taget_x = int(input("x:"))
-                __taget_y = int(input("y:"))
+            __cal.load()
+            logger.info("Loaded calibration from file.")
+        except Exception as e:
+            logger.error(f"Failed to load calibration: {e}")
+            sys.exit(1)
 
-                __cmd_needed = __cal.get_calibrated_command(__taget_x, __taget_y)
+    if args.manual:
+        logger.info("Starting manual calibration...")
+        __cal.manual_calibration()
+    elif args.deep:
+        logger.info(f"Starting deep calibration (target_error={args.target_error}, max_iterations={args.max_iterations})...")
+        __cal.automatic_deep_calibration(target_error=args.target_error, max_iterations=args.max_iterations)
+    elif not args.load_from_file:
+        # Default to automatic calibration if no data loaded and no specific method selected
+        logger.info("Starting automatic calibration...")
+        __cal.automatic_calibration()
+            
+    if args.save_to_file:
+        __cal.save()
+        logger.info("Saved calibration to file.")
 
-                # Test swipe
-                os.system(
-                    f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(__cmd_needed[0])} {500 + int(__cmd_needed[1])}'")
-                sleep(3)
+    if len(__cal.cmds) > 0 and len(__cal.acts) > 0:
+        __cal.train()
+    else:
+        logger.warning("No calibration data available. Skipping training.")
 
-                if not __first_run:
-                    # Burn previous dummy
-                    tracker.output_queue.get()
+    if args.plot_vector_calibration:
+        __cal.plot_vector_calibration()
+    
+    if args.plot_heatmap_calibration:
+        __cal.plot_heatmap_calibration()
+        
+    if args.plot_connected_pairs:
+        __cal.plot_connected_pairs()
 
-                # Dummy
-                os.system(
-                    f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
-                sleep(3)
-                
-                logger.info(f"\n{tracker.output_queue.get(timeout=5)}\n"
-                            f"[🧪] Target:\t{__taget_x}, {__taget_y}\n"
-                            f"[🚂] Command:\tX={__cmd_needed[0]:.2f}, Y={__cmd_needed[1]:.2f}"
-                            # f"[⚠️] Error: \t[{error_x}, {error_y}] {total_error:.2f}px {error_percent:.2f}%"
-                            )
-                
-                __first_run = False
+    if args.test:
+        logger.info("Starting test mode...")
+        with GestureTracker() as tracker:
+            try:
+                __first_run = True
+                while True:
+                    try:
+                        input_str = input("Enter target x,y (or q to quit): ")
+                        if input_str.lower() == 'q':
+                            break
+                        parts = input_str.replace(',', ' ').split()
+                        if len(parts) != 2:
+                            print("Invalid input. Format: x,y")
+                            continue
+                            
+                        __taget_x = int(parts[0])
+                        __taget_y = int(parts[1])
+                    except ValueError:
+                        print("Invalid numbers.")
+                        continue
 
-        finally:
-            logger.info("Exiting...")
+                    __cmd_needed = __cal.get_calibrated_command(__taget_x, __taget_y)
+
+                    # Test swipe
+                    os.system(
+                        f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(__cmd_needed[0])} {500 + int(__cmd_needed[1])}'")
+                    sleep(3)
+
+                    if not __first_run:
+                        # Burn previous dummy swipe
+                        try:
+                            tracker.output_queue.get(timeout=1)
+                        except queue.Empty:
+                            pass
+
+                    # Dummy
+                    os.system(
+                        f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
+                    sleep(3)
+                    
+                    try:
+                        gesture = tracker.output_queue.get(timeout=5)
+                        logger.info(f"\n{gesture}\n"
+                                    f"[🧪] Target:\t{__taget_x}, {__taget_y}\n"
+                                    f"[🚂] Command:\tX={__cmd_needed[0]:.2f}, Y={__cmd_needed[1]:.2f}"
+                                    )
+                    except queue.Empty:
+                        logger.warning("No gesture detected.")
+                    
+                    __first_run = False
+
+            except KeyboardInterrupt:
+                pass
+            finally:
+                logger.info("Exiting test mode...")

@@ -11,4 +11,4 @@ adb shell getevent -lt | perl -ne '
             undef $x; # Reset for next touch point
         }
     }'
-#!Spero non ci abbiate creduto, lho fatto scrivere a una AI a caso col ***** che uso perl!
+#!Spero non ci abbiate creduto, lho fatto scrivere a una AI a caso... col ***** che uso perl!

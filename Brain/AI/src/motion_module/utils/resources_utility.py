@@ -258,6 +258,10 @@ def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Imag
 
 
 class DoStuffElsewhere(AbstractContextManager):
+    """
+    Allows you to run code in a different directory
+    When you use with 'with', it will restore the previous directory on exit
+    """
     def __exit__(self, exc_type, exc_value, traceback):
         os.chdir(self.old_directory)
     
