@@ -44,6 +44,8 @@ class MotionModule:
         - If you want to clear the whole map and scan it from scratch you can call 'clear_desk'
         - If your position no longer matches the one accounted for by the module you can reset it with 'set_current_position' but you may want to 'collapse_desk' after
         - When you want to (tap 1000, 1000) do not go to (1000, 1000) use 'goto_for_action' and execute the action at the returned value
+        - If you use the desk to campionate for the position where to tap you should call 'desk_to_position' and use those coordinated for the movement
+        because the desk by itself does not account for possible negative movements
     """
     
     def __init__(
@@ -78,12 +80,7 @@ class MotionModule:
     
     # TODO: add a way to auto-train the swipe calibrator
     # TODO: add confidence threshold to have some kind of security net for wrong movement, and a correction for them
-    # TODO: move then estimate movement, and recalculate next movements
-    # TODO: merge images at correct angles/offset between them
-    # TODO: keep track of where we are regarding an initial position
-    # TODO: a function to reset the position
     # TODO: a function to check and explore the map boundaries
-    # TODO: a function to define the motion area from the mask
     
     @staticmethod
     def _angle_to_offset(distance: float, angle: float):
@@ -339,7 +336,7 @@ class MotionModule:
         # TODO: may need to invert (*-1) angle_to_offset result to have it match the screen coordinates
         return self.move_with_offset(self._angle_to_offset(distance, angle))
     
-    def move_with_time(self):
+    def move_with_time(self) -> tuple[float, float] | None:
         """
         Tries to move the map ONCE by pressing for x time on a point
         """
@@ -352,13 +349,13 @@ class MotionModule:
         """
         pass
     
-    def move_with_tap(self, towards: Towards):
+    def move_with_tap(self, towards: Towards) -> tuple[float, float] | None:
         """
         Tries to move the map ONCE by tapping on a point
         Parameters:
             The direction we want to move to
         Returns:
-            ???
+            offset_x, offset_y || None if something went wrong
         """
         # TODO: to implement
         """
@@ -493,7 +490,6 @@ class MotionModule:
             position: the new position, in pixels (x, y)
         """
         self._position = position
-        self._desk_offset = position
         
     def collapse_desk(self):
         """
@@ -503,6 +499,18 @@ class MotionModule:
         self._desk = np.zeros((height, width, 4), dtype=np.uint8)
         self._desk_offset = self._position
         self._expand_desk(self._position, (width, height))
+        
+    def desk_to_position(self, coordinates: tuple[int, int]) -> tuple[int, int]:
+        """
+        Converts desk coordinates (indices in the desk array) to global position coordinates.
+        """
+        return coordinates[0] + self._desk_offset[0], coordinates[1] + self._desk_offset[1]
+
+    def position_to_desk(self, position: tuple[int, int]) -> tuple[int, int]:
+        """
+        Converts global position coordinates to desk coordinates (indices in the desk array).
+        """
+        return position[0] - self._desk_offset[0], position[1] - self._desk_offset[1]
 
 
 class TestMotionModule(MotionModule):
