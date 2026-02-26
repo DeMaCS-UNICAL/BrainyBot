@@ -21,7 +21,17 @@ from AI.src.motion_module.utils.resources_utility import DoStuffElsewhere
 class SwipeCalibrator:
     """
     Parameters:
-        method: "linear_regression" (default), "linear_interpolation", "ransac_regression", "huber_regression"
+        method: "linear_regression" (default), "linear_interpolation", "ransac_regression", "huber_regression". Can be changed later.
+    How to use:
+        - Before calibrating the robot should be connected and on a screen that does not block adb captures (you can use npm calibration display)
+        - The simplest calibration you can do simply implies running the program from a terminal with --save_to_file.
+        - The --deep calibration will take a lot longer 11~ minutes but if the robot does not explode it will be way more precise
+        - If you use the --deep calibration you also need --max_iterations and --target_error
+        - You can add point to the calibration by using the --load_from_file and you method of calibration
+        The manual calibration cannot be used to add point to a calibration since it's discarded if load_from_file is used
+        - You can test the end result with --test and plot the graphs with --plot_{type}
+        - ⚠️Remember to pass --save_to_file if you want to save the calibration, it will NOT do it by default
+        - It's suggested to add a suffix with the name of the phone used for the calibration and to avoid sharing calibrations between devices
     """
     def __init__(self, method: str = "linear_regression"):
         self.is_trained = False
@@ -337,7 +347,7 @@ class SwipeCalibrator:
             case (False, True): return f"{test_n}_{robot}_{pen}"
             case (False, False): return f"{test_n}_{robot}_{pen}_{suffix}"
 
-    def load(self,
+    def load_from_file(self,
              filename: str = None,
              test_n: int = None,
              robot: str = "brainybot1",
@@ -365,7 +375,7 @@ class SwipeCalibrator:
         self.cmds = caricato["cmds"]
         self.acts = caricato["acts"]
     
-    def save(self,
+    def save_to_file(self,
              filename: str = None,
              test_n: int = None,
              robot: str = "brainybot1",
@@ -516,7 +526,20 @@ if __name__ == "__main__":
     TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
     CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
 
-    parser = argparse.ArgumentParser(description="Run the calibration script")
+    DESCRIPTION = """Run the calibration script
+How to use:
+    - Before calibrating the robot should be connected and on a screen that does not block adb captures (you can use npm calibration display)
+    - The simplest calibration you can do simply implies running the program from a terminal with [--save_to_file].
+    - The [--deep] calibration will take a lot longer 11~ minutes but if the robot does not explode it will be way more precise
+    - If you use the [--deep] calibration you also need [--max_iterations] and [--target_error]
+    - You can add point to the calibration by using the [--load_from_file] and you method of calibration
+    The manual calibration cannot be used to add point to a calibration since it's discarded if [--load_from_file] is used
+    - You can test the end result with [--test] and plot the graphs with [--plot_{type}]
+    - ⚠️ Remember to pass [--save_to_file] if you want to save the calibration, it will NOT do it by default
+    - It's suggested to add a suffix with the name of the phone used for the calibration and to avoid sharing calibrations between devices
+"""
+
+    parser = argparse.ArgumentParser(description=DESCRIPTION)
     parser.add_argument("--method", type=str, default="linear_regression", 
                         help="Method to use for the calibration: linear_regression (default), linear_interpolation, ransac_regression, huber_regression")
     parser.add_argument("--manual", action="store_true", help="Choose the calibration swipes manually")
@@ -534,6 +557,10 @@ if __name__ == "__main__":
     parser.add_argument("--plot_vector_calibration", action="store_true", help="Plot the vector calibration")
     parser.add_argument("--plot_heatmap_calibration", action="store_true", help="Plot the heatmap calibration")
     parser.add_argument("--plot_connected_pairs", action="store_true", help="Plot the commanded vs measured swipes connected by lines")
+    parser.add_argument("--suffix", type=str, default=None, help="A suffix to append to the calibration file name.")
+    parser.add_argument("--robot", type=str, default="brainybot1", help="Name of the robot")
+    parser.add_argument("--pen", type=str, default="pinky_thing", help="Name of the pen")
+    parser.add_argument("--test_number", type=int, default=None, help="Test number prefix")
     
     args = parser.parse_args()
     
@@ -541,7 +568,7 @@ if __name__ == "__main__":
     
     if args.load_from_file:
         try:
-            __cal.load()
+            __cal.load_from_file(suffix=args.suffix, robot=args.robot, pen=args.pen, test_n=args.test_number)
             logger.info("Loaded calibration from file.")
         except Exception as e:
             logger.error(f"Failed to load calibration: {e}")
@@ -559,7 +586,7 @@ if __name__ == "__main__":
         __cal.automatic_calibration()
             
     if args.save_to_file:
-        __cal.save()
+        __cal.save_to_file(suffix=args.suffix, robot=args.robot, pen=args.pen, test_n=args.test_number)
         logger.info("Saved calibration to file.")
 
     if len(__cal.cmds) > 0 and len(__cal.acts) > 0:

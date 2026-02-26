@@ -99,19 +99,6 @@ def get_custom_image(
         f"python3 {CLIENT_PATH}/client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
     return get_image(name)
 
-
-# def get_custom_image(
-#         orientation: Orientation = Orientation.DESCENDING,
-#         direction: Direction = Direction.HORIZONTAL,
-#         offset: int = 0,
-#         start_x: int = 540,
-#         start_y: int = 1200,
-#         name: str = "screenshot.png"
-# ):
-#     img = Image.open(name)
-#     img.load()
-#     return img
-
 def get_image(name: str | None = "screenshot.png") -> Image.Image:
     with DoStuffElsewhere(SCREENSHOT_PATH):
         _run_adb_screencap_to(name)
@@ -281,39 +268,14 @@ class DoStuffElsewhere(AbstractContextManager):
         
 
 if __name__ == "__main__":
-    import time
-    
-    print(os.getcwd())
-    with DoStuffElsewhere(SCREENSHOT_PATH):
-        print(os.getcwd())
-    print(os.getcwd())
-    
-    # print("1. Testing Fast USB Method (Memory)...")
-    # try:
-    #     start = time.time()
-    #     img_fast = run_adb_screencap_to_memory(slow_usb=False)
-    #     print(f"   Time: {time.time() - start:.4f}s")
-    #     Image.fromarray(img_fast).save("fast.png")
-    #     print("   Success: Saved fast.png")
-    # except Exception as e:
-    #     print(f"   Failed: {e}")
-    #
-    # print("2. Testing Slow USB Method (Gzip)...")
-    # try:
-    #     start = time.time()
-    #     img_slow = run_adb_screencap_to_memory(slow_usb=True)
-    #     print(f"   Time: {time.time() - start:.4f}s")
-    #     Image.fromarray(img_slow).save("slow.png")
-    #     print("   Success: Saved slow.png")
-    # except Exception as e:
-    #     print(f"   Failed: {e}")
-    #
-    # print("3. Testing Standard Method (File)...")
-    # try:
-    #     start = time.time()
-    #     img_old = get_image("standard.png")
-    #     print(f"   Time: {time.time() - start:.4f}s")
-    #     img_old.save("standard.png")
-    #     print("   Success: Saved standard.png")
-    # except Exception as e:
-    #     print(f"   Failed: {e}")
+    import sys
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--bw_image", type=str, help="Path to the black and white image to generate the alpha mask from")
+    parser.add_argument("--save_location", type=str, default="", help="Path to save the generated alpha mask")
+    parser.add_argument("--name", type=str, default="ignoreZone", help="Name of the generated alpha mask")
+    args = parser.parse_args()
+    if args.bw_image:
+        make_alpha_mask_from_bw(Image.open(args.bw_image), args.name if args.save_location == "" else f"{args.save_location}/{args.name}")
+        logger.info("Alpha mask generated successfully")
+    sys.exit(0)

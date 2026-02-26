@@ -110,7 +110,7 @@ class MotionModule:
             new_w, new_h = new_dims
             new_desk = np.zeros((new_h, new_w, 4), dtype=np.uint8)
             
-            # For readability... if you prefer replace everything with 0 and 1 and talk to me later
+            # For readability... if you prefer replace everything with [0] and [1] and talk to me later
             offset_x, offset_y = offset
             current_w, current_h = current_size
             
@@ -146,7 +146,7 @@ class MotionModule:
         """
         self._add_frame_to_desk(self._frames_history[-1], coordinates=self._position)
     
-    def _majority_offset_calculation(self):
+    def _majority_offset_calculation(self, f1: np.ndarray = None, f2: np.ndarray = None):
         """
         Calculates the offset between the last two frames in the history, using the UI mask to ignore irrelevant areas.
         This variant execute different algorithm and takes the best / most common result.
@@ -154,10 +154,16 @@ class MotionModule:
         # TODO: Could make this multithreaded
         results = []
         
+        if f1 is None:
+            f1 = self._frames_history[-2]
+            
+        if f2 is None:
+            f2 = self._frames_history[-1]
+        
         for i in range(3):
             results.append(calculate_offset(
-                self._frames_history[-2],
-                self._frames_history[-1],
+                f1,
+                f2,
                 self._ui_mask,
                 used_detector=i,
             ))
@@ -474,6 +480,30 @@ class MotionModule:
         """
         self._desk = np.zeros_like(self._desk)
         self._frames_history.clear()
+    
+    def check_is_position_changed(self) -> bool:
+        """
+        Takes a screenshot and compares it to the last one in the frame history to estimate if the position has changed
+        If it has it will update the position and add the new frame to the desk.
+        ⚠️Will always add a frame to the frame_history
+        Returns: True if the position has changed, False otherwise
+        """
+        if len(self._frames_history) < 1:
+            raise ValueError("No frames in history to compare with.")
+        
+        last_frame = self._frames_history[-1].copy()
+        self._frames_history.append(run_adb_screencap_to_memory())
+        new_frame = self._frames_history[-1]
+        
+        dx, dy, _ = self._majority_offset_calculation(last_frame, new_frame)
+        
+        if int(dx) != 0 or int(dy) != 0:
+            self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
+            self._positions_history.append(self._position)
+            self._add_last_frame_to_desk()
+            self._clamp_frame_history()
+            return True
+        return False
     
     def position(self) -> tuple[int, int]:
         """

@@ -63,7 +63,6 @@ def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray
 
     return img_rgba
 
-
 def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
     """
     Inverts the alpha channel of an RGBA image.
@@ -104,11 +103,9 @@ def to_rgba(arr: np.ndarray, height: int, width: int) -> np.ndarray:
             return to_int32(np.concatenate([arr, alpha], axis=2))
     raise ValueError("Unsupported channel count")
 
-
 def to_grayscale(arr: np.ndarray) -> np.ndarray:
     h, w = arr.shape[:2]
     return cv2.cvtColor(to_uint8(to_rgba(arr, h, w)), cv2.COLOR_RGBA2GRAY)
-
 
 def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
     if isinstance(arr, Image.Image):
@@ -117,7 +114,6 @@ def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
     if a.dtype != np.uint8:
         a = np.clip(a, 0, 255).astype(np.uint8)
     return a
-
 
 def to_int32(arr: np.ndarray | Image.Image) -> np.ndarray:
     match isinstance(arr, Image.Image):
@@ -164,7 +160,6 @@ def np_absolute_distance_image_comparison(
     # vals = diff[alpha_overlap]
     return float(diff.mean()), np.count_nonzero(diff)
 
-
 def np_cosine_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     """
     https://en.wikipedia.org/wiki/Cosine_similarity
@@ -175,7 +170,6 @@ def np_cosine_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     picture2_norm = img1 / np.sqrt(np.sum(img1**2))
     return np.sum(picture2_norm * picture1_norm)
 
-
 def cv2_structural_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     """
     https://en.wikipedia.org/wiki/Structural_similarity_index_measure
@@ -185,7 +179,6 @@ def cv2_structural_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     second_gray = to_grayscale(img1)
     score, _ = structural_similarity(first_gray, second_gray, full=True)
     return score
-
 
 def cv2_match_template(
     img0: np.ndarray, img1: np.ndarray, method=cv2.TM_SQDIFF_NORMED
@@ -203,7 +196,6 @@ def cv2_match_template(
     res = cv2.matchTemplate(first_gray, second_gray, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     return float(np.clip(1.0 - min_val, 0.0, 1.0))
-
 
 class SimilarityThread(Thread):
     """
@@ -254,7 +246,6 @@ class SimilarityThread(Thread):
         self.times.append(time4 - time3)
         self.scores.append(s4)
 
-
 def check_benchmarked_similarity_algorithms(threads: list[SimilarityThread]) -> None:
     def find_min(scores):
         min_score = float(
@@ -273,7 +264,6 @@ def check_benchmarked_similarity_algorithms(threads: list[SimilarityThread]) -> 
         shift = [t.shift for t in threads if t.scores[0] == score][0]
         logger.debug(f"Method {i}:\t{shift},\t{score},\t{time}")
 
-
 # Offset detection
 def cv2_phase_correlation(
     img0: np.ndarray, img1: np.ndarray
@@ -290,7 +280,6 @@ def cv2_phase_correlation(
     (dx, dy), response = cv2.phaseCorrelate(img0_32, img1_32)
 
     return dx, dy, response
-
 
 def cv2_match_template_multi_axis(
     img0: np.ndarray, img1: np.ndarray, method=cv2.TM_SQDIFF_NORMED
@@ -315,7 +304,6 @@ def cv2_match_template_multi_axis(
         confidence = max_val
 
     return offset_x, offset_y, float(np.clip(confidence, 0.0, 1.0))
-
 
 def find_best_offset(
     _img0: Image.Image | np.ndarray,
@@ -392,7 +380,6 @@ def find_best_offset(
     logger.log(DEBUG, f"result: {best_shift} {best_score}")
 
     return best_shift, best_score
-
 
 def calculate_offset(
     img0: np.ndarray, img1: np.ndarray, mask: np.ndarray = None, used_detector: int = 0
@@ -501,7 +488,6 @@ def calculate_offset(
     
     return 0, 0, 0
 
-
 def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     match used_detector:
         case 0:detector = cv2.ORB_create()
@@ -567,7 +553,6 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     dx, dy = (matrix[0, 2], matrix[1, 2]) if matrix is not None else (0, 0)
     confidence = np.sum(inliers) / len(matches) if len(matches) > 0 else 0
     return vis_img, (dx, dy, confidence)
-
 
 def show_image_full_resolution(
     img: Image.Image | np.ndarray,
