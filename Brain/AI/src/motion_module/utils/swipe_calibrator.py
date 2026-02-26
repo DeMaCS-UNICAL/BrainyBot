@@ -20,6 +20,8 @@ from AI.src.motion_module.utils.resources_utility import DoStuffElsewhere
 
 class SwipeCalibrator:
     """
+    A set of functions to generate a correction map for swipes to account for pen friction
+    
     Parameters:
         method: "linear_regression" (default), "linear_interpolation", "ransac_regression", "huber_regression". Can be changed later.
     How to use:
@@ -52,6 +54,7 @@ class SwipeCalibrator:
               ):
         """
         Train the model
+        
         Parameters:
             commanded_swipes: A list of pairs (dx, dy) that the pen should have performed
             measured_swipes: A list of pairs (dx, dy) that the pen actually performed
@@ -128,6 +131,8 @@ class SwipeCalibrator:
         
     def get_calibrated_command(self, target_dx, target_dy) -> tuple[float, float]:
         """
+        transform the target displacement into the command needed to achieve it
+        
         Returns:
             the [x, y] command needed to achieve the target swipe
         """
@@ -143,43 +148,39 @@ class SwipeCalibrator:
             for i in range(2, 9):
                 self.cmds.append([100 * i, 0])
                 os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {200 + 100 * i} {1000}'")
-                sleep(3)
+                sleep(.5)
                 
             # Get X Half step
             for i in range(1, 9, 2):
                 self.cmds.append([200 + 50 * i, 0])
                 os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {200 + 200 + 50 * i} {1000}'")
-                sleep(3)
+                sleep(.5)
             
             # Get Y data
             for i in range(2, 9):
                 self.cmds.append([0, 100 * i])
                 os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {500} {200} {500} {200 + 100 * i}'")
-                sleep(3)
+                sleep(.5)
                 
             # Get Y Half step
             for i in range(1, 9, 2):
                 self.cmds.append([0, 200 + 50 * i])
                 os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {500} {200} {500} {200 + 200 + 50 * i}'")
-                sleep(3)
+                sleep(.5)
                 
             # Get XY Data combined
             for i in range(2, 9):
                 self.cmds.append([100 * i, 100 * i])
                 os.system(
                     f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {200} {200 + 100 * i} {200 + 100 * i}'")
-                sleep(3)
+                sleep(.5)
                 
             # Get XY Data combined Half step
             for i in range(1, 9, 2):
                 self.cmds.append([200 + 50 * i, 200 + 50 * i])
                 os.system(
                     f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {200} {200 + 200 + 50 * i} {200 + 200 + 50 * i}'")
-                sleep(3)
-        
-            # Dummy capture Because my capturer capture the next group based on adb timestamp
-            os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
-            sleep(3)
+                sleep(.5)
             
             queue_to_list = [tracker.output_queue.get(timeout=5) for _ in range(tracker.output_queue.qsize())]
             for cmd, gesture in zip(self.cmds, queue_to_list):
@@ -191,6 +192,7 @@ class SwipeCalibrator:
         """
         Calibrate by setting an objective (600,0) and perform multiple actions until you get close to (600,0)
         Collects a lot of data, and it's slow
+        
         Parameters:
             target: the target displacement [dx, dy]
             target_error: the target error percentage for each swipe
@@ -198,33 +200,16 @@ class SwipeCalibrator:
         """
         
         with GestureTracker() as tracker:
-            # Start with the target itself as the first guess
             current_cmd = [target[0], target[1]]
-            
-            first_run = True
+
             local_iterations = 0
             
             while True:
-                # Perform swipe
                 os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(current_cmd[0])} {500 + int(current_cmd[1])}'")
-                sleep(3)
-                
-                # Clear previous dummy
-                if not first_run: 
-                    try:
-                        tracker.output_queue.get(timeout=1)
-                    except queue.Empty:
-                        pass
-                else: 
-                    first_run = False
-                
-                # Dummy capture to flush the previous gesture
-                os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
-                sleep(3)
-                
-                # Get the actual swipe result
+                sleep(.5)
+
                 try:
-                    gesture = tracker.output_queue.get(timeout=5)
+                    gesture = tracker.output_queue.get(timeout=1)
                 except queue.Empty:
                     logger.warning("No gesture detected!")
                     continue
@@ -243,11 +228,9 @@ class SwipeCalibrator:
                             f"[🚂] Command:\t{current_cmd}\n"
                             f"[⚠️] Error: \t[{error_x}, {error_y}] {total_error:.2f}px {error_percent:.2f}%")
                 
-                # Save the data point
                 self.cmds.append(list(current_cmd))
                 self.acts.append([actual_dx, actual_dy])
 
-                # Check if we are close enough
                 if total_error <= target_error * target_mag:
                     logger.info("Target reached within tolerance!")
                     break
@@ -257,6 +240,12 @@ class SwipeCalibrator:
                     break
                 
                 variant = 1.0
+                """
+                you can make it hover around the point with values > 1
+                and you can make it more cautious with values < 1
+                ⚠️ With values < 1 and > 1 it (most likely) will not get between tolerances
+                so avoid setting max_iterations too high
+                """
                 current_cmd[0] += variant * (target[0] - actual_dx)
                 current_cmd[1] += variant * (target[1] - actual_dy)
                 
@@ -264,9 +253,13 @@ class SwipeCalibrator:
     
     def automatic_deep_calibration(self, target_error: float = 0.02, max_iterations: int = 5):
         """
-        ⚠️Warning using value of x/y too small without moving on the other axis WILL result in the program crashing
+        ⚠️ Warning using value of x/y too small without moving on the other axis WILL result in the program crashing
         due to the inability of the GestureTracker to detect those movements!
-        ⚠️Warning movements too big will result in the pen going outside the display and breaking teh calibration
+        ⚠️ Warning movements too big will result in the pen going outside the display and breaking the calibration
+        
+        Parameters:
+            target_error: the target error percentage for each swipe
+            max_iterations: the maximum number of iterations to perform for each swipe to get close to the target
         """
         start_time = datetime.datetime.now()
         
@@ -289,42 +282,24 @@ class SwipeCalibrator:
     def manual_calibration(self):
         """
         Add calibration point to the existing ones, can be used with an empty set of calibration points
-        [⚠️WARNING may damage the automatic_deep_calibration dataset]
+        [⚠️ WARNING may damage the automatic_deep_calibration dataset ]
         You can use "clear_calibration" to remove all the calibration points
         """
         with GestureTracker() as tracker:
             try:
-                first_run = True
                 while True:
                     taget_x = int(input("x: "))
                     taget_y = int(input("y: "))
                     
                     self.cmds.append([taget_x, taget_y])
-                    
-                    # We don't have __cmd_needed here, assuming we want to test the raw target first or use get_calibrated_command if trained
-                    if self.is_trained:
-                        cmd_needed = self.get_calibrated_command(taget_x, taget_y)
-                    else:
-                        cmd_needed = [taget_x, taget_y]
 
-                    os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(cmd_needed[0])} {500 + int(cmd_needed[1])}'")
-                    sleep(2)
+                    os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(taget_x)} {500 + int(taget_y)}'")
+                    sleep(1)
                     
-                    if not first_run: 
-                        try:
-                            tracker.output_queue.get(timeout=1)
-                        except queue.Empty:
-                            pass
-                    
-                    os.system(f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
-                    sleep(2)
-                    
-                    gesture = tracker.output_queue.get(timeout=5)
+                    gesture = tracker.output_queue.get(timeout=2)
                     self.acts.append([gesture.end_x - gesture.start_x, gesture.end_y - gesture.start_y])
                     
                     logger.info(f"\n{gesture}\n[🧪]: {taget_x}, {taget_y}")
-                    
-                    first_run = False
             except KeyboardInterrupt:
                 pass # redundant
             finally:
@@ -431,7 +406,7 @@ class SwipeCalibrator:
     def plot_heatmap_calibration(self, max_range: int = 1000, save_path: str | None = None):
         """
         Generates a heatmap visualization of the calibration map showing the magnitude of correction.
-
+        
         Parameters:
             max_range: the max offset
             save_path: path to save the plot
@@ -476,8 +451,8 @@ class SwipeCalibrator:
     def plot_connected_pairs(self, save_path: str | None = None):
         """
         Plots the commanded vs measured swipes connected by lines.
-        This helps visualize the error for each specific training point.
-
+        This helps visualize the error for each specific training points
+        
         Parameters:
             save_path: path to save the plot
         """
@@ -495,13 +470,11 @@ class SwipeCalibrator:
         
         plt.figure(figsize=(10, 8))
         
-        # Plot commanded points
+        # What we wanted
         plt.scatter(cmds_arr[:, 0], cmds_arr[:, 1], c='blue', label='Commanded (Desired)', marker='o')
-        
-        # Plot measured points
+        # What we got
         plt.scatter(acts_arr[:, 0], acts_arr[:, 1], c='red', label='Measured (Actual)', marker='x')
         
-        # Draw lines connecting them
         for i in range(len(cmds_arr)):
             plt.plot([cmds_arr[i, 0], acts_arr[i, 0]], [cmds_arr[i, 1], acts_arr[i, 1]], 'k-', alpha=0.3)
         
@@ -522,10 +495,8 @@ if __name__ == "__main__":
     import argparse
     import sys
     
-    # Define defaults or overrides if necessary
-    TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
-    CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
-
+    # TAPPY_ORIGINAL_SERVER_IP = "http://127.0.0.1:8000"
+    # CLIENT_PATH = "/home/wip/tesi/BrainyBot/tappy-client/clients/python"
     DESCRIPTION = """Run the calibration script
 How to use:
     - Before calibrating the robot should be connected and on a screen that does not block adb captures (you can use npm calibration display)
@@ -545,7 +516,6 @@ How to use:
     parser.add_argument("--manual", action="store_true", help="Choose the calibration swipes manually")
     parser.add_argument("--deep", action="store_true", help="Run the deep calibration (slow but more accurate)")
     
-    # Check if --deep is in args to make parameters required
     deep_required = "--deep" in sys.argv
     parser.add_argument("--target_error", type=float, default=0.03, help="Target error for the deep calibration", required=deep_required)
     parser.add_argument("--max_iterations", type=int, default=5, help="Max iterations for the deep calibration", required=deep_required)
@@ -605,9 +575,8 @@ How to use:
 
     if args.test:
         logger.info("Starting test mode...")
-        with GestureTracker() as tracker:
+        with GestureTracker() as __tracker:
             try:
-                __first_run = True
                 while True:
                     try:
                         input_str = input("Enter target x,y (or q to quit): ")
@@ -615,13 +584,13 @@ How to use:
                             break
                         parts = input_str.replace(',', ' ').split()
                         if len(parts) != 2:
-                            print("Invalid input. Format: x,y")
+                            logger.warning("Invalid input. Format: x,y")
                             continue
                             
                         __taget_x = int(parts[0])
                         __taget_y = int(parts[1])
                     except ValueError:
-                        print("Invalid numbers.")
+                        logger.warning("Invalid numbers.")
                         continue
 
                     __cmd_needed = __cal.get_calibrated_command(__taget_x, __taget_y)
@@ -629,30 +598,16 @@ How to use:
                     # Test swipe
                     os.system(
                         f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {500} {200 + int(__cmd_needed[0])} {500 + int(__cmd_needed[1])}'")
-                    sleep(3)
-
-                    if not __first_run:
-                        # Burn previous dummy swipe
-                        try:
-                            tracker.output_queue.get(timeout=1)
-                        except queue.Empty:
-                            pass
-
-                    # Dummy
-                    os.system(
-                        f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {200} {1000} {500} {1000}'")
-                    sleep(3)
+                    sleep(.5)
                     
                     try:
-                        gesture = tracker.output_queue.get(timeout=5)
-                        logger.info(f"\n{gesture}\n"
+                        __gesture = __tracker.output_queue.get(timeout=2)
+                        logger.info(f"\n{__gesture}\n"
                                     f"[🧪] Target:\t{__taget_x}, {__taget_y}\n"
                                     f"[🚂] Command:\tX={__cmd_needed[0]:.2f}, Y={__cmd_needed[1]:.2f}"
                                     )
                     except queue.Empty:
                         logger.warning("No gesture detected.")
-                    
-                    __first_run = False
 
             except KeyboardInterrupt:
                 pass

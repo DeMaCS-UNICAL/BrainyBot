@@ -10,11 +10,10 @@ import numpy as np
 # External libraries
 from PIL import ImageDraw, Image
 
-from AI.src.constants import logger, TAPPY_ORIGINAL_SERVER_PROTOCOL, TAPPY_ORIGINAL_SERVER_PORT, \
-    TAPPY_ORIGINAL_SERVER_IP, CLIENT_PATH
+from AI.src.constants import logger, TAPPY_ORIGINAL_SERVER_IP, CLIENT_PATH
 from AI.src.motion_module.enums import MotionType, Towards
 from AI.src.motion_module.utils.image_processing_utility import to_int32, apply_mask_make_transparent, calculate_offset
-from AI.src.motion_module.utils.pen_calibration import SwipeCalibrator
+from AI.src.motion_module.utils.swipe_calibrator import SwipeCalibrator
 from AI.src.motion_module.utils.resources_utility import run_adb_screencap_to_memory
 
 
@@ -268,7 +267,7 @@ class MotionModule:
     @staticmethod
     def __swipe_robot(start_x: int, start_y: int, end_x: int, end_y: int):
         os.system(
-            f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_PROTOCOL}://{TAPPY_ORIGINAL_SERVER_IP}:{TAPPY_ORIGINAL_SERVER_PORT} --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
+            f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
         )
     
     def _swipe(self, start_x: int, start_y: int, end_x: int, end_y: int):
