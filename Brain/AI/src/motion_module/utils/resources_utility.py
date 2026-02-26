@@ -10,101 +10,14 @@ from PIL import Image
 import os
 from AI.src.constants import SCREENSHOT_PATH, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP, logger
 from AI.src.motion_module.enums import Orientation, Direction
+from AI.src.webservices.helpers import get_screenshot
 
-
-def _run_adb_screencap_to(path: str) -> None:
-    with open(path, "wb") as f:
-        subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
-
-def run_adb_screencap_to_memory(slow_usb: bool = True, save_file: str | None = None) -> np.ndarray :
-    """
-    Parameters:
-        slow_usb: if True, uses adb exec-out screencap | gzip -1 to save bandwidth,
-            otherwise uses adb exec-out screencap to save cpu cycles
-        save_file: if not None, saves the image to the specified file
-    Returns:
-        np.ndarray: image data in RGBA format
-    https://stackoverflow.com/questions/43900380/faster-command-than-adb-shell-screencap
-    """
-    
-    if slow_usb:
-        cmd = ['adb', 'exec-out', 'sh -c "screencap | gzip -1"']
-    else:
-        cmd = ["adb", "exec-out", "screencap"]
-    
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    if slow_usb:
-        import gzip
-        stream = gzip.GzipFile(fileobj=process.stdout, mode='rb')
-    else:
-        stream = process.stdout
-
-    # Read the 12-byte header (Width, Height, Format) formed by 3 uint
-    header = stream.read(12)
-    if len(header) < 12:
-        raise Exception("Failed to read image header")
-    
-    width, height, pixel_format = struct.unpack("<III", header)
-    buffer_size = width * height * 4
-    raw_data = stream.read(buffer_size)
-    
-    if len(raw_data) != buffer_size:
-        raise Exception("Incomplete read of image data")
-    
-    # Numpy you're beautiful
-    image = np.frombuffer(raw_data, dtype=np.uint8)
-    image = image.reshape((height, width, 4))
-    
-    # Optional: Clean up
-    if slow_usb:
-        stream.close()
-    process.stdout.close()
-    process.wait()
-    
-    if save_file is not None:
-        Image.fromarray(image).save(save_file)
-    
-    return image
 
 def _run_motionevent(parts: List[str] | str) -> None:
     if isinstance(parts, str):
         os.system(parts)
     else:
         subprocess.run(parts, check=True)
-
-
-def get_custom_image(
-        orientation: Orientation = Orientation.DESCENDING,
-        direction: Direction = Direction.HORIZONTAL,
-        offset: int = 0,
-        start_x: int = 540,
-        start_y: int = 1200,
-        name: str = "screenshot.png",
-) -> Image.Image:
-    if offset <= 0:
-        raise ValueError("offset must be positive")
-    end_x = start_x
-    end_y = start_y
-    if direction == Direction.HORIZONTAL:
-        end_x = start_x - offset if orientation == Orientation.DESCENDING else start_x + offset
-    else:
-        end_y = start_y - offset if orientation == Orientation.DESCENDING else start_y + offset
-    
-    # _run_motionevent(["adb", "shell", "input", "motionevent", "DOWN", str(start_x), str(start_y)])
-    # _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
-    # _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
-    
-    os.system(
-        f"python3 {CLIENT_PATH}/client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'")
-    return get_image(name)
-
-def get_image(name: str | None = "screenshot.png") -> Image.Image:
-    with DoStuffElsewhere(SCREENSHOT_PATH):
-        _run_adb_screencap_to(name)
-        img = Image.open(name)
-        img.load()
-    return img
 
 def get_custom_image_set(
         orientation: Orientation = Orientation.DESCENDING,
@@ -130,7 +43,10 @@ def get_custom_image_set(
         else:
             end_y = start_y + offset * (i + 1) if orientation == Orientation.DESCENDING else start_y - offset * (i + 1)
         _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
-        _run_adb_screencap_to("screenshot.png")
+        get_screenshot(
+            save_path=os.getcwd(),
+            filename=f"screenshot.png",
+        )
         img = Image.open("screenshot.png")
         img.load()
         images.append(img)
@@ -226,11 +142,11 @@ def get_image_set(
     
     image_prefix = f"{'i_' if not perfect else ''}{'v_' if vertical else ''}{'h_' if horizontal else ''}{'r_' if orientation != Orientation.DESCENDING else ''}"
     
-    _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_0.png")
+    get_screenshot(save_path=save_location, filename=f"{image_prefix}screenshot_0.png")
     for index, action in enumerate(actions[1:]):
         with DoStuffElsewhere(CLIENT_PATH):
             _run_motionevent(action)
-        _run_adb_screencap_to(f"{save_location}{image_prefix}screenshot_{index + 1}.png")
+        get_screenshot(save_path=save_location, filename=f"{image_prefix}screenshot_{index + 1}.png")
     _run_motionevent(actions[-1])
 
 def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Image.Image:

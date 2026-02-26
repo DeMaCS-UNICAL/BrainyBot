@@ -5,8 +5,8 @@ from collections import Counter
 
 # Python
 import mahotas
-import math
 import numpy as np
+
 # External libraries
 from PIL import ImageDraw, Image
 
@@ -14,7 +14,7 @@ from AI.src.constants import logger, TAPPY_ORIGINAL_SERVER_IP, CLIENT_PATH
 from AI.src.motion_module.enums import MotionType, Towards
 from AI.src.motion_module.utils.image_processing_utility import to_int32, apply_mask_make_transparent, calculate_offset
 from AI.src.motion_module.utils.swipe_calibrator import SwipeCalibrator
-from AI.src.motion_module.utils.resources_utility import run_adb_screencap_to_memory
+from AI.src.webservices.helpers import get_screenshot, swipe
 
 
 class Worker(threading.Thread):
@@ -260,21 +260,6 @@ class MotionModule:
         
         return int(start_x), int(start_y), int(end_x), int(end_y)
     
-    @staticmethod
-    def __swipe_adb(start_x: int, start_y: int, end_x: int, end_y: int):
-        os.system(f"adb shell input swipe {start_x} {start_y} {end_x} {end_y}")
-    
-    @staticmethod
-    def __swipe_robot(start_x: int, start_y: int, end_x: int, end_y: int):
-        os.system(
-            f"python3 {CLIENT_PATH}/client3.py --url {TAPPY_ORIGINAL_SERVER_IP} --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
-        )
-    
-    def _swipe(self, start_x: int, start_y: int, end_x: int, end_y: int):
-        if self._force_headless:
-            return self.__swipe_adb(start_x, start_y, end_x, end_y)
-        return self.__swipe_robot(start_x, start_y, end_x, end_y)
-    
     def _clamp_frame_history(self, keep: int = None):
         if keep is None:
             keep = self._frame_history_size
@@ -286,11 +271,7 @@ class MotionModule:
         """
         if len(self._frames_history) < 2:
             self._positions_history.append(self._position)
-            self._frames_history.append(
-                run_adb_screencap_to_memory(
-                    save_file=f"test_{len(self._frames_history)}.png"
-                )
-            )
+            self._frames_history.append(get_screenshot(to_memory=True))
             self._add_last_frame_to_desk()
     
     @staticmethod
@@ -308,17 +289,14 @@ class MotionModule:
         self._ensure_history()
         command = self.swipe_calibrator.get_calibrated_command(*offset)
         command = int(command[0]), int(command[1])
-        swipe = self._offset_to_swipe(command)
-        if swipe is None:
+        swipe_cmd = self._offset_to_swipe(command)
+        if swipe_cmd is None:
             # Note: here you should NOT retry with multiple swipes command, the move command should only do ONE action
             return None
-        self._swipe(*swipe)
         
-        self._frames_history.append(
-            run_adb_screencap_to_memory(
-                save_file=f"test_{len(self._frames_history)}.png"
-            )
-        )
+        swipe(*swipe_cmd)
+        
+        self._frames_history.append(get_screenshot(to_memory=True))
         # dx, dy, confidence = self._calculate_offset()
         dx, dy, confidence = self._majority_offset_calculation()
         self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
@@ -491,7 +469,7 @@ class MotionModule:
             raise ValueError("No frames in history to compare with.")
         
         last_frame = self._frames_history[-1].copy()
-        self._frames_history.append(run_adb_screencap_to_memory())
+        self._frames_history.append(get_screenshot(to_memory=True))
         new_frame = self._frames_history[-1]
         
         dx, dy, _ = self._majority_offset_calculation(last_frame, new_frame)
@@ -565,9 +543,10 @@ class TestMotionModule(MotionModule):
 if __name__ == "__main__":
     import argparse
     
-    argparser = argparse.ArgumentParser()
-    
-    logger.debug(os.getcwd())
+    DESCRIPTION = """
+    """
+    argparser = argparse.ArgumentParser(description=DESCRIPTION)
+    argparser.add_argument("--calibration-file", type=str, default="calibration_data.json", help="Path to the calibration file")
     
     cal = SwipeCalibrator()
     # cal.load()

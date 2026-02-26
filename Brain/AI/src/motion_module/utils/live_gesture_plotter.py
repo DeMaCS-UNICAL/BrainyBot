@@ -12,6 +12,8 @@ from AI.src.motion_module.utils.gesture_tracker import GestureTracker
 from AI.src.motion_module.utils.resources_utility import run_adb_screencap_to_memory
 
 from AI.src.constants import logger
+from AI.src.webservices.helpers import get_screenshot
+
 
 def get_screen_resolution() -> Tuple[int, int]:
     logger.info("📱 Querying device resolution from ADB...")
@@ -73,8 +75,7 @@ class LiveGesturePlotter:
         """
         while self.screen_thread_running:
             try:
-                # Drop in your fast custom function here
-                img_array = run_adb_screencap_to_memory()
+                img_array = get_screenshot()
                 
                 if img_array is not None:
                     self.latest_frame = img_array

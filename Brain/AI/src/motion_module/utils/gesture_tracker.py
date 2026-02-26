@@ -39,6 +39,13 @@ class Gesture:
 
 
 class GestureTracker(threading.Thread, AbstractContextManager):
+    """
+    A class that tracks what happen on the connected device.
+    
+    Parameters:
+        output_queue: a queue to put the gesture objects into.
+        live_feed: if True, will also put live gestures into the output queue.
+    """
     def __init__(self, output_queue: queue.Queue = queue.Queue(), live_feed: bool = False):
         super().__init__(daemon=True)
         self.output_queue = output_queue

@@ -14,7 +14,15 @@ from AI.src.motion_module.enums import Direction, Orientation
 
 def sanitize_mask(arr: np.ndarray) -> np.ndarray:
     """
-    Ensures the mask is an opacity mask with only fully white pixels left
+    Generates a boolean mask representing pixels to keep.
+    
+    Parameters:
+        arr: input mask (H,W,3) or (H,W,4) or (H,W) ~ RGB or RGBA or grayscale
+    Returns:
+        a boolean numpy array where True indicates pixels to keep.
+        - For RGBA: keeps pixels where alpha > 0.
+        - For RGB: keeps pixels that are fully white (255, 255, 255).
+        - For Grayscale: keeps pixels that are not 0.
     """
     if arr.ndim == 3 and arr.shape[2] == 4:
         # mask_keep = (np.all(arr[:, :, :3] == 255, axis=2)) & (arr[:, :, 3] == 255)
@@ -26,18 +34,21 @@ def sanitize_mask(arr: np.ndarray) -> np.ndarray:
 
     return mask_keep
 
-
 # Conversions functions
 def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray:
     """
-    img: input image (H,W,3) or (H,W,4) or (H,W) ~ RGB or RGBA or grayscale
-    mask: input mask (H,W,3) or (H,W,4) or (H,W) ~ RGB or RGBA or grayscale
+    Removes pixels from an image according to a mask.
     STRONGLY RECOMMENDED to use RGBA (H,W,4) mask with alpha channel, you can generate one from a black and white image
-        with make_alpha_mask_from_bw function
-    return: image with alpha channel applied according to the mask
-    1) if the mask pixel is white (255,255,255) the corresponding image pixel is kept
-    2) if the mask pixel alpha channel is 255 (opaque) the corresponding image pixel is kept
-    3) otherwise the corresponding image pixel is made transparent
+    with make_alpha_mask_from_bw function
+    
+    Parameters:
+        img: input image (H,W,3) or (H,W,4) or (H,W) ~ RGB or RGBA or grayscale
+        mask: input mask (H,W,3) or (H,W,4) or (H,W) ~ RGB or RGBA or grayscale
+    Returns:
+        image with alpha channel applied according to the mask
+        1) if the mask pixel is white (255,255,255) the corresponding image pixel is kept
+        2) if the mask pixel alpha channel is 255 (opaque) the corresponding image pixel is kept
+        3) otherwise the corresponding image pixel is made transparent
     """
     img_rgba = to_rgba(img, *img.shape[:2])
     h, w = img_rgba.shape[:2]
@@ -66,8 +77,12 @@ def apply_mask_make_transparent(img: np.ndarray, mask: np.ndarray) -> np.ndarray
 def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
     """
     Inverts the alpha channel of an RGBA image.
-    Accepts either a numpy array or a PIL Image and returns a numpy array (int32).
     255 (opaque) becomes 0 (transparent) and viceversa.
+    
+    Parameters:
+        img: The input image. Can be a numpy array (int32) or a PIL Image.
+    Returns:
+        a numpy array representing the inverted maks.
     """
     # convert PIL Image to numpy int32 (helper to_int32 is defined in the module)
     if isinstance(img, Image.Image):
@@ -90,9 +105,18 @@ def invert_mask_alpha_channel(img: np.ndarray | Image.Image) -> np.ndarray:
     res[:, :, 3] = 255 - res[:, :, 3]
     return res
 
-
 # Stuff I like to use
 def to_rgba(arr: np.ndarray, height: int, width: int) -> np.ndarray:
+    """
+    Transforms a numpy array to RGBA format.
+    
+    Parameters:
+        arr: The input numpy array, which can be in grayscale (H,W), RGB (H,W,3), or RGBA (H,W,4) format.
+        height: The height of the image (H).
+        width: The width of the image (W).
+    Returns:
+        A numpy array in RGBA format (H,W,4) with dtype int32.
+    """
     if arr.ndim == 2:
         arr = np.stack([arr, arr, arr], axis=2)
     match arr.shape[2]:
@@ -104,10 +128,26 @@ def to_rgba(arr: np.ndarray, height: int, width: int) -> np.ndarray:
     raise ValueError("Unsupported channel count")
 
 def to_grayscale(arr: np.ndarray) -> np.ndarray:
+    """
+    Transforms a numpy array to grayscale.
+    
+    Parameters:
+        arr: The input numpy array, which can be in grayscale (H,W), RGB (H,W,3), or RGBA (H,W,4) format.
+    Returns:
+        A numpy array in grayscale format (H,W) with dtype uint8.
+    """
     h, w = arr.shape[:2]
     return cv2.cvtColor(to_uint8(to_rgba(arr, h, w)), cv2.COLOR_RGBA2GRAY)
 
 def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
+    """
+    Converts an image or array to uint8, clipping values to [0, 255].
+    
+    Parameters:
+        arr: The input image (PIL) or numpy array.
+    Returns:
+        A numpy array with dtype uint8.
+    """
     if isinstance(arr, Image.Image):
         arr = to_int32(arr)
     a = np.array(arr, copy=False)
@@ -116,6 +156,14 @@ def to_uint8(arr: np.ndarray | Image.Image) -> np.ndarray:
     return a
 
 def to_int32(arr: np.ndarray | Image.Image) -> np.ndarray:
+    """
+    Converts an image or array to int32.
+    
+    Parameters:
+        arr: The input image (PIL) or numpy array.
+    Returns:
+        A numpy array with dtype int32.
+    """
     match isinstance(arr, Image.Image):
         case True:
             return np.array(arr, dtype=np.int32)
@@ -131,9 +179,14 @@ def np_absolute_distance_image_comparison(
     img0: Image.Image | np.ndarray, img1: Image.Image | np.ndarray
 ) -> tuple[float, int]:
     """
-    img0, img1: images to compare (PIL Image or numpy array)
-    return: (mean absolute distance, number of considered pixels)
-    0 = identical images
+    Computes the mean absolute distance between two images.
+    
+    Parameters:
+        img0: first image to compare (PIL Image or numpy array).
+        img1: second image to compare (PIL Image or numpy array).
+    Returns:
+        A tuple of (mean absolute distance, number of considered pixels).
+        A score of 0 indicates identical images.
     """
     img0 = to_int32(img0)
     img1 = to_int32(img1)
@@ -162,9 +215,16 @@ def np_absolute_distance_image_comparison(
 
 def np_cosine_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     """
+    Calculates the cosine similari ty between two images.
     https://en.wikipedia.org/wiki/Cosine_similarity
     https://www.geeksforgeeks.org/dbms/cosine-similarity/
     Pretty fast but not ideal for offset detection
+    
+    Parameters:
+        img0: The first image as a numpy array.
+        img1: The second image as a numpy array.
+    Returns:
+        The cosine similarity between the two images.
     """
     picture1_norm = img0 / np.sqrt(np.sum(img0**2))
     picture2_norm = img1 / np.sqrt(np.sum(img1**2))
@@ -172,8 +232,15 @@ def np_cosine_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
 
 def cv2_structural_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     """
+    Calculates the structural similarity index (SSIM) between two images.
     https://en.wikipedia.org/wiki/Structural_similarity_index_measure
     https://scikit-image.org/docs/0.25.x/auto_examples/transform/plot_ssim.html
+    
+    Parameters:
+        img0: The first image as a numpy array.
+        img1: The second image as a numpy array.
+    Returns:
+        The structural similarity index (SSIM) between the two images.
     """
     first_gray = to_grayscale(img0)
     second_gray = to_grayscale(img1)
@@ -181,32 +248,42 @@ def cv2_structural_similarity(img0: np.ndarray, img1: np.ndarray) -> float:
     return score
 
 def cv2_match_template(
-    img0: np.ndarray, img1: np.ndarray, method=cv2.TM_SQDIFF_NORMED
+    template_img: np.ndarray, image: np.ndarray, method=cv2.TM_SQDIFF_NORMED
 ) -> float:
     """
+    Matches a template image (img1) within a search image (img0) using OpenCV.
     https://docs.opencv.org/4.11.0/de/da9/tutorial_template_matching.html
     [WARNING] only TM_SQDIFF and TM_CCORR support mask from my understanding
     Notes that SQDIFF is more sensitive to small differences and that include noise, so for noisy images avoid this
     Since we're working with screen and we want the most accuracy possible SQDIFF wins
     CCORR is less sensitive so it's less likely to break on photorealistic environment BUT to use this you need to switch to max_val
     I use the normed one by default you can choose what you want to use but do some research/testing before changing stuff, it's pretty prone to breaking in edge cases
+    
+    Parameters:
+        template_img: The search image (H,W) or (H,W,3) or (H,W,4).
+        image: The template image (H,W) or (H,W,3) or (H,W,4).
+        method: The template matching method to use. Defaults to cv2.TM_SQDIFF_NORMED.
+    Returns:
+        A float between 0 and 1 indicating the similarity, where 1 is a perfect match and 0 is no match.
     """
-    first_gray = to_grayscale(img0)
-    second_gray = to_grayscale(img1)
+    first_gray = to_grayscale(template_img)
+    second_gray = to_grayscale(image)
     res = cv2.matchTemplate(first_gray, second_gray, method)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     return float(np.clip(1.0 - min_val, 0.0, 1.0))
 
 class SimilarityThread(Thread):
     """
-    Execute the similarity computation in a separate thread and store the result in self.score
-    The comparison algorithms can be changed default one is cv2_match_template that is the fastest
-    img0: first image
-    img1: second image
-    shift: the shift applied to img1 (for logging purposes)
-    algorithm: function to use for comparison, should take two numpy arrays as input and return a float score (higher = more similar)
+    Execute the similarity computation in a separate thread and store the result in self.score.
+    
+    Parameters:
+        img0: first image.
+        img1: second image.
+        shift: the shift applied to img1 (for logging purposes).
+        algorithm: function to use for comparison, should take
+        shift: The shift applied to img1 (for logging purposes).
+        algorithm: Function to use for comparison, should take two numpy arrays as input and return a float score (higher = more similar).
     """
-
     def __init__(self, img0, img1, shift, algorithm=cv2_match_template):
         super().__init__()
         self.img0: np.ndarray = img0
@@ -219,10 +296,16 @@ class SimilarityThread(Thread):
         self.algorithm = algorithm
 
     def run(self):
+        """
+        Executes the similarity algorithm.
+        """
         self.score = 1 - self.algorithm(self.img0, self.crop1)
         logger.log(DEBUG, f"Score at shift {self.shift}: old {self.score!r}")
 
     def benchmark_algorithms(self):
+        """
+        Runs multiple similarity algorithms and records their performance.
+        """
         time0 = datetime.datetime.now()
         # ------------ absolute distance ------------
         s1, self.n_valid = np_absolute_distance_image_comparison(self.img0, self.crop1)
@@ -246,7 +329,14 @@ class SimilarityThread(Thread):
         self.times.append(time4 - time3)
         self.scores.append(s4)
 
+
 def check_benchmarked_similarity_algorithms(threads: list[SimilarityThread]) -> None:
+    """
+    Logs average times and best scores from a list of SimilarityThread benchmarks.
+    
+    Parameters:
+        threads: A list of SimilarityThread instances that have run benchmarks.
+    """
     def find_min(scores):
         min_score = float(
             "inf"
@@ -264,10 +354,20 @@ def check_benchmarked_similarity_algorithms(threads: list[SimilarityThread]) -> 
         shift = [t.shift for t in threads if t.scores[0] == score][0]
         logger.debug(f"Method {i}:\t{shift},\t{score},\t{time}")
 
+
 # Offset detection
 def cv2_phase_correlation(
     img0: np.ndarray, img1: np.ndarray
 ) -> tuple[float, float, float]:
+    """
+    Estimates translation between two images using phase correlation.
+    
+    Parameters:
+        img0: The first image as a numpy array.
+        img1: The second image as a numpy array.
+    Returns:
+        A tuple (dx, dy, response) representing x/y offsets and the peak response strength.
+    """
     # Not compatible with masks = useless
     # Could try with "Windowing" (Hann Window) basically fading out the edges but the mask still need to be a rectangle
     first_gray = to_grayscale(img0)
@@ -281,6 +381,7 @@ def cv2_phase_correlation(
 
     return dx, dy, response
 
+
 def cv2_match_template_multi_axis(
     img0: np.ndarray, img1: np.ndarray, method=cv2.TM_SQDIFF_NORMED
 ) -> tuple[int, int, float]:
@@ -288,6 +389,16 @@ def cv2_match_template_multi_axis(
     https://docs.opencv.org/4.11.0/de/da9/tutorial_template_matching.html
     Need adjustment, since we want to find the offset this does not work as intented for now
     To make this work we need to check for section of the second image
+    
+    Parameters:
+        img0: The first image as a numpy array.
+        img1: The second image as a numpy array.
+        method: The template matching method to use. Defaults to cv2.TM_SQDIFF_NORMED.
+    Returns:
+        A tuple (offset_x, offset_y, confidence) where:
+            - offset_x: The estimated horizontal offset between img0 and img1.
+            - offset_y: The estimated vertical offset between img0 and img1.
+            - confidence: A float between 0 and 1 indicating the confidence of the match, where 1 is a perfect match and 0 is no match.
     """
     first_gray = to_grayscale(img0)
     second_gray = to_grayscale(img1)
@@ -305,6 +416,7 @@ def cv2_match_template_multi_axis(
 
     return offset_x, offset_y, float(np.clip(confidence, 0.0, 1.0))
 
+
 def find_best_offset(
     _img0: Image.Image | np.ndarray,
     _img1: Image.Image | np.ndarray,
@@ -316,14 +428,19 @@ def find_best_offset(
     orientation: Orientation = Orientation.DESCENDING,
 ):
     """
-    _img0: image to match
-    _img1: image to check
-    _mask: mask for both images (only check alpha values, can be generated from a black and white image with make_alpha_mask_from_bw)
-    base_shift: how much the check image is shifted from the first image (can be negative)
-    check_range: range of offset to check (a, b) a->b (a can be negative)
-    check_step: how many pixels between each check (1 = every pixel)
-    direction: change the direction of the shift (0 = horizontal, 1 = vertical)
-    orientation: change the orientation of the shift (basically if the delta is positive or negative)
+    Iteratively checks a range of offsets to find the most similar match between two images.
+    
+    Parameters:
+        _img0: image to match.
+        _img1: image to check.
+        _mask: mask for both images.
+        base_shift: starting shift.
+        check_range: range of relative offsets to check (min, max).
+        check_step: step size between checks.
+        direction: shift direction (HORIZONTAL or VERTICAL).
+        orientation: shift orientation (ASCENDING or DESCENDING).
+    Returns:
+        A tuple (best_shift, best_score).
     """
     if isinstance(_mask, Image.Image):
         _mask = np.array(_mask, dtype=np.int32)
@@ -380,6 +497,7 @@ def find_best_offset(
     logger.log(DEBUG, f"result: {best_shift} {best_score}")
 
     return best_shift, best_score
+
 
 def calculate_offset(
     img0: np.ndarray, img1: np.ndarray, mask: np.ndarray = None, used_detector: int = 0
@@ -469,7 +587,7 @@ def calculate_offset(
     matches = bf.match(des0, des1)
     
     if len(matches) < 4:
-        logger.warn("Not enough matches found to calculate offset.")
+        logger.warning("Not enough matches found to calculate offset.")
         return 0, 0, 0
     
     src_pts = np.float32([kp0[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
@@ -488,7 +606,19 @@ def calculate_offset(
     
     return 0, 0, 0
 
+
 def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
+    """
+    Visualizes keypoint matches between two images and estimates the offset.
+    
+    Parameters:
+        img0: The first image.
+        img1: The second image.
+        mask: Optional region-of-interest mask.
+        used_detector: Integer mapping to ORB (0), AKAZE (1), or SIFT (2).
+    Returns:
+        A tuple (vis_img, (dx, dy, confidence)).
+    """
     match used_detector:
         case 0:detector = cv2.ORB_create()
         case 1:detector = cv2.AKAZE_create()
@@ -516,7 +646,7 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     kp1, des1 = detector.detectAndCompute(img1_gray, mask_cv)
     
     if des0 is None or des1 is None:
-        return cv2.drawMatches(img0, [], img1, [], [], None), (0, 0)
+        return cv2.drawMatches(img0, [], img1, [], [], None), (0, 0, 0)
     
     match used_detector:
         case 0: bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
@@ -528,7 +658,7 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     matches = sorted(matches, key=lambda x: x.distance)
     
     if not matches:
-        return cv2.drawMatches(img0, kp0, img1, kp1, [], None), (0, 0)
+        return cv2.drawMatches(img0, kp0, img1, kp1, [], None), (0, 0, 0)
     
     src_pts = np.float32([kp0[m.queryIdx].pt for m in matches]).reshape(-1, 1, 2)
     dst_pts = np.float32([kp1[m.trainIdx].pt for m in matches]).reshape(-1, 1, 2)
@@ -554,6 +684,7 @@ def visualize_orb_matches(img0, img1, mask=None, used_detector: int = 0):
     confidence = np.sum(inliers) / len(matches) if len(matches) > 0 else 0
     return vis_img, (dx, dy, confidence)
 
+
 def show_image_full_resolution(
     img: Image.Image | np.ndarray,
     title: str | None = None,
@@ -562,7 +693,7 @@ def show_image_full_resolution(
 ):
     """
     Display a PIL Image or numpy array in a matplotlib window attempting to preserve full image resolution.
-    Needed because using pycharm with remote deevelopment on wsl only matplotlib appears so I need this
+    Needed because using pycharm with remote development on was only matplotlib appears so I need this
 
     Behavior:
     - If possible, opens a figure whose pixel dimensions match the image (1:1 mapping) by setting
