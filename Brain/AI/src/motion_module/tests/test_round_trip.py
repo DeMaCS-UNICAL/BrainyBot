@@ -1,20 +1,20 @@
 import os
-import time
 import subprocess
-from matplotlib.transforms import offset_copy
-
-from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
-from PIL import ImageDraw, Image
-import matplotlib.pyplot as plt
+import time
 from enum import Enum
+
+import matplotlib.pyplot as plt
+from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
+from matplotlib.transforms import offset_copy
+from PIL import Image, ImageDraw
 
 # north, east, south, west
 # ox, dx, oy, dy
 actions_coefficient = (
-    (1, 1, .25, 1.25),
-    (1.25, .25, 1, 1),
-    (1, 1, 1.25, .25),
-    (.25, 1.25, 1, 1),
+    (1, 1, 0.25, 1.25),
+    (1.25, 0.25, 1, 1),
+    (1, 1, 1.25, 0.25),
+    (0.25, 1.25, 1, 1),
 )
 ac = actions_coefficient
 
@@ -30,6 +30,7 @@ ad = actions_direction
 
 offsets = 0, 0
 
+
 class Direction(Enum):
     NORTH = 0
     EAST = 1
@@ -42,9 +43,8 @@ direction = 0
 if __name__ == "__main__":
     os.chdir("../resources")
 
-
     for x in range(4):
-        direction = (x+1)%4
+        direction = (x + 1) % 4
 
         with open("../screenshot.png", "wb") as f:
             subprocess.run(["adb", "exec-out", "screencap", "-p"], stdout=f, check=True)
@@ -52,7 +52,12 @@ if __name__ == "__main__":
         with Image.open("../screenshot.png") as im:
             size = (im.size[0], im.size[1])
             # ox, dx, oy, dy = im.width//2*ac[direction][0]+offsets[0], im.width//2*ac[direction][1]+offsets[0], im.height//2*ac[direction][2]+offsets[1], im.height//2*ac[direction][3]+offsets[1]
-            ox, dx, oy, dy = im.width//2+offsets[0], im.width//2+ad[direction][0]+offsets[0], im.height//2+offsets[1], im.height//2+ad[direction][1]+offsets[1]
+            ox, dx, oy, dy = (
+                im.width // 2 + offsets[0],
+                im.width // 2 + ad[direction][0] + offsets[0],
+                im.height // 2 + offsets[1],
+                im.height // 2 + ad[direction][1] + offsets[1],
+            )
 
             # Display
             draw = ImageDraw.Draw(im)
@@ -71,14 +76,14 @@ if __name__ == "__main__":
                 f"adb shell input motionevent DOWN {ox} {oy}",
                 f"adb shell input motionevent MOVE {dx} {dy}",
                 "sleep 0.10\n",
-                f"adb shell input motionevent UP {dx} {dy}"
+                f"adb shell input motionevent UP {dx} {dy}",
             ]
             movementsClient = [
                 f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'down {ox} {oy}'",
                 f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'move {dx} {dy}'",
-                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'up {dx} {dy}'"
+                f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'up {dx} {dy}'",
             ]
-            
+
             for move in movements:
                 print(move)
                 subprocess.run(move, shell=True, check=True)

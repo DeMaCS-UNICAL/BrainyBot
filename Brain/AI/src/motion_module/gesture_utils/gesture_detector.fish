@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/fish
 #!ho usato perl... sono molto depresso dalle mie azioni...
 adb exec-out getevent -lt | perl -ne '
     if (/\[\s*([\d.]+)\].*ABS_MT_POSITION_X\s+([0-9a-f]+)/) {

@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import List, Tuple
 
 from AI.src.constants import logger
-from AI.src.motion_module.utils.processed_phone_screen_data import (
+from AI.src.motion_module.gesture_utils.processed_phone_screen_data import (
     extract_phone_screen_info,
 )
 

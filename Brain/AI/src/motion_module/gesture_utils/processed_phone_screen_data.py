@@ -9,6 +9,7 @@ def extract_phone_screen_info() -> tuple[
     Parses the output of `adb shell dumpsys input` to compare raw and logical touch input dimensions.
 
     Returns: a tuple of (raw_x, logical_x, ratio_x) and (raw_y, logical_y, ratio_y).
+    Returns: a tuple of (raw_x, logical_x, ratio_x) and (raw_y, logical_y, ratio_y).
     """
     data = subprocess.check_output(["adb", "shell", "dumpsys", "input"]).decode()
 

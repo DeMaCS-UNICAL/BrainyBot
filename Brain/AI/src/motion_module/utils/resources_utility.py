@@ -1,15 +1,22 @@
-import subprocess
+import os
 import random
+import struct
+import subprocess
 from contextlib import AbstractContextManager
 from typing import List
-import struct
 
-import numpy as np
+# External libraries
 from PIL import Image
+import numpy as np
 
-import os
-from AI.src.constants import SCREENSHOT_PATH, CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP, logger
-from AI.src.motion_module.enums import Orientation, Direction
+# Internal modules
+from AI.src.constants import (
+    CLIENT_PATH,
+    SCREENSHOT_PATH,
+    TAPPY_ORIGINAL_SERVER_IP,
+    logger,
+)
+from AI.src.motion_module.enums import Direction, Orientation
 from AI.src.webservices.helpers import get_screenshot
 
 
@@ -19,13 +26,14 @@ def _run_motionevent(parts: List[str] | str) -> None:
     else:
         subprocess.run(parts, check=True)
 
+
 def get_custom_image_set(
-        orientation: Orientation = Orientation.DESCENDING,
-        direction: Direction = Direction.HORIZONTAL,
-        offset: int = 100,
-        step_number: int = 4,
-        start_x: int = 540,
-        start_y: int = 1200,
+    orientation: Orientation = Orientation.DESCENDING,
+    direction: Direction = Direction.HORIZONTAL,
+    offset: int = 100,
+    step_number: int = 4,
+    start_x: int = 540,
+    start_y: int = 1200,
 ) -> List[Image.Image]:
     if offset <= 0:
         raise ValueError("offset must be positive")
@@ -36,13 +44,25 @@ def get_custom_image_set(
     end_y = start_y
     images: List[Image.Image] = []
 
-    _run_motionevent(["adb", "shell", "input", "motionevent", "DOWN", str(start_x), str(start_y)])
+    _run_motionevent(
+        ["adb", "shell", "input", "motionevent", "DOWN", str(start_x), str(start_y)]
+    )
     for i in range(step_number):
         if direction == Direction.HORIZONTAL:
-            end_x = start_x + offset * (i + 1) if orientation == Orientation.DESCENDING else start_x - offset * (i + 1)
+            end_x = (
+                start_x + offset * (i + 1)
+                if orientation == Orientation.DESCENDING
+                else start_x - offset * (i + 1)
+            )
         else:
-            end_y = start_y + offset * (i + 1) if orientation == Orientation.DESCENDING else start_y - offset * (i + 1)
-        _run_motionevent(["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)])
+            end_y = (
+                start_y + offset * (i + 1)
+                if orientation == Orientation.DESCENDING
+                else start_y - offset * (i + 1)
+            )
+        _run_motionevent(
+            ["adb", "shell", "input", "motionevent", "MOVE", str(end_x), str(end_y)]
+        )
         get_screenshot(
             save_path=os.getcwd(),
             filename=f"screenshot.png",
@@ -51,15 +71,14 @@ def get_custom_image_set(
         img.load()
         images.append(img)
 
-    _run_motionevent(["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)])
+    _run_motionevent(
+        ["adb", "shell", "input", "motionevent", "UP", str(end_x), str(end_y)]
+    )
     return images
 
+
 def generate_steps(
-        start: int,
-        step_size: int,
-        count: int,
-        perfect: bool,
-        orientation: Orientation
+    start: int, step_size: int, count: int, perfect: bool, orientation: Orientation
 ) -> List[int]:
     steps = [start]
     current = start
@@ -75,15 +94,16 @@ def generate_steps(
         steps.append(current)
     return steps
 
+
 def get_image_set(
-        perfect: bool = True,
-        vertical: bool = False,
-        horizontal: bool = False,
-        orientation: Orientation = Orientation.DESCENDING,
-        save_location: str = "",
-        step_size: int = 100,
-        start_x: int | None = None,
-        start_y: int | None = None,
+    perfect: bool = True,
+    vertical: bool = False,
+    horizontal: bool = False,
+    orientation: Orientation = Orientation.DESCENDING,
+    save_location: str = "",
+    step_size: int = 100,
+    start_x: int | None = None,
+    start_y: int | None = None,
 ):
     """
     Generates image set by simulating motion events and capturing screenshots,
@@ -123,10 +143,10 @@ def get_image_set(
     #     ["adb", "shell", "input", "motionevent", "MOVE", str(x_steps[0]), str(y_steps[0])],
     #     ["adb", "shell", "input", "motionevent", "UP", str(x_steps[0]), str(y_steps[0])],
     # ]
-    
+
     x_steps = [start_x] * count
     y_steps = [start_y] * count
-    
+
     if vertical:
         y_steps = generate_steps(start_y, step_size, count, perfect, orientation)
     if horizontal:
@@ -134,20 +154,26 @@ def get_image_set(
 
     actions = [
         f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {start_x} {start_y} {end_x} {end_y}'"
-        for start_x, start_y, end_x, end_y in zip(x_steps, y_steps, x_steps[1:], y_steps[1:])
+        for start_x, start_y, end_x, end_y in zip(
+            x_steps, y_steps, x_steps[1:], y_steps[1:]
+        )
     ]
     actions.append(
         f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {x_steps[-1]} {y_steps[-1]} {x_steps[0]} {y_steps[0]}'"
     )
-    
+
     image_prefix = f"{'i_' if not perfect else ''}{'v_' if vertical else ''}{'h_' if horizontal else ''}{'r_' if orientation != Orientation.DESCENDING else ''}"
-    
+
     get_screenshot(save_path=save_location, filename=f"{image_prefix}screenshot_0.png")
     for index, action in enumerate(actions[1:]):
         with DoStuffElsewhere(CLIENT_PATH):
             _run_motionevent(action)
-        get_screenshot(save_path=save_location, filename=f"{image_prefix}screenshot_{index + 1}.png")
+        get_screenshot(
+            save_path=save_location,
+            filename=f"{image_prefix}screenshot_{index + 1}.png",
+        )
     _run_motionevent(actions[-1])
+
 
 def make_alpha_mask_from_bw(_img: Image.Image, name: str = "ignoreZone") -> Image.Image:
     img = _img.convert("RGBA")
@@ -165,9 +191,10 @@ class DoStuffElsewhere(AbstractContextManager):
     Allows you to run code in a different directory
     When you use with 'with', it will restore the previous directory on exit
     """
+
     def __exit__(self, exc_type, exc_value, traceback):
         os.chdir(self.old_directory)
-    
+
     def __enter__(self):
         self.old_directory = os.getcwd()
         try:
@@ -176,22 +203,41 @@ class DoStuffElsewhere(AbstractContextManager):
             logger.error(f"Failed to change directory to {self.location}: {e}")
             raise e
         return self
-    
+
     def __init__(self, location: str) -> None:
         self.location = location
         self.old_directory: str
-        
-        
+
 
 if __name__ == "__main__":
-    import sys
     import argparse
+    import sys
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--bw_image", type=str, help="Path to the black and white image to generate the alpha mask from")
-    parser.add_argument("--save_location", type=str, default="", help="Path to save the generated alpha mask")
-    parser.add_argument("--name", type=str, default="ignoreZone", help="Name of the generated alpha mask")
+    parser.add_argument(
+        "--bw_image",
+        type=str,
+        help="Path to the black and white image to generate the alpha mask from",
+    )
+    parser.add_argument(
+        "--save_location",
+        type=str,
+        default="",
+        help="Path to save the generated alpha mask",
+    )
+    parser.add_argument(
+        "--name",
+        type=str,
+        default="ignoreZone",
+        help="Name of the generated alpha mask",
+    )
     args = parser.parse_args()
     if args.bw_image:
-        make_alpha_mask_from_bw(Image.open(args.bw_image), args.name if args.save_location == "" else f"{args.save_location}/{args.name}")
+        make_alpha_mask_from_bw(
+            Image.open(args.bw_image),
+            args.name
+            if args.save_location == ""
+            else f"{args.save_location}/{args.name}",
+        )
         logger.info("Alpha mask generated successfully")
     sys.exit(0)

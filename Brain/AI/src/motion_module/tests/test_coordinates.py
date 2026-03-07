@@ -1,7 +1,9 @@
 import os
-from PIL import ImageDraw, Image
-import matplotlib.pyplot as plt
 import subprocess
+
+import matplotlib.pyplot as plt
+from PIL import Image, ImageDraw
+
 if __name__ == "__main__":
     os.chdir("../resources")
     with open("../screenshot.png", "wb") as f:
@@ -23,7 +25,3 @@ if __name__ == "__main__":
         draw.circle((dx, dy), radius=20, fill="blue", width=4)
         plt.imshow(im)
         plt.show()
-
-
-
-
