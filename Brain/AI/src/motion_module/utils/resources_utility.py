@@ -1,23 +1,22 @@
 import os
 import random
-import struct
 import subprocess
 from contextlib import AbstractContextManager
 from typing import List
 
-# External libraries
-from PIL import Image
 import numpy as np
 
 # Internal modules
 from AI.src.constants import (
     CLIENT_PATH,
-    SCREENSHOT_PATH,
     TAPPY_ORIGINAL_SERVER_IP,
     logger,
 )
 from AI.src.motion_module.enums import Direction, Orientation
 from AI.src.webservices.helpers import get_screenshot
+
+# External libraries
+from PIL import Image
 
 
 def _run_motionevent(parts: List[str] | str) -> None:

@@ -1,6 +1,7 @@
 import re
 import subprocess
 from datetime import datetime
+from tkinter.constants import N
 
 from AI.src.constants import logger
 from processed_phone_screen_data import extract_phone_screen_info

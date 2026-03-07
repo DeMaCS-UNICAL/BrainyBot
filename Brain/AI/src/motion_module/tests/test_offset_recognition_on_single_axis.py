@@ -1,13 +1,12 @@
 import logging
-import subprocess
 from logging import DEBUG, INFO, Formatter
 from threading import Thread
 
 import matplotlib.pyplot as plt
 from AI.src.constants import logger
-from AI.src.stuffMerger.enums import *
-from AI.src.stuffMerger.utils.image_processing_utility import *
-from AI.src.stuffMerger.utils.resources_utility import *
+from AI.src.motion_module.enums import *
+from AI.src.motion_module.utils.image_processing_utility import *
+from AI.src.motion_module.utils.resources_utility import *
 
 logger.setLevel(logging.INFO)
 

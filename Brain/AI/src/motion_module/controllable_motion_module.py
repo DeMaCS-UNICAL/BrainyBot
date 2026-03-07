@@ -284,7 +284,7 @@ class App(customtkinter.CTk):
                 swipe_calibrator=self.motion_module.swipe_calibrator,
                 force_headless=self.motion_module._force_headless,
             )
-            self.status_label.configure(text=f"Status: Loaded new mask.")
+            self.status_label.configure(text="Status: Loaded new mask.")
         except Exception as e:
             self.status_label.configure(text=f"Status: Error loading mask: {e}")
 
@@ -301,7 +301,7 @@ class App(customtkinter.CTk):
             method = self.calib_method_var.get()
             calibrator = SwipeCalibrator(filepath, method=method)
             self.motion_module = MotionModule(
-                ui_mask=self.motion_module.ui_mask,
+                ui_mask=self.motion_module.get_mask_copy(),
                 swipe_calibrator=calibrator,
                 force_headless=self.motion_module._force_headless,
             )
@@ -355,7 +355,7 @@ class App(customtkinter.CTk):
 
     def cmd_goto(self):
         x, y = self.get_inputs()
-        if x is not None:
+        if x is not None and y is not None:
             self.status_label.configure(text=f"Status: Executing Goto({x}, {y})")
             threading.Thread(
                 target=lambda: self.motion_module.goto((x, y)), daemon=True
@@ -363,7 +363,7 @@ class App(customtkinter.CTk):
 
     def cmd_goto_action(self):
         x, y = self.get_inputs()
-        if x is not None:
+        if x is not None and y is not None:
             self.status_label.configure(text=f"Status: Executing GotoAction({x}, {y})")
             threading.Thread(
                 target=lambda: self.motion_module.goto_for_action((x, y)), daemon=True
@@ -371,7 +371,7 @@ class App(customtkinter.CTk):
 
     def cmd_move(self):
         dx, dy = self.get_inputs()
-        if dx is not None:
+        if dx is not None and dy is not None:
             self.status_label.configure(text=f"Status: Executing Move({dx}, {dy})")
             threading.Thread(
                 target=lambda: self.motion_module.move_with_offset((dx, dy)),
@@ -391,15 +391,16 @@ class App(customtkinter.CTk):
                     ),
                 )
             except Exception as e:
+                err = e  # WTF If I do not do this it bugs the error checker
                 self.after(
-                    0, lambda: self.status_label.configure(text=f"Status: Error {e}")
+                    0, lambda: self.status_label.configure(text=f"Status: Error {err}")
                 )
 
         threading.Thread(target=run, daemon=True).start()
 
     def cmd_set_position(self):
         x, y = self.get_inputs()
-        if x is not None:
+        if x is not None and y is not None:
             self.motion_module.set_current_position((x, y))
             self.status_label.configure(text=f"Status: Set Position to ({x}, {y})")
 
@@ -436,10 +437,11 @@ class App(customtkinter.CTk):
             return
 
         try:
+            assert self.desk_image_item is not None
             coords = self.desk_canvas.coords(self.desk_image_item)
             img_x_offset = coords[0]
             img_y_offset = coords[1]
-        except:
+        except Exception:
             return
 
         click_x = int(event.x - img_x_offset)

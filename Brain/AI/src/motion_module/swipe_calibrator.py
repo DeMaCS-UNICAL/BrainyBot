@@ -52,11 +52,11 @@ class SwipeCalibrator:
 
     def train(
         self,
-        commanded_swipes: list[list[int]] = None,
-        measured_swipes: list[list[int]] = None,
-        method: str = None,
+        commanded_swipes: list[list[int]] | None = None,
+        measured_swipes: list[list[int]] | None = None,
+        method: str | None = None,
         drop_first: bool = False,
-        outlier_zscore_threshold: float = None,
+        outlier_zscore_threshold: float | None = None,
     ):
         """
         Train the model
@@ -75,8 +75,10 @@ class SwipeCalibrator:
         """
         if commanded_swipes is None:
             commanded_swipes = self.cmds
+            assert commanded_swipes is not None, "Commanded swipes not provided."
         if measured_swipes is None:
             measured_swipes = self.acts
+            assert measured_swipes is not None, "Measured swipes not provided."
 
         if len(commanded_swipes) == 0 or len(measured_swipes) == 0:
             raise ValueError("No training data provided")
@@ -359,10 +361,10 @@ class SwipeCalibrator:
 
     @staticmethod
     def _assemble_file_string_prefix(
-        test_n: int = None,
+        test_n: int | None = None,
         robot: str = "brainybot1",
         pen: str = "pinkyThing",
-        suffix: str = None,
+        suffix: str | None = None,
     ) -> str:
         match (test_n is None, suffix is None):
             case (True, True):
@@ -376,11 +378,11 @@ class SwipeCalibrator:
 
     def load_from_file(
         self,
-        filename: str = None,
-        test_n: int = None,
+        filename: str | None = None,
+        test_n: int | None = None,
         robot: str = "brainybot1",
         pen: str = "pinkyThing",
-        suffix: str = None,
+        suffix: str | None = None,
     ):
 
         prefix = None
@@ -400,7 +402,7 @@ class SwipeCalibrator:
                     ):
                         filename = f
                         break
-
+            assert filename is not None, "No valid file found matching prefix."
             with open(filename, "rb") as f:
                 caricato = pickle.load(f)
 
@@ -409,11 +411,11 @@ class SwipeCalibrator:
 
     def save_to_file(
         self,
-        filename: str = None,
-        test_n: int = None,
+        filename: str | None = None,
+        test_n: int | None = None,
         robot: str = "brainybot1",
         pen: str = "pinkyThing",
-        suffix: str = None,
+        suffix: str | None = None,
     ):
         if filename is None:
             filename = (
@@ -429,7 +431,9 @@ class SwipeCalibrator:
             with open(filename, "wb") as f:
                 pickle.dump(data_to_save, f)
 
-    def plot_vector_calibration(self, max_range: int = 1000, plot_filename: str = None):
+    def plot_vector_calibration(
+        self, max_range: int = 1000, plot_filename: str | None = None
+    ):
         """
         Generates the visualization of the calibration map with vectors
 

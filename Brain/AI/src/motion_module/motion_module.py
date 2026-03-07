@@ -57,11 +57,12 @@ class MotionModule:
         force_headless: bool = False,
         start_position: tuple[int, int] = (0, 0),
     ):
-        match isinstance(ui_mask, Image.Image):
-            case True:
-                self._ui_mask: np.ndarray = to_int32(ui_mask)
-            case False:
-                self._ui_mask: np.ndarray = ui_mask
+        self._ui_mask: np.ndarray
+        if isinstance(ui_mask, Image.Image):
+            self._ui_mask = to_int32(ui_mask)
+        else:
+            self._ui_mask = ui_mask
+
         height, width = self._ui_mask.shape[:2]
         # array RGBA trasparente (0 = trasparente)
         self._desk = np.zeros((height, width, 4), dtype=np.uint8)
@@ -151,11 +152,15 @@ class MotionModule:
         self._add_frame_to_desk(self._frames_history[-1], coordinates=self._position)
 
     def _majority_offset_calculation(
-        self, f1: np.ndarray = None, f2: np.ndarray = None
+        self, f1: np.ndarray | None = None, f2: np.ndarray | None = None
     ):
         """
         Calculates the offset between the last two frames in the history, using the UI mask to ignore irrelevant areas.
         This variant execute different algorithm and takes the best / most common result.
+
+        Parameters:
+            f1 (np.ndarray): First frame to compare. If None, uses the second-to-last frame in the history.
+            f2 (np.ndarray): Second frame to compare. If None, uses the last frame in the history.
         """
         # TODO: Could make this multithreaded
         results = []
@@ -249,6 +254,7 @@ class MotionModule:
         """
         if self._motion_area is None:
             self.calculate_motion_area()
+            assert self._motion_area is not None, "Motion area calculation failed."
 
         (min_x, min_y), (max_x, max_y) = self._motion_area
 
@@ -274,7 +280,7 @@ class MotionModule:
 
         return int(start_x), int(start_y), int(end_x), int(end_y)
 
-    def _clamp_frame_history(self, keep: int = None):
+    def _clamp_frame_history(self, keep: int | None = None):
         if keep is None:
             keep = self._frame_history_size
         self._frames_history = self._frames_history[-keep:]
@@ -391,6 +397,7 @@ class MotionModule:
         if self._motion_area is None:
             # It's redundant because at this point should be already instantiated, but I feel safer
             self.calculate_motion_area()
+            assert self._motion_area is not None, "Motion area calculation failed."
 
         # min - max
         max_x_movement = abs(self._motion_area[0][0] - self._motion_area[1][0])
@@ -482,6 +489,12 @@ class MotionModule:
 
     def get_desk_copy(self) -> np.ndarray:
         return self._desk.copy()
+
+    def get_pil_mask(self) -> Image.Image:
+        return Image.fromarray(self._ui_mask, mode="L")
+
+    def get_mask_copy(self) -> np.ndarray:
+        return self._ui_mask.copy()
 
     def clear_desk(self):
         """
