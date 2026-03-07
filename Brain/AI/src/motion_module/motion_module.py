@@ -143,6 +143,8 @@ class MotionModule:
         """
         Paste the last frame from the history on the desk.
         """
+        if not self._frames_history:
+            return
         self._add_frame_to_desk(self._frames_history[-1], coordinates=self._position)
     
     def _majority_offset_calculation(self, f1: np.ndarray = None, f2: np.ndarray = None):
@@ -271,8 +273,12 @@ class MotionModule:
         """
         if len(self._frames_history) < 2:
             self._positions_history.append(self._position)
-            self._frames_history.append(get_screenshot(to_memory=True))
-            self._add_last_frame_to_desk()
+            screenshot = get_screenshot(to_memory=True)
+            if screenshot is not None and not isinstance(screenshot, bool):
+                self._frames_history.append(screenshot)
+                self._add_last_frame_to_desk()
+            else:
+                logger.warning("Failed to get screenshot for history")
     
     @staticmethod
     def distance(point_a: tuple[int, int], point_b: tuple[int, int]) -> float:
@@ -296,15 +302,19 @@ class MotionModule:
         
         swipe(*swipe_cmd)
         
-        self._frames_history.append(get_screenshot(to_memory=True))
-        # dx, dy, confidence = self._calculate_offset()
-        dx, dy, confidence = self._majority_offset_calculation()
-        self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
-        self._positions_history.append(self._position)
-        self._add_last_frame_to_desk()
-        self._clamp_frame_history()
-        
-        return dx, dy
+        screenshot = get_screenshot(to_memory=True)
+        if screenshot is not None and not isinstance(screenshot, bool):
+            self._frames_history.append(screenshot)
+            # dx, dy, confidence = self._calculate_offset()
+            dx, dy, confidence = self._majority_offset_calculation()
+            self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
+            self._positions_history.append(self._position)
+            self._add_last_frame_to_desk()
+            self._clamp_frame_history()
+            return dx, dy
+        else:
+            logger.warning("Failed to get screenshot after move")
+            return None
     
     def move_with_angle(self, distance: float, angle: float) -> tuple[float, float] | None:
         """
@@ -394,9 +404,14 @@ class MotionModule:
             
             movement = (clamped_x, clamped_y)
             
-            dx, dy = self.move_with_offset(movement)
-            delta_history.append((dx, dy))
-            movement_history.append(np.linalg.norm(dx - dy))
+            result = self.move_with_offset(movement)
+            if result is not None:
+                dx, dy = result
+                delta_history.append((dx, dy))
+                movement_history.append(np.linalg.norm(dx - dy))
+            else:
+                logger.warning("Move failed during goto")
+                break
         
         return sum([round(x[0]) for x in delta_history]), sum([round(y[1]) for y in delta_history])
     
@@ -469,17 +484,21 @@ class MotionModule:
             raise ValueError("No frames in history to compare with.")
         
         last_frame = self._frames_history[-1].copy()
-        self._frames_history.append(get_screenshot(to_memory=True))
-        new_frame = self._frames_history[-1]
-        
-        dx, dy, _ = self._majority_offset_calculation(last_frame, new_frame)
-        
-        if int(dx) != 0 or int(dy) != 0:
-            self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
-            self._positions_history.append(self._position)
-            self._add_last_frame_to_desk()
-            self._clamp_frame_history()
-            return True
+        screenshot = get_screenshot(to_memory=True)
+        if screenshot is not None and not isinstance(screenshot, bool):
+            self._frames_history.append(screenshot)
+            new_frame = self._frames_history[-1]
+            
+            dx, dy, _ = self._majority_offset_calculation(last_frame, new_frame)
+            
+            if int(dx) != 0 or int(dy) != 0:
+                self._position = (self._position[0] - int(dx), self._position[1] - int(dy))
+                self._positions_history.append(self._position)
+                self._add_last_frame_to_desk()
+                self._clamp_frame_history()
+                return True
+        else:
+            logger.warning("Failed to get screenshot for position check")
         return False
     
     def position(self) -> tuple[int, int]:
