@@ -3,3 +3,4 @@ Brainybot is both a physical robot that physically touches a phone screen or, in
 The hardware version of BB is based on the great TapsterBot design from Jason Huggins (https://github.com/tapsterbot/tapsterbot, https://tapster.io/)
 
 Check out our **[wiki page](https://github.com/DeMaCS-UNICAL/BrainyBot/wiki)** for more information and installation instructions.
+Find **[here](https://drive.google.com/drive/folders/1AR6yPLVh9kIiOMw8t519Npz-aOhcc4eg?usp=sharing)** the material for submitted papers.
