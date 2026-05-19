@@ -15,6 +15,8 @@ from AI.src.vision.objectsFinder import ObjectsFinder
 from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE, nameColor, ORANGE
 from AI.src.vision.input_game_object import TemplateMatch, SimplifiedTemplateMatch
 from AI.src.vision.output_game_object import OutputTemplateMatch
+from AI.src.gfd_code_updated.Script_Controller import run_controller
+
 
 def draw(matrixCopy, center,id,width,height, color):
     top_left = (center[0] - width // 2, center[1] - height // 2)
@@ -56,12 +58,16 @@ class MatchingCandy:
         self.object_matrix=None
         self.first=True
         self.sprites=sprites
+        self.sprites = sprites
+        print(f"Loaded sprites: {len(self.sprites)}")
+        print(list(self.sprites.keys()))
 
     def vision(self, grid_changed=True, benchmark=False):
         grid_changed=self.first
         self.first=False
         finder = ObjectsFinder(self.screenshot,color=cv2.COLOR_BGR2RGB, debug=self.debug, threshold=0.78,validation=self.validation)
         self.__matrix = getImg(os.path.join(SCREENSHOT_PATH, self.screenshot),color_conversion=cv2.COLOR_BGR2RGB)
+        path_img = (os.path.join(SCREENSHOT_PATH, self.screenshot))
         if not benchmark:
             if  not self.validation:
                 plt.imshow( self.__matrix)
@@ -70,8 +76,23 @@ class MatchingCandy:
                 if not self.debug:
                     plt.pause(0.1)
         if grid_changed:
-            to_return = finder.find(TemplateMatch(self.sprites,self.threshold_dictionary))
 
+
+            to_return = run_controller(
+                image_path=path_img,
+                population=20,
+                generations=5,
+                tolerance=0.05,
+                gamename=None,
+                tune="candy_cffrush",
+                save_ids=True,
+                debug=False
+            )
+            # for obj in to_return:
+            #     print(obj.__dict__)
+            # to_return = finder.find(TemplateMatch(self.sprites,self.threshold_dictionary))
+            # for item in to_return:
+            #     print(vars(item))   # or print(item.__dict__)
             return to_return
         else:
             print("Looking for existing matrix") if not benchmark else None
@@ -108,7 +129,10 @@ class MatchingCandy:
         #self.__graph = self.abstraction(self.vision())
         #return self.__graph
         template_matches_list = self.vision(False, benchmark)
+
         to_plot,matrix = self.abstraction(template_matches_list.copy(), benchmark)
+        for row in matrix.matrix:
+            print(row)
         return template_matches_list,matrix,self.__matrix.copy()
 
     def get_matrix(self):

@@ -32,6 +32,8 @@ def asp_input(input):
     #to_return = get_input_dlv_nodes(graph)
     #to_return.extend(get_edges(graph))
     matrix = input[1]
+    for row in matrix.matrix:
+        print(row)
     to_return = get_input_dlv_cells(matrix)
     return to_return
 
@@ -118,7 +120,7 @@ def candy_crush_benchmark(screenshot, spriteSize):
 
     benchmark_utils.end_benchmark()
 
-        
+
 def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,it=0, benchmark=False):
     # execute template matching
     spriteSize = (110, 110)
@@ -132,9 +134,14 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
         plt.ion()
 
     template_matches_list,candyMatrix,_ = matchingCandy.search()
+
+    print("here")
+
+
+
     input = asp_input(("",candyMatrix))
-    #for e in input:
-        #print(ASPMapper.get_instance().get_string(e) + ".")
+    for e in input:
+        print(ASPMapper.get_instance().get_string(e) + ".")
     success = True
 
     
@@ -209,6 +216,99 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
             feedback = Feedback()
             success,abstraction,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
             matrix = abstraction[1]
+
+        
+# def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_validation=None,it=0, benchmark=False):
+#     # execute template matching
+#     spriteSize = (110, 110)
+
+#     if benchmark:
+#         candy_crush_benchmark(screenshot, spriteSize)
+#         return
+    
+#     matchingCandy = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None)
+#     if not debug:
+#         plt.ion()
+
+#     template_matches_list,candyMatrix,_ = matchingCandy.search()
+#     print("here")
+#     input = asp_input(("",candyMatrix))
+#     #for e in input:
+#         #print(ASPMapper.get_instance().get_string(e) + ".")
+#     success = True
+
+    
+#     if vision_validation!=None:
+#         validation_abstraction=[]
+#         abstraction_result=[]
+#         validation_vision = {}
+#         validation_info = CCSValidation()
+#         if(vision_validation!=None):
+#             validation_vision,validation_abstraction=read_validation_data(vision_validation, abstraction_validation)
+#         for e in input:
+#             abstraction_result.append(ASPMapper.get_instance().get_string(e) + ".")
+#         validator = Validation()
+#         #validator.validate_matches(template_matches_list,validation_vision)
+#         #validator.validate_matrix(input,validation_abstraction)#TODO: ABSTRACTION VALIDATION
+#         #   with open(RESOURCES_PATH+"/"+screenshot+".txt",'w+') as f:
+#         return (validator.validate_matches(template_matches_list,validation_vision, spriteSize[0]*0.1),(validator.validate_facts(abstraction_result,validation_abstraction)))#TODO: ABSTRACTION VALIDATION
+#     if debug:
+#         for r in candyMatrix.matrix:
+#             for c in r:
+#                 print(c,end='\t')
+#             print()
+#     while True:
+#         # recall ASP program
+#         solution = DLVSolution()
+#         swap1,answer_set = solution.recall_asp(input)
+#         swap: Swap = swap1
+#         if swap == None:
+#             print("No moves found. Maybe there is no candy on screen?")
+#             template_matches_list,candyMatrix,_ = MatchingCandy(screenshot,spriteSize,retrieve_config(),debug,vision_validation!=None).search()
+#         else:
+#             # draw
+            
+#             cell1 = candyMatrix.get_cell(swap.get_id1())
+#             cell2 = candyMatrix.get_cell(swap.get_id2())
+#             matrix_copy=matchingCandy.get_matrix().copy()
+#             width, height = candyMatrix.delta[0],candyMatrix.delta[1]
+#             if  not vision_validation:
+#                 draw(matrix_copy, (cell1.x,cell1.y),f"{swap.get_id1()}",width,height,nameColor[WHITE])
+#                 draw(matrix_copy, (cell2.x,cell2.y),f"{swap.get_id1()}",width,height,nameColor[WHITE])
+#                 plt.imshow( matrix_copy)
+#                 plt.title(f"VISION")
+#                 plt.show()
+#                 if not debug:
+#                     plt.pause(0.1)
+#             #
+#             # Enlarges swipe coordinates so to start swiping not from the center of the candy but from the border
+#             #
+#             x1,y1,x2,y2 = cell1.x, cell1.y, cell2.x, cell2.y
+#             EL = 20  #pixels of swipe offset
+#             SX1 = x1
+#             SX2 = x2
+#             SY1 = y1
+#             SY2 = y2
+
+#             if (abs(x1-x2) < 10):
+#             #swipe vertical
+#                 SX1 = int( (x1+x2)/2+width/2 )
+#                 SX2 = SX1
+#                 SY1 = int(min(y1,y2)+EL) 
+#                 SY2 = int(max(y1,y2) + height+EL) 
+#             else:
+#             # assumiamo swipe orizzontale
+#                 SY1 = int((y1+y2)/2+height/2)
+#                 SY2 = int(SY1)
+#                 SX1 = int(min(x1,x2)+EL) 
+#                 SX2 = int(max(x1,x2) + width + EL)
+
+#             os.chdir(CLIENT_PATH)
+#             os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
+#             time.sleep(1)
+#             feedback = Feedback()
+#             success,abstraction,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)
+#             matrix = abstraction[1]
 
 
 def read_validation_data(vision_validation, abstraction_validation):

@@ -1,0 +1,184 @@
+{
+    "candy_crush_saga": {
+        "2400x1080": {
+            "vertical_threshold": 289,
+            "vertical_minLineLength": 88,
+            "vertical_maxLineGap": 11,
+            "threshold": 236,
+            "maxval": 251,
+            "canny_thresh": 65,
+            "cell_w": "118.0",
+            "cell_h": "125.62"
+        }
+    },
+    "3. Candy crush friends saga": {
+        "vertical_threshold": 300,
+        "vertical_minLineLength": 100,
+        "vertical_maxLineGap": 6,
+        "horizontal_threshold": 100,
+        "horizontal_minLineLength": 140,
+        "horizontal_maxLineGap": 8
+    },
+    "6. Aqua blast match 3 puzzle": {
+        "vertical_threshold": 100,
+        "vertical_minLineLength": 75,
+        "vertical_maxLineGap": 5,
+        "horizontal_threshold": 100,
+        "horizontal_minLineLength": 180,
+        "horizontal_maxLineGap": 8
+    },
+    "7. Candy fever": {
+        "vertical_threshold": 70,
+        "vertical_minLineLength": 65,
+        "vertical_maxLineGap": 7,
+        "horizontal_threshold": 100,
+        "horizontal_minLineLength": 100,
+        "horizontal_maxLineGap": 5
+    },
+    "sweets_match": {
+        "vertical_threshold": 100,
+        "vertical_minLineLength": 69,
+        "vertical_maxLineGap": 6,
+        "horizontal_threshold": 110,
+        "horizontal_minLineLength": 100,
+        "horizontal_maxLineGap": 8
+    },
+    "10. Candy crush soda": {
+        "vertical_threshold": 100,
+        "vertical_minLineLength": 92,
+        "vertical_maxLineGap": 6,
+        "horizontal_threshold": 100,
+        "horizontal_minLineLength": 93,
+        "horizontal_maxLineGap": 8
+    },
+    "candy_charming": {
+        "vertical_threshold": 100,
+        "vertical_minLineLength": 100,
+        "vertical_maxLineGap": 7,
+        "horizontal_threshold": 130,
+        "horizontal_minLineLength": 100,
+        "horizontal_maxLineGap": 8
+    },
+    "candy_blast": {
+        "vertical_threshold": 300,
+        "vertical_minLineLength": 200,
+        "vertical_maxLineGap": 8,
+        "horizontal_threshold": 200,
+        "horizontal_minLineLength": 250,
+        "horizontal_maxLineGap": 7
+    },
+    "14. Candy witch": {
+        "vertical_threshold": 100,
+        "vertical_minLineLength": 75,
+        "vertical_maxLineGap": 8,
+        "horizontal_threshold": 100,
+        "horizontal_minLineLength": 100,
+        "horizontal_maxLineGap": 8
+    },
+    "16. Puzzle wings": {
+        "vertical_threshold": 150,
+        "vertical_minLineLength": 90,
+        "vertical_maxLineGap": 8,
+        "horizontal_threshold": 350,
+        "horizontal_minLineLength": 70,
+        "horizontal_maxLineGap": 8
+    },
+    "17. Travel match": {
+        "vertical_threshold": 110,
+        "vertical_minLineLength": 50,
+        "vertical_maxLineGap": 8,
+        "horizontal_threshold": 150,
+        "horizontal_minLineLength": 80,
+        "horizontal_maxLineGap": 7
+    },
+    "new_game": {
+        "vertical_threshold": 233,
+        "vertical_minLineLength": 187,
+        "vertical_maxLineGap": 13,
+        "threshold": 256,
+        "maxval": 140,
+        "canny_thresh": 162,
+        "cell_w": "0.05",
+        "cell_h": "0.12"
+    },
+    "ccs_soda": {
+        "vertical_threshold": 137,
+        "vertical_minLineLength": 83,
+        "vertical_maxLineGap": 5,
+        "threshold": 209,
+        "maxval": 237,
+        "canny_thresh": 135,
+        "cell_w": "115.43",
+        "cell_h": "115.29"
+    },
+    "CCSS": {
+        "2400x1080": {
+            "vertical_threshold": 208,
+            "vertical_minLineLength": 171,
+            "vertical_maxLineGap": 19,
+            "threshold": 229,
+            "maxval": 216,
+            "canny_thresh": 56,
+            "cell_w": "114.0",
+            "cell_h": "116.22"
+        },
+        "2000x1200": {
+            "vertical_threshold": 122,
+            "vertical_minLineLength": 103,
+            "vertical_maxLineGap": 3,
+            "threshold": 201,
+            "maxval": 257,
+            "canny_thresh": 37,
+            "cell_w": "128.56",
+            "cell_h": "127.22"
+        }
+    },
+    "ab": {
+        "2400x1080": {
+            "vertical_threshold": 270,
+            "vertical_minLineLength": 57,
+            "vertical_maxLineGap": 19,
+            "threshold": 163,
+            "maxval": 168,
+            "canny_thresh": 139,
+            "cell_w": "117.58",
+            "cell_h": "126.94"
+        }
+    },
+    "abc": {
+        "2400x1080": {
+            "vertical_threshold": 94,
+            "vertical_minLineLength": 33,
+            "vertical_maxLineGap": 18,
+            "threshold": 168,
+            "maxval": 125,
+            "canny_thresh": 147,
+            "cell_w": "99.79",
+            "cell_h": "123.88"
+        }
+    },
+    "abcd": {
+        "2400x1080": {
+            "vertical_threshold": 183,
+            "vertical_minLineLength": 132,
+            "vertical_maxLineGap": 9,
+            "threshold": 199,
+            "maxval": 223,
+            "canny_thresh": 150,
+            "cell_w": "117.83",
+            "cell_h": "127.53"
+        }
+    },
+    "candy_crush": {
+        "2400x1080": {
+            "vertical_threshold": 260,
+            "vertical_minLineLength": 57,
+            "vertical_maxLineGap": 3,
+            "threshold": 194,
+            "maxval": 250,
+            "canny_thresh": 142,
+            "cell_w": "115.88",
+            "cell_h": "116.0"
+        }
+    }
+}

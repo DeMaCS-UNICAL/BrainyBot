@@ -178,37 +178,87 @@ def chooseDLVSystem() -> DesktopHandler:
 def chooseClingo()->DesktopHandler:
     try:
         return DesktopHandler(
-                ClingoDesktopService("/usr/bin/clingo"))
+                ClingoDesktopService("/home/brainybot/clingo"))
     except Exception as e:
         print(e)
 
+# def get_input_dlv_cells(matrix: ObjectMatrix) -> list:
+#     cells = []
+#     for row in matrix.get_cells():
+#         cells.extend(row)
+#     for row in matrix.get_cells():
+#         for cell in row:
+#             if cell.get_value()!="":
+#                 result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", cell.get_value())
+#                 candyType = result.groups()[0]
+#                 special = None
+#                 # checks if the node2 is not swappable
+#                 if "notTouch" in candyType:
+#                     continue
+
+#                 if "Bomb" in candyType:
+#                     special="bomb"            
+
+#                 if "Horizontal" in candyType:
+#                     special="horizontal"
+
+#                 if "Vertical" in candyType:
+#                     special="vertical"
+
+#                 if special!=None:
+#                     cells.append(TypeOf(cell.get_id(),special))
+#                 result = re.search(r"^([a-z]+)[A-Z]?.*$",candyType)
+#                 cell.set_value(result.groups()[0])
+#     return cells
+
 def get_input_dlv_cells(matrix: ObjectMatrix) -> list:
     cells = []
+
     for row in matrix.get_cells():
         cells.extend(row)
+
     for row in matrix.get_cells():
         for cell in row:
-            if cell.get_value()!="":
-                result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", cell.get_value())
+            value = cell.get_value()
+
+            if value in ("", None):
+                continue
+
+            value = str(value)
+
+            # old format: blue.png / red.jpg
+            result = re.search(r"^(\w+)\.(?:png|jpeg|jpg)$", value)
+            if result:
                 candyType = result.groups()[0]
-                special = None
-                # checks if the node2 is not swappable
-                if "notTouch" in candyType:
-                    continue
+            else:
+                # new format: '1', '2', '3', etc.
+                candyType = value
 
-                if "Bomb" in candyType:
-                    special="bomb"            
+            if "notTouch" in candyType:
+                continue
 
-                if "Horizontal" in candyType:
-                    special="horizontal"
+            special = None
 
-                if "Vertical" in candyType:
-                    special="vertical"
+            if "Bomb" in candyType:
+                special = "bomb"
+            elif "Horizontal" in candyType:
+                special = "horizontal"
+            elif "Vertical" in candyType:
+                special = "vertical"
 
-                if special!=None:
-                    cells.append(TypeOf(cell.get_id(),special))
-                result = re.search(r"^([a-z]+)[A-Z]?.*$",candyType)
-                cell.set_value(result.groups()[0])
+            if special is not None:
+                cells.append(TypeOf(cell.get_id(), special))
+
+            # for numeric values, keep '1', '2', etc.
+            if candyType.isdigit():
+                cell.set_value(candyType)
+            else:
+                result = re.search(r"^([a-z]+)[A-Z]?.*$", candyType)
+                if result:
+                    cell.set_value(result.groups()[0])
+                else:
+                    cell.set_value(candyType)
+
     return cells
 
 def get_input_dlv_nodes(graph: ObjectGraph) -> []:

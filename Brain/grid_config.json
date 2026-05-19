@@ -1,0 +1,62 @@
+{
+    "candy_crush_saga": {
+        "2400x1080": {
+            "vertical_threshold": 289,
+            "vertical_minLineLength": 88,
+            "vertical_maxLineGap": 11,
+            "threshold": 236,
+            "maxval": 251,
+            "canny_thresh": 65,
+            "cell_w": "118.0",
+            "cell_h": "125.62"
+        }
+    },
+    "candy_cru": {
+        "2400x1080": {
+            "vertical_threshold": 222,
+            "vertical_minLineLength": 52,
+            "vertical_maxLineGap": 3,
+            "threshold": 169,
+            "maxval": 64,
+            "canny_thresh": 50,
+            "cell_w": "116.5",
+            "cell_h": "125.62"
+        }
+    },
+    "candsy_cru": {
+        "2400x1080": {
+            "vertical_threshold": 261,
+            "vertical_minLineLength": 92,
+            "vertical_maxLineGap": 4,
+            "threshold": 223,
+            "maxval": 162,
+            "canny_thresh": 130,
+            "cell_w": "116.0",
+            "cell_h": "116.0"
+        }
+    },
+    "candsy_[]cru": {
+        "2400x1080": {
+            "vertical_threshold": 174,
+            "vertical_minLineLength": 83,
+            "vertical_maxLineGap": 4,
+            "threshold": 251,
+            "maxval": 278,
+            "canny_thresh": 95,
+            "cell_w": "116.0",
+            "cell_h": "116.12"
+        }
+    },
+    "candy_cffrush": {
+        "2868x1320": {
+            "vertical_threshold": 281,
+            "vertical_minLineLength": 112,
+            "vertical_maxLineGap": 17,
+            "threshold": 214,
+            "maxval": 97,
+            "canny_thresh": 61,
+            "cell_w": "142.29",
+            "cell_h": "143.0"
+        }
+    }
+}

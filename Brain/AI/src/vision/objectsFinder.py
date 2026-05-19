@@ -165,6 +165,10 @@ class ObjectsFinder:
     def __find_all(self, search_info: TemplateMatch) -> dict:
         # Estrai le informazioni necessarie
         img, elements_to_find, thresholds = self.extract_tm_info(search_info)
+        # print("Image shape:", img.shape)
+        # print("Templates:", list(elements_to_find.keys()))
+        # print("Number of templates:", len(elements_to_find))
+        # print("Thresholds:", thresholds)
         
         # Prepara i dati come tuple (self, element, template, threshold, regmax, img)
         templates = [
@@ -179,6 +183,8 @@ class ObjectsFinder:
         
         # Raccogli tutti i risultati in una lista
         main_list = [item for sublist in results for item in sublist]
+        # print(f"Objects found: {len(main_list)}")
+        # print([obj.label for obj in main_list])
         return main_list
 
     def __find_matches(self, image,label, element_to_find,threshold, request_regmax=True) -> list:
