@@ -51,6 +51,15 @@ class TestDLVSolution(unittest.TestCase):
         for (r, c), n in SOLUTION.items():
             self.assertEqual(result[(r, c)], n, f"cell ({r},{c}) expected {n}, got {result[(r, c)]}")
 
+        # solver must never change a given cell's value
+        for r in range(9):
+            for c in range(9):
+                if PUZZLE[r][c] != 0:
+                    self.assertEqual(
+                        result[(r, c)], PUZZLE[r][c],
+                        f"given cell ({r},{c})={PUZZLE[r][c]} was overwritten with {result[(r, c)]}"
+                    )
+
         # every row/col/box must contain 1-9 exactly once
         for r in range(9):
             row_vals = sorted(result[(r, c)] for c in range(9))
