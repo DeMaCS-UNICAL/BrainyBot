@@ -1,7 +1,8 @@
 import argparse
 import os
 from AI.src.ball_sort.helper import ball_sort,check_if_to_revalidate
-from AI.src.candy_crush.helper import candy_crush, check_CCS
+from AI.src.candy_crush.clean_helper import candy_crush
+from AI.src.candy_crush.helper import check_CCS
 from AI.src.g2048.helper import g2048
 from AI.src.webservices.helpers import getScreenshot
 from AI.src.constants import SCREENSHOT_PATH, SCREENSHOT_FILENAME, RESOURCES_PATH, VALIDATION_PATH
