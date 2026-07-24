@@ -4,7 +4,7 @@ import time
 import re
 from collections import Counter
 import numpy as np
-from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
+from AI.src.webservices.input_backend import tap
 from AI.src.ball_sort.detect.new_detect import MatchingBalls
 from AI.src.ball_sort.dlvsolution.dlvsolution import DLVSolution,Ball,Color,Tube
 from AI.src.ball_sort.dlvsolution.helpers import get_colors, get_balls_and_tubes, get_balls_position
@@ -124,8 +124,6 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
         moves.sort(key=lambda x: x.get_step())
         ons.sort(key=lambda x: x.get_step())
 
-        os.chdir(CLIENT_PATH)
-
         coordinates = []
         x1, y1, x2, y2 = 0, 0, 0, 0
         if len(moves)==0:
@@ -146,9 +144,9 @@ def ball_sort(screenshot, debug = False, vision_val=None, abstraction_val=None,i
                     y2 = tube.get_y()
             coordinates.append({'x1': x1, 'y1': y1, 'x2': x2, 'y2': y2})
             print(x1,y1,x2,y2)
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x1} {y1}'")
+            tap(x1, y1)
             time.sleep(0.25)
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'tap {x2} {y2}'")
+            tap(x2, y2)
             time.sleep(0.25)
             success,_,(_,colors,tubes,balls,on,on_feedback) = feedback.request_feedback(matcher.vision,matcher.abstraction,asp_input,ans[step])
             print("Success?",success)
