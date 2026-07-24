@@ -123,11 +123,17 @@ class MatchingSudoku:
         # parent. We instead cluster top-level, button-sized boxes below
         # the grid into rows by y-coordinate, keep only full rows of 5
         # (digits 1-5, then 6-9+X), and drop the trailing X from the last row.
+        # The area window is expressed relative to the image area (not
+        # absolute pixels) so it scales across screenshot resolutions --
+        # same reasoning as __find_grid_container's width/height fractions.
+        img_area = self.get_image_width() * self.get_image_height()
+        low = img_area * 0.0016
+        high = img_area * 0.011
         depth0 = [i for i, h in enumerate(self.__hierarchy) if h[3] == -1]
         below = []
         for i in depth0:
             x, y, w, h = self.__bbox(i)
-            if y > grid_bottom and 3000 < w * h < 20000:
+            if y > grid_bottom and low < w * h < high:
                 below.append((x, y, w, h))
 
         below.sort(key=lambda b: b[1])
