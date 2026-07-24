@@ -11,7 +11,7 @@ from AI.src.candy_crush.constants import RED, YELLOW, PURPLE, GREEN, BLUE, WHITE
 from AI.src.candy_crush.detect.new_detect import MatchingCandy,draw, DISTANCE
 from AI.src.candy_crush.dlvsolution.dlvsolution import DLVSolution
 from AI.src.candy_crush.dlvsolution.helpers import get_input_dlv_nodes, get_edges, Swap, get_input_dlv_cells
-from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
+from AI.src.webservices.input_backend import swipe
 from AI.src.vision.feedback import Feedback
 from AI.src.validation.validation import Validation
 from AI.src.constants import RESOURCES_PATH
@@ -203,8 +203,7 @@ def candy_crush(screenshot,debug = False, vision_validation=None,abstraction_val
                 SX1 = int(min(x1,x2)+EL) 
                 SX2 = int(max(x1,x2) + width + EL)
 
-            os.chdir(CLIENT_PATH)
-            os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
+            swipe(SX1, SY1, SX2, SY2)
             time.sleep(1)
             feedback = Feedback()
             success,abstraction,input = feedback.request_feedback(matchingCandy.vision,matchingCandy.abstraction,asp_input,answer_set)

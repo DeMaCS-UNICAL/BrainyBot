@@ -2,12 +2,15 @@ import os
 import requests
 import subprocess
 
-from AI.src.constants import SCREENSHOT_PATH, USE_ADB
+from AI.src.constants import SCREENSHOT_PATH, INPUT_BACKEND
+from AI.src.webservices import ios_simulator
 
 
 def getScreenshot(url = None, port = None) -> bool:
-    if USE_ADB:
+    if INPUT_BACKEND == 'adb':
         return require_image_from_adb()
+    elif INPUT_BACKEND == 'ios_sim':
+        return require_image_from_ios_simulator()
     else:
         return require_image_from_url(url, port)
 
@@ -20,6 +23,17 @@ def require_image_from_url(url, port) -> None:
     file.write(response.content)
     file.close()
     return True
+
+def require_image_from_ios_simulator() -> bool:
+    try:
+        ios_simulator.screenshot(os.path.join(SCREENSHOT_PATH, 'screenshot.png'))
+        print(f"Screenshot saved to {SCREENSHOT_PATH}")
+        return True
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        print("Is the iOS Simulator booted and is the Appium server running?")
+        return False
+
 
 def require_image_from_adb() -> bool:
     adb_command = f"adb exec-out screencap -p > {SCREENSHOT_PATH}/screenshot.png"

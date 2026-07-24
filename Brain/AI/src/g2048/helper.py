@@ -1,6 +1,6 @@
 import os
 
-from AI.src.constants import CLIENT_PATH, TAPPY_ORIGINAL_SERVER_IP
+from AI.src.webservices.input_backend import swipe
 from AI.src.g2048.detect.new_detect import Matching2048
 from AI.src.g2048.abstraction.graph2048 import Graph2048
 from AI.src.g2048.dlvsolution.dlvsolution import DLVSolution
@@ -105,8 +105,7 @@ def acting(swipe_direction, cx, cy):
         SY1 = SY2 = cy
         SX1 = cx - offset_eo
         SX2 = cx + offset_eo
-    os.chdir(CLIENT_PATH)
-    os.system(f"python3 client3.py --url http://{TAPPY_ORIGINAL_SERVER_IP}:8000 --light 'swipe {SX1} {SY1} {SX2} {SY2}'")
+    swipe(SX1, SY1, SX2, SY2)
 
 def setCache(output, l):
     cache = [0 for i in range(l)]
