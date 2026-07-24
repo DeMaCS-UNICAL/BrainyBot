@@ -22,6 +22,7 @@ def sudoku(screenshot, debug=False, vision_validation=None, abstraction_validati
         return
 
     given_cells = {(g.get_row(), g.get_col()) for g in givens}
+    result.sort(key=lambda value: (value.get_row(), value.get_col()))
     for value in result:
         r, c = value.get_row(), value.get_col()
         if (r, c) in given_cells:
