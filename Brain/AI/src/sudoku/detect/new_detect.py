@@ -8,6 +8,8 @@ from AI.src.vision.output_game_object import OutputRectangle
 
 class MatchingSudoku:
     def __init__(self, screenshot_path, debug=False):
+        print(f"INIT MatchingSudoku with screenshot {screenshot_path}")
+        print(f"Debug: {debug}")
         self.__finder = ObjectsFinder(screenshot_path)
         self.__debug = debug
         self.__cell_boxes = None       # 81 (x,y,w,h), row-major

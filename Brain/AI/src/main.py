@@ -22,6 +22,11 @@ def Start(screenshot,args,iteration=0):
         vision=os.path.join(VALIDATION_PATH,args.games,"vision",screenshot+".txt")
         abstraction=os.path.join(VALIDATION_PATH,args.games,"abstraction",screenshot+".txt")
     benchmark = True if args.benchmark else False
+    print(f"Starting {args.games} with screenshot {screenshot}")
+    print(f"Vision: {vision}")
+    print(f"Abstraction: {abstraction}")
+    print(f"Iteration: {iteration}")
+    print(f"Benchmark: {benchmark}")
     return gameDictionary[args.games](screenshot,args.debugVision,vision,abstraction,iteration, benchmark)
 
 
