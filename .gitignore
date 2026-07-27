@@ -1,4 +1,5 @@
 .idea/
 *.Identifier
 __pycache__
+.superpowers/
 
