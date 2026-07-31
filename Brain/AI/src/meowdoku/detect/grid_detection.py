@@ -5,6 +5,7 @@ import sys
 import numpy as np
 
 from matplotlib import pyplot as plt
+from AI.src.asp_mapping.color import Color
 from AI.src.abstraction.object_graph import ObjectGraph
 from AI.src.candy_crush.object_graph.constants import PX, PY, TYPE, ID
 from AI.src.abstraction.abstraction import Abstraction
@@ -104,7 +105,6 @@ class MatchingMeowdoku:
             color, sample_point, side_size = self.detect_color(box_id)
             cat = self._detect_cat(color, sample_point, side_size)
             mapping[box_id] = (color,cat, sample_point, side_size)
-        
 
         return mapping
 
@@ -117,24 +117,15 @@ class MatchingMeowdoku:
         sample_point = (left_side[0][0] + 3, int((left_side[0][1] + left_side[1][1]) / 2))
         side_size = abs(left_side[0][1] - left_side[1][1])
 
-        color = self.__image[sample_point[1],[sample_point[0]]][0][::-1] # BGR to RGB
+        color = self.__image[sample_point[1],[sample_point[0]]][0]
         color = tuple(int(c) for c in color)
+        color = Color.get_color(color)
         return color, sample_point, side_size
-
-    # deprecato     
-    #def _count_child_boxes(self, box_id):
-    #    # true if count of boxes that have this as a parent > 1
-    #
-    #    # devo esplorare in modo ricorsivo la gerarchia dei box per contare quanti box hanno come parent il box_id dato
-    #    child = [box for box in range(len(self.hierarchy)) if self.hierarchy[box][3] == box_id]
-    #    if not child:
-    #        return 0
-    #
-    #    return len(child) + sum(self._count_child_boxes(c) for c in child)
 
     def _detect_cat(self, color, sample_point, side_size):
         for x_ofs in range(sample_point[0], int(sample_point[0] + side_size / 2)):
-            if tuple(self.__image[sample_point[1],x_ofs]) != color[::-1]:
+            if Color.get_color(tuple(self.__image[sample_point[1],x_ofs])) != color:
+                print(f"Cat detected at {sample_point} with color {color} and original color {tuple(self.__image[sample_point[1],x_ofs][::-1])}")
                 return True
         return False
 

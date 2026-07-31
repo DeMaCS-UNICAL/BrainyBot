@@ -18,7 +18,6 @@ def meowdoku(screenshot, debug = False, vision_validation=None, abstraction_vali
     # produco l'abstraction ... 
     # matching._print_boxes()
     # matching._print_all()
-    #exit(0)
 
     abstraction = Meowgrid(matching.cells)
 
@@ -28,7 +27,7 @@ def meowdoku(screenshot, debug = False, vision_validation=None, abstraction_vali
 
     # non voglio vederli in ordine 
     random.shuffle(actions)
-
+    print(f"Actions to perform: {actions}")
     for r,c,_ in actions: 
         box_id = abstraction.get_cell_id(r,c)[0]
         x,y = matching.get_box_touch_point(box_id)

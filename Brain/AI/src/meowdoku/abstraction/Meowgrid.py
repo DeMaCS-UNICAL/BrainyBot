@@ -30,7 +30,7 @@ class Meowgrid:
             x = self._get_closest_source(self.x_sources, sample_point[0])
             y = self._get_closest_source(self.y_sources, sample_point[1])
 
-            mat[self.y_sources.index(y)][self.x_sources.index(x)] = (cell_id, self.colours.index(colour), cat) # id of the box and index of the color in the discrete colors list
+            mat[self.y_sources.index(y)][self.x_sources.index(x)] = (cell_id, colour.get_id(), cat) # id of the box and index of the color in the discrete colors list
         #self.__pretty_print_matrix(mat)
         return mat
 
@@ -45,8 +45,8 @@ class Meowgrid:
         colours = []
         for cell_id in cells.keys():
                 colour,_,_,_ = cells[cell_id]
-                if colour not in colours:
-                    colours.append(colour)
+                if colour.get_id() not in colours:
+                    colours.append(colour.get_id())
         return colours
     
     def get_grid(self):

@@ -21,7 +21,7 @@ class Solver:
                             for arg in sym.arguments
                         )
                         model_facts.append(args)
+                print(f"Model found: {model_facts}")
                 
                 result.append(model_facts)
-                
         return result[0]
