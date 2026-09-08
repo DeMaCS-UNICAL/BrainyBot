@@ -6,8 +6,7 @@ import multiprocessing
 from time import time
 from matplotlib import pyplot as plt
 import matplotlib
-matplotlib.use('TkAgg')
-from paddleocr import PaddleOCR
+matplotlib.use('MacOSX')
 import logging
 
 from AI.src.abstraction.helpers import getImg
@@ -349,5 +348,13 @@ class ObjectsFinder:
             if search_info.regex.match(text):
                 return text
         return None
+
+    def saturate_img(self, saturation_scale=1.5):
+        hsv = cv2.cvtColor(self.__img_matrix, cv2.COLOR_BGR2HSV)
+        h, s, v = cv2.split(hsv)
+        s = np.clip(s * saturation_scale, 0, 255).astype(np.uint8)
+        hsv_saturated = cv2.merge([h, s, v])
+        saturated_img = cv2.cvtColor(hsv_saturated, cv2.COLOR_HSV2BGR)
+        self.__img_matrix = saturated_img
 
     
