@@ -249,8 +249,9 @@ class ObjectsFinder:
         return balls
     
     
-    def extract_subimage(self, img,rectangle):
-        return img[rectangle.y:rectangle.y+rectangle.heigth, rectangle.x:rectangle.x+rectangle.width]
+    def extract_subimage(self, img,rectangle: TextRectangle):
+        return img[rectangle.rectangle.y:rectangle.rectangle.y+rectangle.rectangle.heigth, rectangle.rectangle.x:rectangle.rectangle.x+rectangle.rectangle.width]
+        #return img[rectangle.y:rectangle.y+rectangle.heigth, rectangle.x:rectangle.x+rectangle.width]
 
   
     def _detect_container(self,search_info:Container):

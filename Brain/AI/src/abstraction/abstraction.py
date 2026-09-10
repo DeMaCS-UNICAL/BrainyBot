@@ -4,7 +4,11 @@ import numpy as np
 import cv2
 from sklearn.cluster import AgglomerativeClustering
 from matplotlib import pyplot as plt
-from AI.src.vision.output_game_object import OutputGameObject, OutputTemplateMatch, OutputContainer, OutputCircle
+from AI.src.vision.output_game_object import MonogramCell, MonogramHint, MonogramGrid, OutputTemplateMatch, OutputContainer, OutputCircle, OutputRectangle
+from AI.src.vision.input_game_object import TemplateMatch, TextRectangle, Rectangle
+from AI.src.vision.objectsFinder import ObjectsFinder
+from AI.src.monogram.detect.constants import TEMPLATES, THRESHOLDS, DISTANCE
+
 
 class Abstraction:
     
@@ -301,3 +305,290 @@ def custom_median(lst):
     lst_sorted = sorted(lst)
     mid_index = len(lst_sorted) // 2
     return lst_sorted[mid_index]
+
+
+class MonogramAbstraction:
+    """
+    Abstraction for Monogram using TemplateMatch:
+    1. Uses template matching to detect cells with X or empty
+    2. Extracts hint text from rectangles
+    3. Organizes into game matrix
+    """
+    
+    def __init__(self, grid_size: tuple = (5, 5), cell_size: tuple = (50, 50)):
+        """
+        Args:
+            grid_size: Expected (rows, cols)
+            cell_size: Expected (width, height)
+        """
+        self.grid_size = grid_size
+        self.cell_size = cell_size
+    
+    # ============ GRID PROCESSING USING TEMPLATE MATCHING ============
+    
+    def process_grid_cells(self, finder: ObjectsFinder, cell_size: tuple = None) -> tuple:
+        """
+        Detect grid cells using template matching.
+        
+        Args:
+            finder: ObjectsFinder with loaded screenshot
+            cell_size: Override cell size if needed
+            
+        Returns:
+            Tuple of (matrix, detected_cells, offset, delta)
+        """
+        if cell_size is None:
+            cell_size = self.cell_size
+        
+        # Use TemplateMatch to find all cells (cross and empty)
+        template_matches = self._find_cells_with_templates(finder)
+        
+        # Convert template matches to MonogramCell objects
+        detected_cells = self._process_template_matches(template_matches)
+        
+        # Organize into matrix
+        matrix, offset, delta = self._organize_cells_to_matrix(detected_cells)
+        
+        return matrix, detected_cells, offset, delta
+    
+    def _find_cells_with_templates(self, finder: ObjectsFinder) -> list:
+        """
+        Use TemplateMatch to find all cells in the image.
+        
+        Args:
+            finder: ObjectsFinder instance with loaded image
+            
+        Returns:
+            List of OutputTemplateMatch objects
+        """
+        # Create TemplateMatch search object
+        # This will match against all templates (cross and empty)
+        search = TemplateMatch(
+            templates=TEMPLATES,           # All templates: cross_*.png, empty_*.png
+            thresholds=THRESHOLDS,         # Thresholds for each template
+            find_all=True,                 # Find all matches
+            regmax=True,                   # Use regional max suppression
+            grayscale=False                # Color template matching
+        )
+        
+        # Use finder to match templates
+        matches = finder.find(search)
+        
+        return matches
+    
+    def _process_template_matches(self, matches: list) -> list:
+        """
+        Convert OutputTemplateMatch objects to MonogramCell objects.
+        
+        Args:
+            matches: List of OutputTemplateMatch from template matching
+            
+        Returns:
+            List of MonogramCell objects
+        """
+        cells = []
+        
+        for match in matches:
+            # match.label contains: "cross_template1" or "empty_template1"
+            is_cross = match.label.startswith("cross_")
+            
+            cell = MonogramCell(
+                x=match.x,
+                y=match.y,
+                has_cross=is_cross,
+                confidence=match.confidence,
+                cell_id=None  # Will be set later
+            )
+            cell.cell_width = match.template_width
+            cell.cell_height = match.template_heigth
+            
+            cells.append(cell)
+        
+        return cells
+    
+    def _organize_cells_to_matrix(self, detected_cells: list) -> tuple:
+        """
+        Organize detected cells into abstract matrix.
+        
+        Returns:
+            Tuple of (matrix, offset, delta)
+        """
+        if not detected_cells:
+            rows, cols = self.grid_size
+            empty_matrix = [['.' for _ in range(cols)] for _ in range(rows)]
+            return empty_matrix, (0, 0), self.cell_size
+        
+        # Compute grid geometry
+        offset, delta = self._compute_grid_geometry(detected_cells)
+        
+        # Initialize empty matrix
+        rows, cols = self.grid_size
+        matrix = [['.' for _ in range(cols)] for _ in range(rows)]
+        
+        # Place detected cells
+        for cell in detected_cells:
+            row = int((cell.y - offset[1]) / delta[1])
+            col = int((cell.x - offset[0]) / delta[0])
+            
+            if 0 <= row < rows and 0 <= col < cols:
+                # Place cell state: 'X' if has cross, '.' if empty
+                matrix[row][col] = str(cell)
+                cell.cell_id = f"x{col}y{row}"
+        
+        return matrix, offset, delta
+    
+    def _compute_grid_geometry(self, detected_cells: list) -> tuple:
+
+        """Determine grid geometry from detected cells"""
+
+        x_coords = [cell.x for cell in detected_cells]
+
+        y_coords = [cell.y for cell in detected_cells]
+    
+        # Cluster to find grid lines
+
+        x_clusters = self._cluster_coordinates(x_coords, threshold=20)
+
+        y_clusters = self._cluster_coordinates(y_coords, threshold=20)
+    
+        offset = (min(x_clusters), min(y_clusters))
+    
+        # NOTE: delta used to come from the average gap between detected cell
+
+        # clusters (_compute_spacing). Since only crossed cells are matched
+
+        # (there's no "empty" template), rows/columns without a cross create
+
+        # gaps spanning more than one grid line, which inflates that average
+
+        # and produces a wrong, screenshot-dependent cell pitch. Each detected
+
+        # cell already carries its own template size (cell_width/cell_height),
+
+        # which is a direct, detection-density-independent measure of one grid
+
+        # step, so use that instead.
+
+        delta = (
+
+            int(np.mean([cell.cell_width for cell in detected_cells])),
+
+            int(np.mean([cell.cell_height for cell in detected_cells])),
+
+        )
+    
+        return offset, delta
+    
+    
+    @staticmethod
+    def _cluster_coordinates(coords: list, threshold: int = 20) -> list:
+        """Group similar coordinates"""
+        if not coords:
+            return []
+        
+        sorted_coords = sorted(coords)
+        clusters = []
+        current_cluster = [sorted_coords[0]]
+        
+        for coord in sorted_coords[1:]:
+            if coord - current_cluster[-1] <= threshold:
+                current_cluster.append(coord)
+            else:
+                clusters.append(np.mean(current_cluster))
+                current_cluster = [coord]
+        
+        if current_cluster:
+            clusters.append(np.mean(current_cluster))
+        
+        return clusters
+    
+    @staticmethod
+    def _compute_spacing(x_clusters: list, y_clusters: list) -> tuple:
+        """Average spacing between clusters"""
+        def avg_spacing(clusters):
+            if len(clusters) < 2:
+                return 50
+            spacings = [clusters[i+1] - clusters[i] for i in range(len(clusters)-1)]
+            return int(np.mean(spacings))
+        
+        return (avg_spacing(x_clusters), avg_spacing(y_clusters))
+    
+    # ============ HINT PROCESSING ============
+    
+    def process_hints(self, finder: ObjectsFinder) -> list:
+        """
+        Extract hint rectangles and their text.
+        
+        Args:
+            finder: ObjectsFinder instance
+            
+        Returns:
+            List of MonogramHint objects
+        """
+        # Find all rectangles in the image
+        hint_rectangles = finder.find(Rectangle(hierarchy=False))
+        
+        hints = []
+        for rect in hint_rectangles:
+            # Extract text using TextRectangle
+            hint_text = self._extract_hint_text(finder, rect)
+            
+            if hint_text:
+                hint = MonogramHint(
+                    x=float(rect.x),
+                    y=float(rect.y),
+                    width=float(rect.width),
+                    height=float(rect.heigth),
+                    hint_text=hint_text,
+                    hint_type=self._classify_hint_type(hint_text)
+                )
+                hints.append(hint)
+        
+        return hints
+    
+    @staticmethod
+    def _extract_hint_text(finder: ObjectsFinder, rectangle: OutputRectangle) -> str:
+        """Extract text from rectangle"""
+        try:
+            text_search = TextRectangle(rectangle=rectangle, numeric=False)
+            result = finder.find(text_search)
+            
+            if result:
+                return str(result).strip()
+            else:
+                return None
+        except Exception as e:
+            print(f"Error extracting text from hint: {e}")
+            return None
+    
+    @staticmethod
+    def _classify_hint_type(hint_text: str) -> str:
+        """Classify hint type"""
+        hint_lower = hint_text.lower()
+        
+        if 'row' in hint_lower or 'r' in hint_lower:
+            return 'horizontal'
+        elif 'col' in hint_lower or 'c' in hint_lower or 'v' in hint_lower:
+            return 'vertical'
+        else:
+            return 'clue'
+    
+    def validate_matrix(self, matrix: list) -> bool:
+        """Validate matrix structure"""
+        expected_rows, expected_cols = self.grid_size
+        
+        if len(matrix) != expected_rows:
+            print(f"Row count mismatch: {len(matrix)} != {expected_rows}")
+            return False
+        
+        for i, row in enumerate(matrix):
+            if len(row) != expected_cols:
+                print(f"Column count mismatch in row {i}: {len(row)} != {expected_cols}")
+                return False
+            
+            for j, cell in enumerate(row):
+                if cell not in ['X', '.', None]:
+                    print(f"Invalid cell at [{i}][{j}]: {cell}")
+                    return False
+        
+        return True
